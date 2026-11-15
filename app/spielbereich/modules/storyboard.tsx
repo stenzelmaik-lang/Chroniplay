@@ -13,7 +13,7 @@ import { emptyStory, type CommandReference, type StoryView } from "@/domain/comm
 import { emptyScene, type SceneDocument, type SceneSummary, type SceneView } from "@/domain/story-scene";
 import { sessionPreparationSchema, type PreparedSession } from "@/domain/story-preparation";
 import { orderedSessionScenes, preparationSections } from "@/domain/session-overview";
-import { bookEvenings, eveningProgress, guideState, looseEvenings, reorderedSessionSceneIds, sceneReadiness, sceneResources, sceneReadinessNames, sortEvenings, storyboardGuide, unplacedBookScenes, type GuideStepId } from "@/domain/storyboard";
+import { assignEveningBook, bookEvenings, eveningProgress, guideState, looseEvenings, reorderedSessionSceneIds, sceneReadiness, sceneResources, sceneReadinessNames, sortEvenings, storyboardGuide, unplacedBookScenes, type GuideStepId } from "@/domain/storyboard";
 import { RichTextEditor, RichTextView } from "./rich-text";
 import { PreparationNPCs } from "./preparation-npcs";
 import { PreparationFigures } from "./preparation-figures";
@@ -254,6 +254,15 @@ export function Storyboard({ a, onDirty, onClassic }: { a: Actor; onDirty?: (dir
     }
   }
 
+  /** The SL files an existing evening under a book (or none); the view follows the evening into that book. */
+  async function moveEveningToBook(target: PreparedSession, bookId: string) {
+    if (busy) return;
+    setBusy(true);
+    const ok = await saveEvening(target, { storyIds: assignEveningBook(target.document.storyIds, books.map(item => item.id), bookId) }, bookId ? "Spielabend dem Buch „" + (books.find(item => item.id === bookId)?.title || "") + "“ zugeordnet." : "Spielabend ohne Buch gespeichert.");
+    setBusy(false);
+    if (ok) { const next = { book: bookId, evening: target.id, scene: "" }; writeRoute(next, "replace"); setRoute(next); }
+  }
+
   async function moveScene(id: string, toIndex: number) {
     if (!evening || busy) return;
     const sceneIds = reorderedSessionSceneIds(evening.id, evening.document, scenes, id, toIndex);
@@ -394,11 +403,19 @@ export function Storyboard({ a, onDirty, onClassic }: { a: Actor; onDirty?: (dir
           <h2 id="sb-evening"><EditableTitle key={evening.id + evening.document.title} value={evening.document.title} label="Titel des Spielabends" onCommit={title => void saveEvening(evening, { title }, "Titel des Spielabends gespeichert.")} /></h2>
           {progress && <ProgressBar progress={progress} />}
         </div>
-        <label className={s.statusPick}><span>Stand des Abends</span>
-          <select value={evening.document.status} disabled={busy} onChange={event => void saveEvening(evening, { status: event.target.value as PreparedSession["document"]["status"] }, "Stand des Spielabends gespeichert.")}>
-            {eveningStatuses.map(key => <option key={key} value={key}>{preparationStatusNames[key]}</option>)}
-          </select>
-        </label>
+        <div className={s.headPicks}>
+          <label className={s.statusPick}><span>Buch oder Kampagne</span>
+            <select value={books.find(item => evening.document.storyIds.includes(item.id))?.id || ""} disabled={busy} onChange={event => void moveEveningToBook(evening, event.target.value)}>
+              <option value="">Ohne Buch</option>
+              {books.map(item => <option key={item.id} value={item.id}>{item.title}</option>)}
+            </select>
+          </label>
+          <label className={s.statusPick}><span>Stand des Abends</span>
+            <select value={evening.document.status} disabled={busy} onChange={event => void saveEvening(evening, { status: event.target.value as PreparedSession["document"]["status"] }, "Stand des Spielabends gespeichert.")}>
+              {eveningStatuses.map(key => <option key={key} value={key}>{preparationStatusNames[key]}</option>)}
+            </select>
+          </label>
+        </div>
       </header>
 
       <section className={s.plan} aria-labelledby="sb-plan">

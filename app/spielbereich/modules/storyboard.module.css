@@ -76,6 +76,7 @@
 .eveningHead{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:16px}
 .eveningTitle{display:grid;gap:8px;flex:1 1 420px;min-width:0}
 .eveningTitle h2{margin:0;font:normal clamp(28px,3vw,40px)/1.15 'Spectral',Georgia,serif}
+.headPicks{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end}
 .statusPick{display:grid;gap:4px;font-size:12px;color:var(--sb-mute)}
 .statusPick select{min-width:180px;padding:9px 12px;border:1px solid var(--sb-line);border-radius:9px;background:var(--sb-panel);color:var(--sb-ink);font:inherit;font-size:14px}
 .plan{display:grid;gap:10px;padding:16px 20px;border:1px solid var(--sb-line);border-left:3px solid var(--sb-gold);border-radius:14px;background:linear-gradient(160deg,#18222b,#11181e)}
@@ -229,6 +230,7 @@
   .hintLine>svg{display:none}
   .plan{padding:14px}
   .planText{font-size:15.5px}
+  .headPicks{flex:1 1 100%}
   .statusPick{flex:1 1 100%}
   .statusPick select{width:100%}
   .runHead .primary{width:100%;justify-content:center}

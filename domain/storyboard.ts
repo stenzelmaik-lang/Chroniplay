@@ -116,3 +116,10 @@ export function sortEvenings(sessions: PreparedSession[]): PreparedSession[] {
     return a.document.title.localeCompare(b.document.title, 'de', { numeric: true }) || a.id.localeCompare(b.id);
   });
 }
+
+/** New storyIds of an evening when the SL picks its book ("" = no book). Other linked stories that are
+ * not one of the selectable books (e.g. archived ones) stay linked; the chosen book comes first. */
+export function assignEveningBook(storyIds: readonly string[], bookIds: readonly string[], bookId: string): string[] {
+  const kept = storyIds.filter(id => !bookIds.includes(id));
+  return [...new Set(bookId ? [bookId, ...kept] : kept)];
+}

@@ -71,3 +71,11 @@ test('Evenings run in play order: dated first, then natural title order', async 
   const list = [evening('Spielabend 10'), evening('Spielabend 2'), evening('Spielabend 1'), evening('Auftakt', { date: '2026-12-05T19:00' }), evening('Vorspiel', { date: '2026-11-28T19:00' })];
   assert.deepEqual(sortEvenings(list).map(e => e.id), ['Vorspiel', 'Auftakt', 'Spielabend 1', 'Spielabend 2', 'Spielabend 10']);
 });
+
+test('Assigning an evening to a book replaces only the selectable book link', async () => {
+  const { assignEveningBook } = await import('../domain/storyboard.ts');
+  assert.deepEqual(assignEveningBook([], ['b1', 'b2'], 'b1'), ['b1']);
+  assert.deepEqual(assignEveningBook(['b1', 'alt-archiv'], ['b1', 'b2'], 'b2'), ['b2', 'alt-archiv']);
+  assert.deepEqual(assignEveningBook(['b1', 'alt-archiv'], ['b1', 'b2'], ''), ['alt-archiv']);
+  assert.deepEqual(assignEveningBook(['b2'], ['b1', 'b2'], 'b2'), ['b2']);
+});

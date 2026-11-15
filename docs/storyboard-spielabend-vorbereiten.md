@@ -1,4 +1,4 @@
-# Storyboard – Kommandozentrum → Spielabend vorbereiten (lokal, Runde 3)
+# Storyboard – Kommandozentrum → Spielabend vorbereiten (Runde 3 live seit 15.11.2026, Nachtrag Buch-Zuordnung)
 
 Stand: 15.11.2026 · Branch `claude/storyboard-kommandozentrum-323cfc` · Basis `c4418db` (Merge PR #86).
 Nicht committet, nicht gepusht, nicht deployt. Keine Migration, keine neuen Abhängigkeiten, keine neuen API-Routen.
@@ -13,6 +13,13 @@ Nicht committet, nicht gepusht, nicht deployt. Keine Migration, keine neuen Abh�
 - **Interaktionen:** Liste **„Spielmaterial dieser Szene“** mit allen angelegten Bausteinen (Art, Titel, Datei bzw. verknüpfte Person, Vorschaubild bei Bildern) und Link zum Bearbeiten im eigenen Fenster. Kehrt man aus dem Material-Fenster zurück, lädt die Szene neu (nur wenn nichts ungespeichert ist) – neues Material erscheint sofort, die Version bleibt aktuell.
 - **Visionen & Botschaften:** Einträge als Karten, geöffneter Eintrag als Arbeitsfläche; Empfänger als Schalter-Chips, Visionstyp/Tempo/Darstellung im Storyboard-Stil. Gleiche Komponente wie in der klassischen Ansicht – die Optik ändert sich dort mit (`prepared-whispers.module.css`, `prepared-whisper-staging.module.css`), die Funktion nicht.
 - **Folgen & Proben:** Abzweigungen als Kartenraster.
+
+## Nachtrag nach dem Release: Abend einem Buch zuordnen
+
+- Im Kopf des Spielabends gibt es neben „Stand des Abends“ die Auswahl **„Buch oder Kampagne“** (alle Bücher plus „Ohne Buch“). Die Wahl speichert sofort die Buchverknüpfung des Abends (`assignEveningBook`: nur die wählbaren Bücher werden ersetzt, andere Verknüpfungen bleiben); Pfadleiste und Adresse folgen dem Abend ins Buch.
+- Lokal geprüft: Abend ohne Buch → „Der Hunger bleibt“ zugeordnet, erscheint nach Neuladen im Buch unter „In Vorbereitung“; „Ohne Buch“ entfernt die Verknüpfung wieder; 375 px ohne seitliches Scrollen. Alle Unit-Tests 687/687. Lokaler Prüfspeicher danach gelöscht.
+- Grenze: Ein Abend, dessen Szenen selbst einem Buch angehören, erscheint dort weiterhin, auch wenn „Ohne Buch“ gewählt ist (bestehende Zuordnung über Szenen bleibt unverändert).
+- Noch nicht live: wartet auf Freigabe.
 
 ## Dateien
 
@@ -48,9 +55,9 @@ Nicht committet, nicht gepusht, nicht deployt. Keine Migration, keine neuen Abh�
 
 ## Offen (für spätere Runden, mit der SL abzustimmen)
 
+
 - Material und Interaktionen als verbundenes System (Material → Einsatz in der Szene), Überarbeitung des Material-Fensters.
 - Geheimnisse und Folgen & Proben inhaltlich weiterentwickeln; NPC-Bereich modular erweitern.
 - Datum des Abends, Szene archivieren/aus dem Abend entfernen nur klassisch.
-- Lokale Prüfdaten in `.local-test/storyboard` (u. a. „Pruefsatz …“, „Pruefnotiz SL …“, „Pruefsatz Atmosphaere …“, „Neue Abzweigung“, „Beispiel – Verfolgung im Nebel“, Buch „Neues Buch“) nach der Sichtprüfung löschen.
 
 Start: `pnpm run build` und danach `pnpm run demo:storyboard` → http://127.0.0.1:8866/anmelden, synthetisches Konto `command-gm@example.invalid`.
