@@ -1,0 +1,56 @@
+# Storyboard – Kommandozentrum → Spielabend vorbereiten (lokal, Runde 3)
+
+Stand: 15.11.2026 · Branch `claude/storyboard-kommandozentrum-323cfc` · Basis `c4418db` (Merge PR #86).
+Nicht committet, nicht gepusht, nicht deployt. Keine Migration, keine neuen Abhängigkeiten, keine neuen API-Routen.
+
+## Runde 3: Rückmeldung der SL nach Sichtprüfung
+
+- **Kopf aufgeräumt:** Kacheln EP-Abrechnung und Live-Regie entfernt (die EP-Abrechnung bleibt in der klassischen Ansicht). Eine Kopfleiste: Pfad Chronik › Buch › Abend › Szene, Speicherstatus, „Weiterarbeiten“, Schalter „Führung“. Die Führung ist darunter eine schlanke Leiste.
+- **Buch:** Spielabende in Spielreihenfolge (`sortEvenings`: geplante Termine zuerst, sonst natürliche Titelfolge – Spielabend 1 vor 2 vor 10). Oben die Reihe **Vorbereitet** (alle nicht im Entwurf), darunter **In Vorbereitung** (Entwurf). Ideenablage bleibt.
+- **Spielabend:** wieder das Storyboard aus Karten (wie Runde 1), angereichert: Nummer, Reifegrad, Titel, Schauplatz, kurzer Vorlesetext, **Vorhandene Inhalte** (8 kleine Marken, gefüllte hervorgehoben), **Mitwirkende** (Namen), **Spielmaterial** (Anzahl). Kopf mit Stand des Abends und „Für diesen Abend geplant“ bleibt. Umsortieren per Ziehen oder Pfeil, sofort gespeichert.
+- **Szene:** Lese- und Bearbeitungsfläche nutzen die volle Breite (keine Zeichenbegrenzung mehr).
+- **Galerie nur dort, wo Bilder hingehören:** Der Galerie-Knopf im Texteditor erscheint nur noch unter Interaktionen. NPCs werden weiterhin aus den NPC-Akten gewählt. In Erzählung, Atmosphäre, NPCs & Dialoge, Geheimnisse, Visionen-Text, Folgen & Proben und SL-Notizen gibt es keine Galerie mehr. Bereits eingebettete Bilder bleiben erhalten und werden angezeigt. „Weitere Formatierung“ bleibt auch ohne Galerie erreichbar (kleine Änderung in `rich-text.tsx`, wirkt auch im Visionen-Editor).
+- **Interaktionen:** Liste **„Spielmaterial dieser Szene“** mit allen angelegten Bausteinen (Art, Titel, Datei bzw. verknüpfte Person, Vorschaubild bei Bildern) und Link zum Bearbeiten im eigenen Fenster. Kehrt man aus dem Material-Fenster zurück, lädt die Szene neu (nur wenn nichts ungespeichert ist) – neues Material erscheint sofort, die Version bleibt aktuell.
+- **Visionen & Botschaften:** Einträge als Karten, geöffneter Eintrag als Arbeitsfläche; Empfänger als Schalter-Chips, Visionstyp/Tempo/Darstellung im Storyboard-Stil. Gleiche Komponente wie in der klassischen Ansicht – die Optik ändert sich dort mit (`prepared-whispers.module.css`, `prepared-whisper-staging.module.css`), die Funktion nicht.
+- **Folgen & Proben:** Abzweigungen als Kartenraster.
+
+## Dateien
+
+- `domain/storyboard.ts` – reine Hilfen (Reifegrad, Umsortieren, Buch-/Abendzuordnung, Führung, `sceneResources`, `sortEvenings`)
+- `app/spielbereich/modules/storyboard.tsx`, `storyboard.module.css` – Oberfläche
+- `app/spielbereich/modules/command-center.tsx` – Storyboard als Standard, klassische Ansicht per `?ansicht=klassisch`
+- `app/spielbereich/modules/rich-text.tsx` – „Weitere Formatierung“ auch ohne Inline-Galerie
+- `app/spielbereich/modules/prepared-whispers.module.css`, `prepared-whisper-staging.module.css` – Optik Visionen/Botschaften
+- `tests/storyboard.test.mjs` (in `pnpm test`, 7 Tests), `tests/fixtures/storyboard-demo.mjs`
+- `scripts/test-local.mjs` – Schalter `--storyboard` (Speicher `.local-test/storyboard`, Port 8866), `package.json` – `demo:storyboard`
+
+## Prüfungen (beobachtet, Runde 3)
+
+| Prüfung | Ergebnis |
+|---|---|
+| `tsc --noEmit` | bestanden |
+| ESLint auf allen geänderten/neuen TS-Dateien | bestanden |
+| Build | bestanden |
+| Alle Unit-Tests `node --experimental-strip-types --test tests/*.test.mjs` | 686 bestanden, 0 fehlgeschlagen |
+| 1440×900: Buch | Reihen „Vorbereitet“ (Abend 01) und „In Vorbereitung“ (Abend 02) |
+| 1440×900: Abend | Karten mit Inhalten, Mitwirkenden, Material; Ideenablage |
+| 1440×900: Szene | Seite 1385 px breit, Editor 1293 px; in der Erzählung kein Galerie-Knopf |
+| Interaktionen | Szene der Testvorlage zeigt 8 Bausteine (Bild mit Vorschau, Audio, Handouts, Person, Proben) |
+| Visionen | Test-Vision angelegt, Schalter geprüft, wieder gelöscht; gespeichert (0 Einträge) |
+| 375×812 | Abend und Szene ohne horizontales Scrollen; Pfeil-Umsortieren nach Neuladen erhalten, danach zurückgestellt |
+
+## Prüfgrenzen
+
+- Natives Ziehen im Testbrowser nicht automatisierbar; Pfeile geprüft. Touch: nur Pfeile.
+- Kein echtes Mobilgerät. `pnpm run test:integration` nicht ausgeführt.
+- Rückkehr aus dem Material-Fenster (Neuladen bei Fokus) nicht mit einem echten zweiten Fenster durchgespielt.
+- Die geänderte Optik der Visionen in der klassischen Ansicht nicht separat angesehen.
+
+## Offen (für spätere Runden, mit der SL abzustimmen)
+
+- Material und Interaktionen als verbundenes System (Material → Einsatz in der Szene), Überarbeitung des Material-Fensters.
+- Geheimnisse und Folgen & Proben inhaltlich weiterentwickeln; NPC-Bereich modular erweitern.
+- Datum des Abends, Szene archivieren/aus dem Abend entfernen nur klassisch.
+- Lokale Prüfdaten in `.local-test/storyboard` (u. a. „Pruefsatz …“, „Pruefnotiz SL …“, „Pruefsatz Atmosphaere …“, „Neue Abzweigung“, „Beispiel – Verfolgung im Nebel“, Buch „Neues Buch“) nach der Sichtprüfung löschen.
+
+Start: `pnpm run build` und danach `pnpm run demo:storyboard` → http://127.0.0.1:8866/anmelden, synthetisches Konto `command-gm@example.invalid`.

@@ -6,3 +6,4 @@
 .toggle strong {font:20px Georgia,serif;}
 .toggle small {color:#afbcca;font-size:12px;}
 .toggle+section {margin-top:10px;}
+.backLink {background:none;border:0;padding:4px 0;color:#d6b779;cursor:pointer;font-size:14px;text-decoration:underline;text-underline-offset:3px;}
