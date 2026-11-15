@@ -25,3 +25,24 @@ Nach dem Deploy: `/anmelden` 200, `/api/dashboard` 401, `/api/command-center/pre
 
 ## Rückweg
 `wrangler rollback 497ab047-fe32-4b01-8f74-75d5dc2f3fa6 --name chronik-von-kleve`.
+
+## Nachtrag 15.11.2026: Buch-Zuordnung und Buch „Blut ohne Erbe“
+
+Freigabe des Besitzers: „Live + Buchtitel 1“.
+
+| | |
+|---|---|
+| Live-Codecommit | `44e15be` (Abend einem Buch zuordnen), `main` per Fast-Forward auf denselben Commit |
+| Worker-Version | `03a81f3c-ea0e-45d7-a9eb-5de95d4cc000`, Tag `44e15be-Buchzuordnung` |
+| Vorversion | `9f4d25c6-acb6-4534-a0bd-583a3128f4e5` (Tag `97f598f-Storyboard`), vor dem Deploy geprüft |
+| Migration | keine; Konfiguration wie oben |
+| D1-Lesezeichen vor dem Deploy | `00000217-00000d4a-00005124-9a3a66a3e80fa162473c578301e33dbf` |
+
+Nach dem Deploy: `/anmelden` 200, Vorbereitung ohne Anmeldung 401, neues Bundle („Buch oder Kampagne“) ausgeliefert.
+
+**Live-Datenänderungen (freigegeben, über die Oberfläche in der angemeldeten SL-Ansicht):**
+- Buch (Handlungsstrang) „Blut ohne Erbe“ angelegt: `plot-f92ce66c-cb8e-4f9f-a05f-6fc95158d0de`, Status Entwurf.
+- Spielabend „Der Hunger bleibt“ (`session-61dee204-d0c8-4dda-ba41-dc6b932848c9`) diesem Buch zugeordnet (`storyIds` vorher leer). 6 Szenen, Status „Vorbereitet“ und Kurzüberblick unverändert.
+- Geprüft: Buchseite „Blut ohne Erbe“ zeigt den Abend unter „Vorbereitet“, keine Konsolenfehler.
+
+Rückweg Code: `wrangler rollback 9f4d25c6-acb6-4534-a0bd-583a3128f4e5 --name chronik-von-kleve`. Rückweg Daten: im Abendkopf „Ohne Buch“ wählen; das Buch lässt sich in der klassischen Ansicht archivieren.
