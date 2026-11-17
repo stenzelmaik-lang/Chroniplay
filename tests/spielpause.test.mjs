@@ -77,4 +77,3 @@ check('Spinner läuft bei 30 und 120 Bildern gleich weit, bremst und stoppt', ()
   a.impulse(-1); assert.ok(a.speed < 0);
   assert.ok(Math.abs(T.angleDifference(-3.12, 3.12)) < 0.1);
 });
-
