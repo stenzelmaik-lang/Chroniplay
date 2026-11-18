@@ -221,6 +221,7 @@ button.stickyGrip:active{cursor:grabbing}.stickyGrip>span{display:flex;align-ite
 .notebookHead{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}.notebookHead>p{margin:0}
 /* Etappe 4a · ChroniPlay-Way: frame level for rail, dock and drawers; visible labels; one rail width for all layers. */
 .app{--rail-w:86px}
+.stage:has([data-spielpause]) .idle{display:none}
 .rail{width:var(--rail-w);gap:2px;padding:10px 6px;background:var(--cp-surface-1);border-right-color:var(--cp-line)}
 .stage,.hud{left:var(--rail-w)}
 .rail .iconWrap{width:100%}

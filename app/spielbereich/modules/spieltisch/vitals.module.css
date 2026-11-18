@@ -145,3 +145,11 @@
 .gmSwitch span{display:grid;gap:2px}
 .gmSwitch strong{color:#ece5d8;font-size:13px}
 .gmSwitch small{color:#9fa49b;font-size:12px}
+
+/* Personal toys need their controls clear on narrow tables. Keep both status
+   entry points available in a compact row; full values remain in their panels. */
+@media(max-width:1100px){
+ :global([data-chroniplay-stage]):has(:global([data-spielpause]:not([data-blocked=true]):not([data-suspended=true]))) .hudBox:not([data-hidden=true]){bottom:88px;height:40px;width:calc(50% - 18px);padding:8px;display:block;overflow:hidden}
+ :global([data-chroniplay-stage]):has(:global([data-spielpause]:not([data-blocked=true]):not([data-suspended=true]))) .hudBox>:not(.hudTitle){display:none}
+ :global([data-chroniplay-stage]):has(:global([data-spielpause]:not([data-blocked=true]):not([data-suspended=true]))) .hudName{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+}
