@@ -1,6 +1,6 @@
 # Persönliche Spielpause am Spieltisch
 
-Stand: 17.11.2026. Lokale Umsetzung auf `codex/spielpause`, ausgehend vom frisch abgerufenen `origin/main` bei `44e15be`. Kein Push und kein Live-Deployment.
+Stand: 18.11.2026. Umsetzung auf `codex/spielpause`, ausgehend vom frisch abgerufenen `origin/main` bei `44e15be`. Der Nutzer hat Korrekturen an 3D-Auftritt/Fokus und die anschließende Live-Veröffentlichung ausdrücklich freigegeben. Der tatsächliche Live-Stand wird im gesonderten Releaseprotokoll dokumentiert.
 
 Arbeitsordner: `C:\Users\Stenz\Documents\ChatGPT\Pen&Paper Spielabend\chroniplay-spielpause`. Der ältere Release-Checkout und der Chronik-Checkout bleiben unverändert. Im Projekt und seinen geprüften übergeordneten Verzeichnissen wurde keine geltende AGENTS.md gefunden.
 
@@ -10,6 +10,9 @@ Arbeitsordner: `C:\Users\Stenz\Documents\ChatGPT\Pen&Paper Spielabend\chroniplay
 - `app/spielbereich/modules/spieltisch/spielpause/spielpause.tsx`: Auswahl, ein aktives Spielzeug, transparente Objekte und Bedienung am unteren Tischrand.
 - `spielpause/toys-core.js`: übernommene physische Würfellogik, Quetschfeder und Spinner-Reibung; ES-Modul statt globalem Objekt. Spinner zeichnet die zentrierte Textur um ihre Lagerkappe.
 - `spielpause/toys-runtime.js`: bestehende Gesten und Zähler in einer aufräumbaren Instanz; neue Auftritte, fokussierte Tastatursteuerung, reduzierte Bewegung und Vorrang vorhandener Dialoge.
+- `spielpause/doll-3d.js`: echtes räumliches Modell aus 47 geschlossenen bzw. extrudierten Teilen, mit perspektivischer Kamera und berechneten Licht-/Kontaktschatten. Kopf, Rumpf, Gliedmaßen und Augen besitzen Volumen; der Mantel hat Rück- und Kantenflächen. Das Plüschfoto wird auf Vorderflächen projiziert, seitliche und hintere Flächen erhalten Stoffmaterial. Eine erhabene Naht bleibt auf dem Hinterkopf sichtbar. Keine gekippte Bildkarte und kein CSS-Kippen der Zeichenfläche.
+- `spielpause/doll-pose.js`: Rückwärtsfallen, weicher Aufprall, körperliche Rückenlage und Aufrichten auf die Füße. Erst danach erscheint „Massier mich“. Bei reduzierter Bewegung steht das Modell sofort bereit.
+- Maus/Touch zeigen keinen rechteckigen Fokusrahmen mehr. Die Tastatur behält ein kleines elliptisches Fokuszeichen am Tischboden. Quetschen und Rückfedern verformen das gesamte 3D-Modell.
 - `stage.module.css`: der Leerbühnenhinweis wird während eines persönlichen Spielzeugs ausgeblendet.
 - `vitals.module.css`: während sichtbarer Spielpause unter 1100 px kompakte, weiterhin anklickbare Statuszugänge oberhalb des Aktionsdocks. Nach dem Wegräumen kehrt die normale Anzeige zurück.
 
@@ -21,7 +24,7 @@ Direkt per Doppelklick, ohne Anmeldung und ohne Server:
 
 `outputs/ChroniPlay-Spieltisch-Spielpause.html`
 
-Diese Datei bündelt dieselbe React-Komponente und dieselben Assets wie das Projekt. Nur die umgebende Beispiel-Tischfläche ist vereinfacht. Die Datei wurde über `file://` mit allen drei Spielzeugen geprüft; keine Browserfehler und keine externen Anfragen. Neu bauen: `node scripts/build-spielpause-preview.mjs`.
+Diese Datei bündelt dieselbe React-Komponente, dasselbe 3D-Modell und dieselben Assets wie das Projekt. Nur die umgebende Beispiel-Tischfläche ist vereinfacht. Die Datei wurde über `file://` mit allen drei Spielzeugen geprüft; keine Browserfehler und keine externen Anfragen. Neu bauen: `node scripts/build-spielpause-preview.mjs`. Mit `?modellpruefung` zeigt dieselbe Datei Vorderseite, Seite, Rücken und Rückenlage des tatsächlichen Modells nebeneinander.
 
 Vollständige Anwendung: `http://127.0.0.1:8847/spielbereich?bereich=sitzung`. Der isolierte lokale Testserver läuft mit synthetischen Daten. Anmeldung als `command-a@example.invalid`, `command-b@example.invalid` oder `command-gm@example.invalid`; Passwort jeweils `ChroniPlay-Demo-2036!`. Das ist ausschließlich eine lokale Testanmeldung.
 
@@ -36,14 +39,15 @@ node --experimental-strip-types scripts/test-local.mjs --zustandswerte
 ## Prüfung
 
 - Projekt-Build, TypeScript und ESLint der geänderten JS-/TS-Dateien bestanden.
-- Sieben übernommene Modellprüfungen bestanden: 26 Steine/54 Sticker, alle neun Ebenen, Umkehrungen, 1000 gemischte Drehungen und vollständiges Zurückdrehen, Mischen, Quetschfeder und bildratenunabhängiger Spinner-Nachlauf.
+- Neun Modellprüfungen bestanden: sieben übernommene Prüfungen für Würfel, Quetschfeder und Spinner sowie zwei neue Prüfungen für die echte Tiefe der Puppenteile und die Lage über dem Tisch während des gesamten Auftritts.
 - `tests/spielpause-browser.mjs` prüft den echten Einstieg mit synthetischen Spieler- und SL-Anmeldungen: gelöster Fall und anschließendes animiertes Mischen; WASDQE und vier Pfeile samt Shift, Rückgängig, Mauswischen und Ansicht; Knautschs Rückenlage/Aufrichten, „Massier mich“, wechselnde Sprechblasen, Halten, Quetschen und Rückfedern; Spinner-Kurven, Schwung, Reibung und Stoppen; Wechseln, Schließen und sofortigen Auftrittsabbruch.
 - Browserprüfung bei 320, 390, 768, 1024 und 1440 px; Knöpfe werden auch auf schmalem Tisch nicht durch Statusfelder verdeckt. Spinner-Auftritt zusätzlich bei 320×700 innerhalb der Tischgrenzen geprüft. Native Chromium-Touch-Ereignisse prüfen Würfelwischen, Puppentippen/Abbruch und Spinner-Tippen/Stoppen.
 - Echte SL-Bildpräsentationen, persönliche Visionen und Botschaften haben Vorrang und machen das Spielzeug vorübergehend unsichtbar/inert. Nach Zurückziehen kehrt es zurück. Spieler B erhält kein Spielzeug von Spieler A. Tischobjekte und Charakterwerte bleiben identisch; außer den schon bestehenden Presence-Aufrufen entstehen keine schreibenden Spieltischanfragen.
 - Bestehende `spieltisch-regie-integration.mjs` bestanden: private Regie und Kataloge geschützt, gezielte Freigaben, Wiederaufnahme und Zurückziehen von Erzählungen unverändert.
-- Gesamtsuite im Arbeitsordner: **590/595 bestanden**. Fünf bestehende Design-Token-Tests scheitern am nicht decodierten `%20` im Ordnernamen. Dieselben fünf Prüfungen bestehen separat über einen normalisierten Pfad. Keine Änderung dieser fremden Tests.
+- Frischer vollständiger Testlauf: **597/597 bestanden**, ausgeführt über einen normalisierten lokalen Pfad mit `--preserve-symlinks-main`. Damit umgehen auch die fünf bestehenden Design-Token-Tests ihr nicht decodiertes `%20` im ursprünglichen Ordnernamen. Keine Änderung dieser fremden Tests.
+- `tests/spielpause-3d-browser.mjs`: fünf zusätzliche Prüfgruppen für echte 3D-Zwischenphasen, rahmenlose Maus-/Touch-Aktivierung, erhaltenen Tastaturfokus, Vorder-/Seiten-/Rückenansichten und ehrliches Verhalten ohne 3D-Unterstützung.
 
-Screenshots und maschinenlesbare Browserergebnisse liegen in `outputs/Spielpause-Pruefung/`. Browser: Edge/Chromium, ohne sichtbares Browserfenster. Touch ist emuliert; kein Test an einem physischen Mobilgerät. Es wurde keine Live-Umgebung verändert.
+Screenshots und maschinenlesbare Browserergebnisse liegen in `outputs/Spielpause-Pruefung/`. Browser: Edge/Chromium, ohne sichtbares Browserfenster. Touch ist emuliert; kein Test an einem physischen Mobilgerät. Knautsch benötigt funktionierendes WebGL; andernfalls wird seine Nichtverfügbarkeit gemeldet und die anderen Spielzeuge bleiben erreichbar. Es wird dann kein flacher Ersatzauftritt als 3D ausgegeben.
 
 ## Quellen und Assets für den ursprünglichen Chat
 

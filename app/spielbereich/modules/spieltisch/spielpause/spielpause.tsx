@@ -12,7 +12,7 @@ const faces = [['U','Oben · W / ↑'],['L','Links · A / ←'],['D','Unten · S
 export function Spielpause({open, onMenuClose, personalKey, blocked}: {
   open:boolean; onMenuClose:()=>void; personalKey:string; blocked:boolean;
 }) {
-  const [toy,setToy] = useState<Toy|null>(null);
+  const [toy,setToy] = useState<Toy|null>(null),[keyboardFocus,setKeyboardFocus]=useState(false);
   const picker = useRef<HTMLElement>(null);
   const returnFocus = () => document.querySelector<HTMLButtonElement>('[aria-label="Spielpause"]')?.focus();
   useEffect(() => { if(open) picker.current?.querySelector<HTMLButtonElement>('button[data-choice]')?.focus(); },[open]);
@@ -23,22 +23,23 @@ export function Spielpause({open, onMenuClose, personalKey, blocked}: {
     }}>
       <header><strong>Spielpause</strong><button aria-label="Spielpause-Auswahl schließen" onClick={closeMenu}>×</button></header>
       <p>Ein kleiner Zeitvertreib. Nur auf deinem Tisch.</p>
-      {(Object.keys(names) as Toy[]).map(id=><button data-choice key={id} aria-pressed={toy===id} onClick={()=>{setToy(id);onMenuClose();}}>{names[id]}</button>)}
+      {(Object.keys(names) as Toy[]).map(id=><button data-choice key={id} aria-pressed={toy===id} onClick={e=>{setKeyboardFocus(e.detail===0);setToy(id);onMenuClose();}}>{names[id]}</button>)}
       {toy && <button onClick={()=>{setToy(null);closeMenu();}}>Spielzeug wegräumen</button>}
     </aside>}
-    {toy && <ToyTable key={toy} toy={toy} personalKey={personalKey} blocked={blocked||open} onClose={()=>{setToy(null);returnFocus();}}/>}
+    {toy && <ToyTable key={toy} toy={toy} keyboardFocus={keyboardFocus} personalKey={personalKey} blocked={blocked||open} onClose={()=>{setToy(null);returnFocus();}}/>}
   </>;
 }
 
-function ToyTable({toy,personalKey,blocked,onClose}:{toy:Toy;personalKey:string;blocked:boolean;onClose:()=>void}) {
+function ToyTable({toy,keyboardFocus,personalKey,blocked,onClose}:{toy:Toy;keyboardFocus:boolean;personalKey:string;blocked:boolean;onClose:()=>void}) {
   const root = useRef<HTMLDivElement>(null);
   useEffect(()=>{
     const node=root.current;
     if(!node)return;
+    node.dataset.input=keyboardFocus?'keyboard':'pointer';
     const dispose=mountToys(node,toy,personalKey);
     node.querySelector<HTMLCanvasElement>(`[data-toy-motion="${toy}"] canvas`)?.focus({preventScroll:true});
     return dispose;
-  },[toy,personalKey]);
+  },[toy,personalKey,keyboardFocus]);
   return <div ref={root} className={styles.table} data-spielpause={toy} data-blocked={blocked} onKeyDown={e=>{
     if(e.key==='Escape' && !e.defaultPrevented){e.preventDefault();e.stopPropagation();onClose();}
   }}>

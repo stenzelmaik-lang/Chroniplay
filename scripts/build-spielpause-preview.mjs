@@ -6,6 +6,7 @@ import {resolve,join} from 'node:path';
 import {createRequire} from 'node:module';
 const require=createRequire(import.meta.url);
 const alias=['react','react/jsx-runtime','react/jsx-dev-runtime','react-dom/client'].map(name=>({find:new RegExp('^'+name+'$'),replacement:require.resolve(name)}));
+alias.push({find:/^three$/,replacement:require.resolve('three').replace('three.cjs','three.module.js')});
 const out=resolve('.local-work/spielpause-preview');
 await build({configFile:false,plugins:[react()],define:{'process.env.NODE_ENV':'"production"'},resolve:{alias},build:{outDir:out,emptyOutDir:true,minify:true,cssCodeSplit:false,lib:{entry:resolve('tests/fixtures/spielpause-preview.tsx'),name:'SpielpausePreview',formats:['iife'],fileName:()=> 'preview.js'}}});
 let js=readFileSync(join(out,'preview.js'),'utf8');

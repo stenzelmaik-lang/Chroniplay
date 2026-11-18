@@ -91,7 +91,7 @@ try {
   await id('cube-view').click();assert.ok(await pixels(canvas)===initialView);pass('Mouse layer swipe and view orbit/reset');
 
   await page.emulateMedia({reducedMotion:'no-preference'});await choose('Graf Knautsch');
-  assert.equal(await root.getAttribute('data-phase'),'entrance');await page.waitForTimeout(950);await page.screenshot({path:out+'/doll-on-back.png'});await ready();
+  assert.equal(await root.getAttribute('data-phase'),'entrance');await page.waitForTimeout(1550);await page.screenshot({path:out+'/doll-on-back.png'});await ready();
   assert.equal(await id('doll-quote').textContent(),'Massier mich');await id('doll-reset').click();
   const doll=id('doll-canvas');await page.waitForTimeout(100);const relaxed=await pixels(doll);rect=await doll.boundingBox();
   await page.mouse.move(rect.x+rect.width/2,rect.y+rect.height/2);await page.mouse.down();await page.waitForTimeout(400);

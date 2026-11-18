@@ -1,5 +1,7 @@
 /* Standalone interaction layer. Nothing here calls a server or changes character values. */
 import * as Toys from './toys-core.js';
+import {createDollRenderer} from './doll-3d.js';
+import {DOLL_ENTRANCE_SECONDS} from './doll-pose.js';
 
 // Adapted from the standalone playground; all events belong to this mount.
 export function mountToys(root, activeToy, personalKey) {
@@ -8,6 +10,8 @@ export function mountToys(root, activeToy, personalKey) {
   const listen = (target, event, callback) => target.addEventListener(event, callback, {signal:lifetime.signal});
   const element = id => root.querySelector('[data-toy-id="' + id + '"]');
   const media = matchMedia('(prefers-reduced-motion: reduce)');
+  listen(window,'pointerdown',()=>{root.dataset.input='pointer';});
+  listen(window,'keydown',()=>{root.dataset.input='keyboard';});
   const reduced = () => media.matches || !!root.closest('.user-reduced-motion');
   const formatNumber = new Intl.NumberFormat('de-DE');
   const storageKey = 'chroniplay:spielpause:' + personalKey;
@@ -65,6 +69,12 @@ export function mountToys(root, activeToy, personalKey) {
   const cubeSurface = canvasSurface('cube-canvas');
   const dollSurface = canvasSurface('doll-canvas');
   const spinnerSurface = canvasSurface('spinner-canvas');
+  let dollRenderer=null;
+  if(activeToy==='doll'){
+    try { dollRenderer=createDollRenderer(); root.dataset.doll3d='ready'; }
+    catch { root.dataset.doll3d='unavailable'; }
+  }
+  let dollProgress=reduced()?1:0;
   const cube = new Toys.CubeModel();
   const doll = new Toys.SqueezeModel(initialCount);
   const spinner = new Toys.SpinnerModel();
@@ -81,9 +91,9 @@ export function mountToys(root, activeToy, personalKey) {
   let mixing = false;
   let dollPointer = null;
   let spinnerPointer = null;
-  let eyeX = 0, eyeY = 0;
-  let dollAsset = null, spinnerAsset = null;
+  let spinnerAsset = null;
   const initialQuote = 'Massier mich';
+  const unavailableQuote='Graf Knautsch kann auf diesem Gerät gerade nicht dargestellt werden.';
   const quotes = [
     'Meine Frisur!', 'Das zählt als Massage.', 'Ich bin aus Plüsch!',
     'Keine Knoblauchfinger, bitte.', 'Ein bisschen würdevoller, ja?',
@@ -273,7 +283,7 @@ export function mountToys(root, activeToy, personalKey) {
     element('doll-state').textContent = doll.held ? 'Wird gequetscht' : 'Zum Quetschen bereit';
   }
   function pressDoll() {
-    if (entrance) return;
+    if (entrance || !dollRenderer) return;
 
     if (!doll.press()) return;
     updateDollLabels(); storage.write();
@@ -306,13 +316,8 @@ export function mountToys(root, activeToy, personalKey) {
   }
   listen(dollSurface.canvas, 'pointermove', event => {
     const point = dollSurface.point(event);
-    eyeX = Toys.clamp((point.x - 210) / 48, -3, 3);
-    eyeY = Toys.clamp((point.y - 170) / 62, -2, 2);
     if (doll.held) doll.wobbleVelocity += (point.x - 210) * 0.0008;
     dollDirty = true; requestFrame();
-  });
-  listen(dollSurface.canvas, 'pointerleave', () => {
-    eyeX = eyeY = 0; dollDirty = true; requestFrame();
   });
   listen(dollSurface.canvas, 'keydown', event => {
     if (![' ', 'Enter'].includes(event.key)) return;
@@ -396,13 +401,14 @@ export function mountToys(root, activeToy, personalKey) {
 
   const motion = root.querySelector('[data-toy-motion="' + activeToy + '"]');
   const controls = root.querySelector('[data-toy-controls="' + activeToy + '"]');
-  let entrance = reduced() ? null : {elapsed:0,duration:activeToy === 'cube' ? 0.72 : activeToy === 'doll' ? 1.9 : 2.8};
+  let entrance = reduced() || activeToy==='doll'&&!dollRenderer ? null : {elapsed:0,duration:activeToy === 'cube' ? 0.72 : activeToy === 'doll' ? DOLL_ENTRANCE_SECONDS : 2.8};
   function ready() {
     root.dataset.phase = 'ready'; controls.disabled = false;
-    if (activeToy === 'doll') element('doll-quote').textContent = initialQuote;
+    if (activeToy === 'doll') element('doll-quote').textContent = dollRenderer?initialQuote:unavailableQuote;
   }
   function arrive() {
     motion.style.transform = '';
+    dollProgress=1;
     entrance = null;
     if (activeToy === 'cube') {
       mixing = true; root.dataset.phase = 'mixing'; controls.disabled = true;
@@ -418,9 +424,7 @@ export function mountToys(root, activeToy, personalKey) {
       const fall = t < 0.72 ? (1 - (t / 0.72) ** 2) : -Math.sin((t-0.72)/0.28*Math.PI)*0.055;
       motion.style.transform = 'translateY(' + (-root.clientHeight * 0.75 * fall) + 'px)';
     } else if (activeToy === 'doll') {
-      const y = t < 0.35 ? -root.clientHeight * 0.7 * (1-(t/0.35)**2) : 0;
-      const tilt = t < 0.35 ? 76*t/0.35 : t < 0.58 ? 76 : 76*(1-(t-0.58)/0.42);
-      motion.style.transform = 'translateY('+y+'px) perspective(600px) rotateX('+tilt+'deg) rotateZ('+(-tilt*0.24)+'deg)';
+      dollProgress=t;dollDirty=true;
     } else {
       const box = motion.getBoundingClientRect();
       const rx = Math.max(0,(root.clientWidth-box.width)/2-12);
@@ -473,8 +477,7 @@ export function mountToys(root, activeToy, personalKey) {
     }
     if (activeToy === 'doll' && (dollDirty || timestamp < blinkUntil)) {
       dollSurface.clear();
-      Toys.drawVampire(dollSurface.ctx, { value: doll.value, wobble: doll.wobble,
-        eyeX, eyeY, blink: timestamp < blinkUntil, asset: dollAsset, bubble: true });
+      dollRenderer?.draw(dollSurface.ctx,{progress:dollProgress,squeeze:doll.value,wobble:doll.wobble});
       dollDirty = false;
     }
     if (spinnerDirty && activeToy === 'spinner') {
@@ -513,19 +516,20 @@ export function mountToys(root, activeToy, personalKey) {
   listen(media, 'change', () => { cubeDirty = dollDirty = spinnerDirty = true; requestFrame(); });
   const puppetImage = new Image();
   listen(puppetImage, 'load', () => {
-    dollAsset = puppetImage;
+    dollRenderer?.setImage(puppetImage);
     dollDirty = true; requestFrame();
   });
   if (activeToy === 'doll') puppetImage.src = '/spielpause/graf-knautsch.webp';
   const spinnerImage = new Image();
   listen(spinnerImage,'load',() => { spinnerAsset = spinnerImage; spinnerDirty = true; requestFrame(); });
   if (activeToy === 'spinner') spinnerImage.src = '/spielpause/vampir-spinner.webp';
-  element('doll-quote').textContent = initialQuote;
+  element('doll-quote').textContent = activeToy==='doll'&&!dollRenderer?unavailableQuote:initialQuote;
   selectFace('F'); updateCubeLabels(); updateDollLabels(); updateSpinnerLabels();
   for (const surface of surfaces) surface.resize();
   requestFrame();
   return () => {
     disposed = true;
+    dollRenderer?.dispose();
     lifetime.abort(); observer?.disconnect(); priorityObserver.disconnect();
     cancelAnimationFrame(frameRequest);
     releaseInputs();
