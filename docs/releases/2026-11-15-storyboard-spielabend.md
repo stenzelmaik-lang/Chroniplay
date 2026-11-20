@@ -62,3 +62,20 @@ Freigabe des Besitzers: „Ja, live bringen“.
 Nach dem Deploy: `/anmelden` 200, Vorbereitung ohne Anmeldung 401; neue Texte („Vorlage für andere KI“) und Spielpause („Graf Knautsch“) im ausgelieferten Bundle. Ein Chunk antwortete direkt nach dem Upload kurz mit 404 und ist seitdem erreichbar (200). Angemeldete Live-Ansicht nicht geprüft (Browser-Sitzung abgelaufen; Anmeldung nur durch die SL).
 
 Rückweg: `wrangler rollback c536d4e1-b3ca-45bf-a798-d807dc739191 --name chronik-von-kleve`.
+
+## Nachtrag 20.11.2026 (später): sichtbare Felder der Szenenwerkzeuge
+
+Freigabe des Besitzers: „Ja, live bringen“.
+
+| | |
+|---|---|
+| Live-Codecommit | `df55055`, `main` per Fast-Forward auf denselben Commit |
+| Worker-Version | `b191ca45-beff-4464-95b3-5337a514f2a3`, Tag `df55055-Werkzeugfelder` |
+| Vorversion | `f328cc63-3a33-4b50-b403-5207ef5a0bef` (Tag `1332541-HTML-Import`), vor dem Deploy zweimal geprüft |
+| Migration | keine; Konfiguration unverändert |
+| D1-Lesezeichen vor dem Deploy | `00000228-000003e4-00005129-c2255dcdbbed33c85cde25b148afac77` |
+
+Inhalt: Ambiente-Playlist, Standardfiguren und andere Werkzeuge in den Storyboard-Szenenbereichen haben sichtbare Felder und Knöpfe (nur CSS).
+Nach dem Deploy: `/anmelden` 200, Vorbereitung ohne Anmeldung 401, neues Stylesheet ausgeliefert (200, neue Regel enthalten). Angemeldete Live-Ansicht nicht geprüft (Anmeldung nur durch die SL).
+
+Rückweg: `wrangler rollback f328cc63-3a33-4b50-b403-5207ef5a0bef --name chronik-von-kleve`.
