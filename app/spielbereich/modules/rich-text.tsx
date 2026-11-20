@@ -1,10 +1,10 @@
 /* eslint-disable @next/next/no-img-element -- Images use the protected authenticated file API. */
 "use client";
 
-import { useId, useLayoutEffect, useRef, useState, type ClipboardEvent, type MouseEvent, type ReactNode } from "react";
+import { useId, useLayoutEffect, useMemo, useRef, useState, type ClipboardEvent, type MouseEvent, type ReactNode } from "react";
 import {
   encodeRichText,
-  htmlToRichText, htmlTextToRichText, inspectRichTextSource, richHtmlPrefix, richTextToHtml,
+  htmlToRichText, htmlTextToRichText, inspectRichTextSource, richHtmlPrefix, richTextToHtml, htmlImportNotes, htmlAuthoringGuide,
   readRichText,
   parseRichTextDocument,
   proseInlineParts,
@@ -111,6 +111,7 @@ export function RichTextEditor({
   disabled?: boolean;
 }) {
   const [initialSource]=useState(()=>value.startsWith(richHtmlPrefix)?{raw:value.slice(richHtmlPrefix.length),...inspectRichTextSource(value.slice(richHtmlPrefix.length),maximumPlainLength)}:null);
+  const [guideCopied,setGuideCopied]=useState(false);
   const [htmlMode,setHtmlMode]=useState(sourceOnly||initialSource!==null),[htmlDraft,setHtmlDraft]=useState(initialSource?.raw??(sourceOnly?richTextToHtml(value):'')),[htmlError,setHtmlError]=useState(initialSource?.error??''),[imageId,setImageId]=useState('');
   const [preview, setPreview] = useState(false);
   const helpId = useId();
@@ -238,6 +239,7 @@ export function RichTextEditor({
     commit();
   }
 
+  const importNotes=useMemo(()=>htmlSource&&htmlMode&&htmlDraft.trim()?htmlImportNotes(htmlDraft):[],[htmlSource,htmlMode,htmlDraft]);
   function sourceChange(raw:string){
     if(disabled)return;
     setHtmlDraft(raw);
@@ -253,11 +255,13 @@ export function RichTextEditor({
       {!sourceOnly&&<button type="button" aria-pressed={!htmlMode&&!preview} disabled={htmlMode&&!!htmlError} onClick={()=>{setPreview(false);setHtmlMode(false);}}>Visuell</button>}
       <button type="button" aria-pressed={htmlMode&&!preview} onClick={()=>{if(!htmlMode)setHtmlDraft(value.startsWith(richHtmlPrefix)?value.slice(richHtmlPrefix.length):richTextToHtml(value));setPreview(false);setHtmlMode(true);}}>{htmlSource?'HTML-Quelltext':'HTML · Expertenansicht'}</button>
       {htmlSource&&<button type="button" aria-pressed={preview} disabled={!!htmlError} onClick={()=>setPreview(true)}>Vorschau</button>}
+      {htmlSource&&htmlMode&&!preview&&<button type="button" title="Kopiert eine Anleitung, damit eine andere KI HTML schreibt, das hier seine Gestaltung behält." onClick={()=>{void navigator.clipboard?.writeText(htmlAuthoringGuide).then(()=>{setGuideCopied(true);setTimeout(()=>setGuideCopied(false),2500);}).catch(()=>undefined);}}>{guideCopied?'Vorlage kopiert':'Vorlage für andere KI'}</button>}
       {!preparationTools&&<small>{htmlSource?'Vorschau veröffentlicht nichts.':'Nur sichere Struktur; Bilder aus dem geschützten Dateispeicher.'}</small>}
     </div>}
     {preparationTools&&<div className={styles.preparationTools}>{inlineGallery&&<ProtectedImageGallery files={files} disabled={disabled||!!htmlError||preview} onOpen={preserveSelection} onSelect={id=>{const markup='<img src="/api/files?id='+id.replace(/[^a-zA-Z0-9_.-]/g,'')+'" alt="Szenenbild"><p><br></p>';if(htmlMode)sourceChange(htmlDraft+markup);else command('insertHTML',markup);}}/>}{!htmlMode&&!preview&&<button type="button" aria-expanded={extraTools} onClick={()=>setExtraTools(!extraTools)}>Weitere Formatierung</button>}</div>}
     {preview?<section className={styles.preview} data-custom-prose={proseClassName ? true : undefined} aria-label={`${label} Vorschau`}><RichTextView value={previewValue ?? value} readable flowing={Boolean(proseClassName)} className={proseClassName}/></section>:htmlMode?<>
       <textarea disabled={disabled} aria-label={label+' HTML'} aria-describedby={preparationTools?undefined:helpId} aria-invalid={!!htmlError} spellCheck={false} value={htmlDraft} onChange={e=>sourceChange(e.target.value)} rows={sourceOnly?7:16}/>
+      {htmlSource&&importNotes.length>0&&<ul className={styles.importNotes} aria-label="Hinweise zur HTML-Übernahme">{importNotes.map(note=><li key={note}>{note}</li>)}</ul>}
       {sourceOnly?<p className={styles.sourceHelp} id={helpId}>HTML für Absätze, Überschriften, Listen und Tabellen. Die Vorschau veröffentlicht nichts.</p>:htmlSource&&!preparationTools&&<p className={styles.sourceHelp} id={helpId}>Erlaubt: Überschriften, Absätze, Hervorhebungen, Listen, Zitate, Links, Trennlinien, Tabellen mit Kopfzeilen und aufklappbare Abschnitte. Klassen: <code>cp-intro</code>, <code>cp-highlight</code>, <code>cp-note</code>, <code>cp-divider</code>. Beispiel: <code>{'<p class="cp-intro">Ein erster Eindruck.</p>'}</code></p>}
     </>:<>
     <div className={styles.toolbar} role="toolbar" aria-label={`${label} formatieren`}>

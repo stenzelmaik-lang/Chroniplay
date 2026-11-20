@@ -21,6 +21,19 @@ Nicht committet, nicht gepusht, nicht deployt. Keine Migration, keine neuen Abh�
 - Grenze: Ein Abend, dessen Szenen selbst einem Buch angehören, erscheint dort weiterhin, auch wenn „Ohne Buch“ gewählt ist (bestehende Zuordnung über Szenen bleibt unverändert).
 - Noch nicht live: wartet auf Freigabe.
 
+## Nachtrag 20.11.2026: HTML-Eingabe im Storyboard, verbesserter HTML-Import
+
+- Alle acht Szenenbereiche bieten im Editor **Visuell · HTML-Quelltext · Vorschau** (wie die klassische Ansicht). HTML anderer KIs kann direkt eingefügt werden.
+- Verbesserter Import (zentral in `domain/location-rich-text.ts`, wirkt überall, wo HTML eingefügt wird):
+  - Code-Block-Markierungen (```` ```html ````) und ganze Seiten (`<html>/<head>/<body>`) werden ausgepackt; `<title>`, `<head>`, `<meta>`, `<link>` fallen weg.
+  - Aus `style` werden übernommen: Textfarbe (auch `#abc`, `rgba()`, gängige Farbnamen), fett, kursiv, unterstrichen, durchgestrichen, Ausrichtung (`text-align`, `align`, `<center>`, auch von umschließenden `<div>` geerbt).
+  - Mehr Elemente: `h5/h6` → Überschrift, `<mark>` → Hervorhebung, `<dt>/<dd>`, `<pre>`, `<figcaption>`, `<cite>/<q>` → kursiv.
+  - Weiterhin entfernt (Sicherheit/Einheitlichkeit): Rahmen, Hintergründe, Schriftgrößen/-arten, Abstände, `<style>`-Blöcke, Skripte, Einbettungen, fremde Bilder.
+- Editor: Unter dem Quelltext erscheint, was nicht übernommen wird (Stilangaben, unbekannte Klassen, `<style>`, Skripte, fremde Bilder). Knopf **„Vorlage für andere KI“** kopiert eine Anleitung, mit der eine andere KI passendes HTML schreibt. Quelltext in Festbreitenschrift.
+- Lesefassung zeigt Listen mit Aufzählungszeichen.
+- Prüfungen: `tests/rich-text-html-import.test.mjs` (5 Tests, in `pnpm test`); alle Unit-Tests 701/701; tsc und ESLint grün; Browser: KI-HTML mit Code-Block eingefügt, Hinweise und Vorlage-Knopf sichtbar, nach Neuladen zentriert/farbig/fett/Liste/Hervorhebung korrekt. Integrations- und Browser-Skripte (`*-integration.mjs`, `*-browser.mjs`) nicht ausgeführt. Lokaler Prüfspeicher gelöscht.
+- Noch nicht live.
+
 ## Dateien
 
 - `domain/storyboard.ts` – reine Hilfen (Reifegrad, Umsortieren, Buch-/Abendzuordnung, Führung, `sceneResources`, `sortEvenings`)

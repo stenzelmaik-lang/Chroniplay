@@ -181,6 +181,11 @@
 .reader,.writer{display:grid;gap:14px}
 .prose{font-family:'Spectral',Georgia,serif;font-size:clamp(18px,1.3vw,21px);line-height:1.75;color:#efe6d6}
 .prose p{margin:0 0 1em}
+.prose ul,.prose ol{margin:0 0 1em;padding-left:1.6em}
+.prose ul{list-style:disc}
+.prose ol{list-style:decimal}
+.prose li{margin:.25em 0}
+.prose li::marker{color:var(--sb-gold)}
 .blank{margin:0;font:italic 19px/1.6 'Spectral',Georgia,serif;color:#8f999e}
 .pageActions{display:flex;justify-content:flex-end;gap:10px;padding-top:6px;border-top:1px solid #222c34}
 .privatePage{background:radial-gradient(circle at 50% -20%,#2a1a1e,#161114 60%);border-color:#4a2a30}

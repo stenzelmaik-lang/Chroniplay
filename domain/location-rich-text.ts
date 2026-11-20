@@ -226,31 +226,105 @@ export const richHtmlPrefix='cvk-html-v1:';
 /** Recognize an explicitly pasted HTML fragment, not angle brackets in prose.
  * Recognition is only a format hint; the existing parser remains the sanitizer. */
 export function htmlTextToRichText(value:string):string|null {
-  if (!/^\s*<(?:p|h[1-4]|ul|ol|blockquote|table|div|section|article|strong|b|em|i|u|span|hr|br)(?:\s|\/?>)/i.test(value)
-    || !/(?:<\/(?:p|h[1-4]|ul|ol|blockquote|table|div|section|article|strong|b|em|i|u|span)\s*>|<(?:hr|br)\b[^>]*\/?>)\s*$/i.test(value)) return null;
-  try { return htmlToRichText(value); }
+  const source=cleanHtmlSource(value);
+  if (!/^\s*<(?:p|h[1-6]|ul|ol|blockquote|table|div|section|article|aside|header|main|center|details|figure|strong|b|em|i|u|span|hr|br)(?:\s|\/?>)/i.test(source)
+    || !/(?:<\/(?:p|h[1-6]|ul|ol|blockquote|table|div|section|article|aside|header|main|center|details|figure|strong|b|em|i|u|span)\s*>|<(?:hr|br)\b[^>]*\/?>)\s*$/i.test(source)) return null;
+  try { return htmlToRichText(source); }
   catch { return null; } // Preserve the original text if formatting cannot be represented safely.
 }
 type HtmlNode={nodeName:string;tagName?:string;value?:string;attrs?:{name:string;value:string}[];childNodes?:HtmlNode[]};
-const forbidden=new Set(['script','style','iframe','object','embed','svg','math','template','noscript','form','input','button','video','audio']);
+const forbidden=new Set(['script','style','iframe','object','embed','svg','math','template','noscript','form','input','button','video','audio','head','title','meta','link','base']);
+
+/** HTML from other tools often arrives wrapped: a Markdown code fence (```html … ```) or a whole page.
+ * Only the content is kept; the sanitizer below still decides what survives. */
+export function cleanHtmlSource(html:string):string {
+  let source=html.replace(/^\uFEFF/,'').trim();
+  const fence=source.match(/^```[a-zA-Z0-9-]*[ \t]*\r?\n([\s\S]*?)\r?\n?```\s*$/);
+  if(fence)source=fence[1].trim();
+  const body=source.match(/<body\b[^>]*>([\s\S]*)<\/body\s*>/i);
+  if(body)source=body[1].trim();
+  return source;
+}
+const namedColors:Record<string,string>={white:'#ffffff',black:'#000000',red:'#d32f2f',darkred:'#8b0000',crimson:'#dc143c',maroon:'#800000',gold:'#ffd700',goldenrod:'#daa520',orange:'#ffa500',yellow:'#ffeb3b',green:'#2e7d32',darkgreen:'#006400',blue:'#1e88e5',navy:'#000080',purple:'#800080',brown:'#8b4513',gray:'#808080',grey:'#808080',silver:'#c0c0c0',beige:'#f5f5dc',ivory:'#fffff0',wheat:'#f5deb3',tan:'#d2b48c'};
+/** A CSS colour as #rrggbb, or undefined: #rgb, #rrggbb, rgb()/rgba() (alpha dropped) and a few common names. */
+export function cssColorToHex(value:string|undefined):string|undefined {
+  const v=value?.trim().toLowerCase();if(!v)return undefined;
+  if(/^#[0-9a-f]{6}$/.test(v))return v;
+  const short=v.match(/^#([0-9a-f])([0-9a-f])([0-9a-f])$/);if(short)return '#'+short.slice(1).map(c=>c+c).join('');
+  const rgb=v.match(/^rgba?\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*(?:,\s*[\d.]+%?\s*)?\)$/);
+  if(rgb){const parts=rgb.slice(1,4).map(Number);return parts.every(n=>n<=255)?'#'+parts.map(n=>n.toString(16).padStart(2,'0')).join(''):undefined;}
+  return namedColors[v];
+}
+function styleOf(n:HtmlNode):Record<string,string> {
+  const out:Record<string,string>={};
+  for(const declaration of (n.attrs?.find(a=>a.name==='style')?.value||'').slice(0,2000).split(';')){
+    const i=declaration.indexOf(':');if(i>0)out[declaration.slice(0,i).trim().toLowerCase()]=declaration.slice(i+1).trim().toLowerCase().replace(/\s*!important$/,'');
+  }
+  return out;
+}
+type Align=''|'center'|'right';
+function alignOf(n:HtmlNode,inherited:Align):Align {
+  const value=(styleOf(n)['text-align']||n.attrs?.find(a=>a.name==='align')?.value||'').toLowerCase();
+  if(n.tagName==='center'||value==='center')return 'center';
+  if(value==='right'||value==='end')return 'right';
+  if(value==='left'||value==='start'||value==='justify')return '';
+  return inherited;
+}
+const supportedStyles=new Set(['color','font-weight','font-style','text-decoration','text-decoration-line','text-align']);
+/** What a pasted HTML fragment loses on import, in plain German, so the SL can adjust the source or the other tool. */
+export function htmlImportNotes(html:string):string[] {
+  const source=cleanHtmlSource(html);if(!source||source.length>authoringSourceMax)return [];
+  let root:HtmlNode;try{root=parseFragment(source) as unknown as HtmlNode;}catch{return [];}
+  const notes:string[]=[],lost=new Set<string>(),classes=new Set<string>();let count=0,styleBlock=false,unsafe=false,externalImage=false;
+  const visit=(n:HtmlNode,depth=0)=>{
+    if(++count>5000||depth>40)return;
+    const tag=n.tagName||'';
+    if(tag==='style')styleBlock=true;
+    else if(['script','iframe','object','embed','form','input','button','video','audio','svg','math'].includes(tag))unsafe=true;
+    else if(tag==='img'&&!/^\/api\/files\?id=[a-zA-Z0-9_.-]{1,100}$/.test(n.attrs?.find(a=>a.name==='src')?.value||''))externalImage=true;
+    for(const key of Object.keys(styleOf(n)))if(!supportedStyles.has(key))lost.add(key);
+    for(const name of (n.attrs?.find(a=>a.name==='class')?.value||'').split(/\s+/))if(name&&!richTextClasses.includes(name as typeof richTextClasses[number]))classes.add(name);
+    (n.childNodes||[]).forEach(c=>visit(c,depth+1));
+  };
+  (root.childNodes||[]).forEach(n=>visit(n));
+  const list=(set:Set<string>)=>[...set].slice(0,8).join(', ')+(set.size>8?' …':'');
+  if(lost.size)notes.push('Nicht übernommene Stilangaben: '+list(lost)+'. Übernommen werden Textfarbe, fett, kursiv, unterstrichen, durchgestrichen und Ausrichtung.');
+  if(classes.size)notes.push('Unbekannte Klassen ignoriert: '+list(classes)+'. Gestalten kannst du mit '+richTextClasses.join(', ')+'.');
+  if(styleBlock)notes.push('Stilblöcke (<style>) werden nicht übernommen – nutze die cp-Klassen oder Farben direkt am Text.');
+  if(unsafe)notes.push('Skripte, Einbettungen, Formulare und Medien-Elemente werden aus Sicherheitsgründen entfernt.');
+  if(externalImage)notes.push('Bilder von außerhalb werden entfernt. Bilder fügst du über die Galerie ein.');
+  return notes;
+}
+/** Copyable brief for another AI, so the HTML it writes keeps its look in ChroniPlay. */
+export const htmlAuthoringGuide=[
+  'Schreibe den Text als reines HTML-Fragment für ChroniPlay – ohne <html>, <head>, <body>, <style> oder <script> und ohne Code-Block-Markierung.',
+  'Erlaubte Elemente: <h2>, <h3>, <p>, <strong>, <em>, <u>, <s>, <ul>/<ol>/<li>, <blockquote>, <hr>, <table> mit <tr>, <th>, <td>, <details> mit <summary>, <a href="https://…">.',
+  'Gestaltung nur über diese Klassen: cp-intro (Einleitung), cp-subtitle (Untertitel), cp-highlight (Hervorhebung), cp-note (Hinweis), cp-divider (Trennung), cp-align-center und cp-align-right (Ausrichtung). Mehrere Klassen mit Leerzeichen trennen.',
+  'Farben nur direkt am Text als style="color:#rrggbb". Fett, kursiv und Ausrichtung dürfen auch als style angegeben werden.',
+  'Keine Rahmen, Hintergründe, Schriftgrößen, Schriftarten, Abstände, Bilder oder Einbettungen – die Darstellung übernimmt ChroniPlay.',
+].join('\n');
 export function htmlToRichText(html:string):string {
   if(html.length>authoringSourceMax)throw new Error('HTML zu lang.');
-  const root=parseFragment(html) as unknown as HtmlNode;
+  const root=parseFragment(cleanHtmlSource(html)) as unknown as HtmlNode;
   let visited=0;
   const inline=(n:HtmlNode,marks:Omit<RichTextInline,'text'>={},depth=0):RichTextInline[]=>{
     if(++visited>5000||depth>40)throw new Error('HTML zu komplex.');
     if(n.nodeName==='#text')return [{text:n.value||'',...marks}];
     const tag=n.tagName||'';if(forbidden.has(tag))return [];
-    const m={...marks};if(['b','strong'].includes(tag))m.bold=true;if(['i','em'].includes(tag))m.italic=true;if(tag==='u')m.underline=true;if(['s','strike','del'].includes(tag))m.strike=true;
-    if(tag==='span'){
-      const className=allowedClasses([marks.className,n.attrs?.find(a=>a.name==='class')?.value].filter(Boolean).join(' '));
+    const m={...marks},style=styleOf(n),decoration=style['text-decoration-line']||style['text-decoration']||'';
+    if(['b','strong'].includes(tag)||/^(?:bold|bolder|[6-9]00)$/.test(style['font-weight']||''))m.bold=true;
+    if(['i','em','cite','q','dfn','var'].includes(tag)||/^(?:italic|oblique)/.test(style['font-style']||''))m.italic=true;
+    if(['u','ins'].includes(tag)||decoration.includes('underline'))m.underline=true;
+    if(['s','strike','del'].includes(tag)||decoration.includes('line-through'))m.strike=true;
+    if(['span','mark','font','strong','b','em','i'].includes(tag)){
+      const className=allowedClasses([marks.className,n.attrs?.find(a=>a.name==='class')?.value,tag==='mark'?'cp-highlight':''].filter(Boolean).join(' '));
       if(className)m.className=className;
     }
-    const color=n.attrs?.find(a=>a.name==='style')?.value.match(/(?:^|;)\s*color\s*:\s*(#[a-f0-9]{6}|rgb\([^)]*\))/i)?.[1]?.toLowerCase()||n.attrs?.find(a=>a.name==='color')?.value.toLowerCase();const rgb=color?.match(/^rgb\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)$/);const normalized=rgb?'#'+rgb.slice(1).map(v=>Number(v).toString(16).padStart(2,'0')).join(''):color;if(isRichTextColor(normalized))m.color=normalized;
+    const color=cssColorToHex(style.color)||cssColorToHex(n.attrs?.find(a=>a.name==='color')?.value);if(color&&isRichTextColor(color))m.color=color;
     if(tag==='a'){const href=safeHref(n.attrs?.find(a=>a.name==='href')?.value);if(href)m.href=href;}
     if(tag==='br')return [{text:'\n',...m}];
     const children:RichTextInline[]=[];
-    const lineBlocks=new Set(['p','div','h1','h2','h3','h4','ul','ol','li','blockquote']);
+    const lineBlocks=new Set(['p','div','h1','h2','h3','h4','h5','h6','ul','ol','li','blockquote','dt','dd','pre','figcaption']);
     let previousWasBlock=false;
     for(const child of n.childNodes||[]){
       const parts=inline(child,m,depth+1), isBlock=lineBlocks.has(child.tagName||'');
@@ -261,10 +335,11 @@ export function htmlToRichText(html:string):string {
     return children;
   };
   const blocks:RichTextBlock[]=[];
-  const walk=(n:HtmlNode,depth=0)=>{
+  const walk=(n:HtmlNode,depth=0,inheritedAlign:Align='')=>{
     if(depth>40||++visited>5000)throw new Error('HTML zu komplex.');
     const tag=n.tagName||'';if(forbidden.has(tag))return;
-    const className=allowedClasses(n.attrs?.find(a=>a.name==='class')?.value);
+    const align=n.nodeName==='#text'?inheritedAlign:alignOf(n,inheritedAlign);
+    const className=allowedClasses([n.attrs?.find(a=>a.name==='class')?.value,align==='center'?'cp-align-center':align==='right'?'cp-align-right':''].filter(Boolean).join(' '));
     const decoration=className?{className}:{};
     if(tag==='hr'){blocks.push({type:'divider',...decoration});return;}
     if(tag==='img'){
@@ -273,7 +348,7 @@ export function htmlToRichText(html:string):string {
     }
     if(tag==='details'){
       const summary=(n.childNodes||[]).find(c=>c.tagName==='summary');
-      const start=blocks.length;(n.childNodes||[]).filter(c=>c!==summary).forEach(c=>walk(c,depth+1));
+      const start=blocks.length;(n.childNodes||[]).filter(c=>c!==summary).forEach(c=>walk(c,depth+1,align));
       const content=blocks.splice(start);blocks.push({type:'details',summary:(summary?inline(summary).map(p=>p.text).join(''):'Weiterlesen').trim().slice(0,200)||'Weiterlesen',content:{version:1,blocks:content},...decoration});return;
     }
     if(tag==='table'){
@@ -286,13 +361,13 @@ export function htmlToRichText(html:string):string {
     // Browsers create inline-only <div> lines (including <div><br></div>)
     // for Enter/pasted newlines. Preserve them as paragraphs, not loose text.
     const editorLine = tag === 'div' && !(n.childNodes || []).some(child => /^(?:p|div|section|article|h[1-6]|ul|ol|table|blockquote)$/.test(child.tagName || ''));
-    if(['p','h1','h2','h3','h4','blockquote'].includes(tag)||editorLine){
-      blocks.push({type:tag==='blockquote'?'quote':['h1','h2'].includes(tag)?'heading2':['h3','h4'].includes(tag)?'heading3':'paragraph',children:(n.childNodes?.length===1&&n.childNodes[0].tagName==='br')?[]:inline(n),...decoration});
-      (n.childNodes||[]).filter(c=>c.tagName==='img'||c.tagName==='hr').forEach(c=>walk(c,depth+1));return;
+    if(['p','h1','h2','h3','h4','h5','h6','blockquote','pre','dt','dd','figcaption','address'].includes(tag)||editorLine){
+      blocks.push({type:tag==='blockquote'?'quote':['h1','h2'].includes(tag)?'heading2':['h3','h4','h5','h6'].includes(tag)?'heading3':'paragraph',children:(n.childNodes?.length===1&&n.childNodes[0].tagName==='br')?[]:inline(n,tag==='dt'?{bold:true}:{}),...decoration});
+      (n.childNodes||[]).filter(c=>c.tagName==='img'||c.tagName==='hr').forEach(c=>walk(c,depth+1,align));return;
     }
-    if(['span','a','b','strong','i','em','u','s','strike','del','font'].includes(tag)){blocks.push({type:'paragraph',children:(n.childNodes?.length===1&&n.childNodes[0].tagName==='br')?[]:inline(n)});return;}
-    if(n.nodeName==='#text'){if(n.value?.trim())blocks.push({type:'paragraph',children:[{text:n.value}]});return;}
-    (n.childNodes||[]).forEach(c=>walk(c,depth+1));
+    if(['span','a','b','strong','i','em','u','s','strike','del','font','mark','cite','q','code','small','sub','sup','abbr','time','ins'].includes(tag)){blocks.push({type:'paragraph',children:(n.childNodes?.length===1&&n.childNodes[0].tagName==='br')?[]:inline(n),...(align?{className:align==='center'?'cp-align-center':'cp-align-right'}:{})});return;}
+    if(n.nodeName==='#text'){if(n.value?.trim())blocks.push({type:'paragraph',children:[{text:n.value}],...(inheritedAlign?{className:inheritedAlign==='center'?'cp-align-center':'cp-align-right'}:{})});return;}
+    (n.childNodes||[]).forEach(c=>walk(c,depth+1,align));
   };
   (root.childNodes||[]).forEach(n=>walk(n));
   const parsed=parseRichTextDocument({version:1,blocks});if(!parsed)throw new Error('HTML überschreitet die zulässige Dokumentstruktur.');return encodeRichText(parsed);

@@ -339,7 +339,7 @@ export function Storyboard({ a, onDirty, onClassic }: { a: Actor; onDirty?: (dir
     if (!open) return null;
     const value = String(open.document[key] || ""), label = sceneGuideSteps.find(step => step.id === key)?.label || "Text";
     if (writing === key) return <div className={s.writer}>
-      <RichTextEditor key={open.id + ":" + key} label={label} value={value} onChange={next => change({ [key]: next } as Partial<SceneDocument>)} maximumPlainLength={authoringTextMax} placeholder={areaPlaceholder[key]} compactTools preparationTools inlineGallery={galleryAreas.has(key)} files={galleryAreas.has(key) ? files : []} proseClassName={s.prose} />
+      <RichTextEditor key={open.id + ":" + key} label={label} value={value} onChange={next => change({ [key]: next } as Partial<SceneDocument>)} maximumPlainLength={authoringTextMax} placeholder={areaPlaceholder[key]} advanced htmlSource compactTools preparationTools inlineGallery={galleryAreas.has(key)} files={galleryAreas.has(key) ? files : []} proseClassName={s.prose} />
       <div className={s.pageActions}><button type="button" className={s.primary} onClick={() => { setWriting(null); void save(); }}>Fertig – Lesefassung zeigen</button></div>
     </div>;
     return <div className={s.reader}>

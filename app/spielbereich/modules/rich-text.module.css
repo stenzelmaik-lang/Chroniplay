@@ -14,6 +14,8 @@
 .sourceEditor .toolbar button:focus-visible, .sourceEditor textarea:focus-visible, .sourceEditor .editable:focus-visible { outline: 2px solid #d6b36f; outline-offset: 3px; }
 .sourceHelp { margin: 0; color: #b4b9b0; font-size: 13px; line-height: 1.6; overflow-wrap: anywhere; }
 .sourceHelp code { color: #e7d5ad; }
+.importNotes { margin: 0; padding: 10px 12px 10px 28px; border: 1px solid rgba(214,179,111,.35); border-radius: 8px; background: rgba(214,179,111,.06); color: #e4dac8; font-size: 13px; line-height: 1.55; display: grid; gap: 4px; }
+.sourceEditor > textarea, .editor textarea[aria-label$=" HTML"] { font-family: ui-monospace, "Cascadia Code", Consolas, monospace; font-size: 14px; line-height: 1.55; tab-size: 2; }
 .sourceEditor .editorFooter { color: #b4b9b0; font-size: 12px; }
 .sourceEditor .editorFooter small { font-size: 12px; }
 .preview { min-height: 160px; padding: 20px; border: 1px solid rgba(205,166,107,.28); background: rgba(6,11,13,.7); }
