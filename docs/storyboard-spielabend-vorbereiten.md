@@ -34,6 +34,12 @@ Nicht committet, nicht gepusht, nicht deployt. Keine Migration, keine neuen Abh�
 - Prüfungen: `tests/rich-text-html-import.test.mjs` (5 Tests, in `pnpm test`); alle Unit-Tests 701/701; tsc und ESLint grün; Browser: KI-HTML mit Code-Block eingefügt, Hinweise und Vorlage-Knopf sichtbar, nach Neuladen zentriert/farbig/fett/Liste/Hervorhebung korrekt. Integrations- und Browser-Skripte (`*-integration.mjs`, `*-browser.mjs`) nicht ausgeführt. Lokaler Prüfspeicher gelöscht.
 - Noch nicht live.
 
+## Nachtrag 20.11.2026: Eingabefelder der Werkzeuge sichtbar
+
+- Fehler: In der Storyboard-Szene hatten die Felder fremder Bausteine (Ambiente-Playlist, Standardfiguren u. a.) weder Rahmen noch Hintergrund und waren nur 20 px hoch – sie wirkten wie Text; „Titel hinzufügen“ war ohne Link grau. Ursache: Diese Bausteine verlassen sich auf die Feldgestaltung der klassischen Ansicht.
+- Behebung: schwache (`:where`) Feld- und Knopfgestaltung für `.tools` im Storyboard; eigene Klassen der Bausteine haben weiter Vorrang.
+- Lokal geprüft: Playlist-Titel per Link angelegt, nach Neuladen gespeichert und bearbeitbar; Standardfiguren-Felder sichtbar; alle Unit-Tests grün. Prüfspeicher gelöscht. Noch nicht live.
+
 ## Dateien
 
 - `domain/storyboard.ts` – reine Hilfen (Reifegrad, Umsortieren, Buch-/Abendzuordnung, Führung, `sceneResources`, `sortEvenings`)

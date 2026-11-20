@@ -178,6 +178,14 @@
 .field{display:grid;gap:5px;font-size:12px;color:var(--sb-mute)}
 .field select,.field input,.field textarea{width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid var(--sb-line);border-radius:9px;background:#0c1217;color:var(--sb-ink);font:inherit;font-size:14px;resize:vertical}
 .tools{display:grid;gap:16px}
+/* Werkzeuge anderer Module (Szenenbild, Playlist, NPCs, Figuren) bringen hier nicht immer eigene Feldgestaltung mit.
+   :where() hält die Regeln schwach, damit eigene Klassen der Module weiter Vorrang haben. */
+.tools :where(input:not([type=checkbox],[type=radio],[type=file],[type=range],[type=color]),select,textarea){box-sizing:border-box;width:100%;min-height:42px;padding:9px 12px;border:1px solid var(--sb-line);border-radius:9px;background:#0c1217;color:var(--sb-ink);font:inherit;font-size:14px}
+.tools :where(input,select,textarea):focus{border-color:var(--sb-gold);outline:none;box-shadow:0 0 0 2px var(--sb-gold-soft)}
+.tools :where(input)::placeholder{color:#6f7a80}
+.tools :where(label){color:var(--sb-mute)}
+.tools :where(button:not([class])){display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:42px;padding:8px 14px;border:1px solid var(--sb-gold);border-radius:9px;background:transparent;color:#e9cf98;font-weight:600;font-size:13px}
+.tools :where(button:not([class])):hover:not(:disabled){background:var(--sb-gold-soft)}
 .reader,.writer{display:grid;gap:14px}
 .prose{font-family:'Spectral',Georgia,serif;font-size:clamp(18px,1.3vw,21px);line-height:1.75;color:#efe6d6}
 .prose p{margin:0 0 1em}
