@@ -46,3 +46,19 @@ Nach dem Deploy: `/anmelden` 200, Vorbereitung ohne Anmeldung 401, neues Bundle 
 - Geprüft: Buchseite „Blut ohne Erbe“ zeigt den Abend unter „Vorbereitet“, keine Konsolenfehler.
 
 Rückweg Code: `wrangler rollback 9f4d25c6-acb6-4534-a0bd-583a3128f4e5 --name chronik-von-kleve`. Rückweg Daten: im Abendkopf „Ohne Buch“ wählen; das Buch lässt sich in der klassischen Ansicht archivieren.
+
+## Nachtrag 20.11.2026: HTML-Eingabe im Storyboard und verbesserter HTML-Import
+
+Freigabe des Besitzers: „Ja, live bringen“.
+
+| | |
+|---|---|
+| Live-Codecommit | `1332541` (enthält `main` 689579c mit Spielpause, PR #87), `main` per Fast-Forward auf denselben Commit |
+| Worker-Version | `f328cc63-3a33-4b50-b403-5207ef5a0bef`, Tag `1332541-HTML-Import` |
+| Vorversion | `c536d4e1-b3ca-45bf-a798-d807dc739191` (Tag `689579c-spielpause`, Codex 18.11.), vor dem Deploy zweimal geprüft; Stand vollständig im Release enthalten |
+| Migration | keine; Konfiguration aus der Vorversion gelesen, unverändert |
+| D1-Lesezeichen vor dem Deploy | `00000228-0000014c-00005129-49c86d4829694ed32c45f48ddb2e3238` |
+
+Nach dem Deploy: `/anmelden` 200, Vorbereitung ohne Anmeldung 401; neue Texte („Vorlage für andere KI“) und Spielpause („Graf Knautsch“) im ausgelieferten Bundle. Ein Chunk antwortete direkt nach dem Upload kurz mit 404 und ist seitdem erreichbar (200). Angemeldete Live-Ansicht nicht geprüft (Browser-Sitzung abgelaufen; Anmeldung nur durch die SL).
+
+Rückweg: `wrangler rollback c536d4e1-b3ca-45bf-a798-d807dc739191 --name chronik-von-kleve`.
