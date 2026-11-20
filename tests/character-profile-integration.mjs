@@ -53,22 +53,31 @@ check((await req(a,'/api/character-companion','PATCH',{action:'profile',id:own.i
 check((await req(a,'/api/character-companion','PATCH',{action:'profile',id:own.id,version:v,profile:storyShared,media:[{fileId:uploads[0],type:'portrait',caption:marker+' Bild',shared:true},{fileId:uploads[1],type:'reference',caption:'',shared:false}]})).status===200,'portrait and reference are saved with the profile');
 const withImages=await detail(a);
 check(withImages.companion.media.some(m=>m.id===uploads[0]&&m.type==='portrait'&&m.caption===marker+' Bild'&&m.shared===true)&&withImages.identity.portraitRef==='/api/files?id='+uploads[0],'the image list reads back and the portrait becomes the character image');
-// Galerie (4c): the campaign gallery lists only shared images and serves only those.
+// Galerie (SL report 21.11.2026): personal. A player sees only the images of the own characters, never another
+// player's, not in the list and not by a direct id. The SL sees the images shared with the group.
 const gallery=await req(b,'/api/character-gallery');
-const mine=gallery.data?.characters?.find(c=>c.id===own.id);
-check(gallery.status===200&&!!mine&&mine.images.some(i=>i.url.includes(uploads[0]))&&!gallery.text.includes(uploads[1]),'Player B sees the shared images of Player A in the gallery, not the private one');
-check((await req(b,'/api/character-gallery?characterId='+encodeURIComponent(own.id)+'&fileId='+uploads[0])).status===200,'Player B loads a shared gallery image');
-check((await req(b,'/api/character-gallery?characterId='+encodeURIComponent(own.id)+'&fileId='+uploads[1])).status===404,'Player B cannot load a private image through the gallery');
-check((await req(b,'/api/character-gallery?characterId='+encodeURIComponent(own.id)+'&fileId='+foreign)).status===404,'a file that is not in the character list is refused');
+check(gallery.status===200&&!gallery.data.characters.some(c=>c.id===own.id)&&!gallery.text.includes(uploads[0])&&!gallery.text.includes(uploads[1]),'Player B does not see Player A\'s images in the own gallery, not even the shared one');
+check((await req(b,'/api/character-gallery?characterId='+encodeURIComponent(own.id)+'&fileId='+uploads[0])).status===404,'Player B cannot load Player A\'s shared image by direct id');
+check((await req(b,'/api/character-gallery?characterId='+encodeURIComponent(own.id)+'&fileId='+uploads[1])).status===404,'Player B cannot load Player A\'s private image by direct id');
+check((await req(b,'/api/files?id='+uploads[1])).status===404,'Player B cannot load Player A\'s private image through the file route');
+const ownGallery=await req(a,'/api/character-gallery'),mine=ownGallery.data?.characters?.find(c=>c.id===own.id);
+check(ownGallery.status===200&&!!mine&&mine.images.some(i=>i.url.includes(uploads[0]))&&mine.images.some(i=>i.url.includes(uploads[1])),'Player A sees the own shared and private images');
+check(!ownGallery.text.includes(foreign),'Player A does not see Player B\'s image');
+check((await req(a,'/api/character-gallery?characterId='+encodeURIComponent(own.id)+'&fileId='+uploads[1])).status===200,'Player A loads the own private image');
+check((await req(a,'/api/character-gallery?characterId='+encodeURIComponent(own.id)+'&fileId='+foreign)).status===404,'a file that is not in the character list is refused');
+const slGallery=await req(gm,'/api/character-gallery');
+check(slGallery.status===200&&slGallery.text.includes(uploads[0])&&!slGallery.text.includes(uploads[1]),'the SL sees the shared image, not the private one');
+check((await req(gm,'/api/character-gallery?characterId='+encodeURIComponent(own.id)+'&fileId='+uploads[0])).status===200,'the SL loads the shared image');
 check((await req(null,'/api/character-gallery')).status===401,'not signed in: gallery → 401');
-// Second way in from the gallery page: the picture joins the same image list, shared with the group.
+check((await req(null,'/api/character-gallery?characterId='+encodeURIComponent(own.id)+'&fileId='+uploads[0])).status===401,'not signed in: gallery image → 401');
+// Second way in from the gallery page: the picture joins the same image list, private.
 const galleryUpload=await upload(a,'SYNTHETIC_PROFILE_GALLERY.png');
 let gv=(await detail(a)).revision.version;
-check((await req(b,'/api/character-companion','PATCH',{action:'media',id:own.id,version:gv,fileId:galleryUpload,mediaType:'reference',shared:true})).status>=400,'Player B cannot add a picture to Player A\'s character');
-check((await req(a,'/api/character-companion','PATCH',{action:'media',id:own.id,version:gv,fileId:galleryUpload,mediaType:'reference',shared:true})).status===200,'the owner adds a picture from the gallery');
+check((await req(b,'/api/character-companion','PATCH',{action:'media',id:own.id,version:gv,fileId:galleryUpload,mediaType:'reference',shared:false})).status>=400,'Player B cannot add a picture to Player A\'s character');
+check((await req(a,'/api/character-companion','PATCH',{action:'media',id:own.id,version:gv,fileId:galleryUpload,mediaType:'reference',shared:false})).status===200,'the owner adds a picture from the gallery');
 const afterAdd=await detail(a);
-check(afterAdd.companion.media.some(m=>m.id===galleryUpload&&m.shared===true&&m.type==='reference'),'the gallery picture sits in the image list of the Charakterprofil, shared');
-check((await req(b,'/api/character-gallery')).text.includes(galleryUpload),'Player B sees the added picture in the gallery');
+check(afterAdd.companion.media.some(m=>m.id===galleryUpload&&m.shared===false&&m.type==='reference'),'the gallery picture sits in the image list of the Charakterprofil, private');
+check((await req(a,'/api/character-gallery')).text.includes(galleryUpload)&&!(await req(b,'/api/character-gallery')).text.includes(galleryUpload),'the added picture is in Player A\'s gallery, not in Player B\'s');
 uploads.push(galleryUpload);
 // Individuelle Angaben: the owner writes them on their own tab; other players cannot.
 let iv=(await detail(a)).revision.version;
