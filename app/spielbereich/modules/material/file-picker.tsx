@@ -14,7 +14,7 @@ import styles from './workbench.module.css';
  */
 export const ownClose=(handler:()=>void)=>(e:{target:EventTarget;currentTarget:EventTarget})=>{if(e.target===e.currentTarget)handler();};
 
-/** A file as /api/files lists it: own files, group files and (for the GM) SL files. Never other players' private files. */
+/** A file as /api/files lists it: own files and SL group files; for the GM also players' group files and SL files. Never other players' files for players. */
 export type PickerFile=PreparationFile&{owner_id?:string;visibility?:string;size?:number;created_at?:string};
 export const fileUrl=(id:string)=>'/api/files?id='+encodeURIComponent(id);
 const accepts:Record<MaterialAccept,string>={image:'image/jpeg,image/png,image/webp,image/gif',audio:'audio/mpeg,audio/ogg,audio/wav,audio/mp4',video:'video/mp4,video/webm',document:'application/pdf,image/jpeg,image/png,image/webp',none:''};

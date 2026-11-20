@@ -58,11 +58,28 @@ privat und erscheint nur bei A. Das Teilnehmerprofil am Spieltisch zeigt weiter 
 - Nicht gegen Live oder Produktionsdaten geprüft.
 - `node_modules` war im Worktree per Verzeichnisverknüpfung aus einem Nachbar-Worktree mit identischem Lockfile geliehen.
 
-## Offene Punkte (Entscheidung der SL)
-- **Persönliches Archiv** (Notizbuch → „Persönliches Archiv“) listet über `GET /api/files` weiterhin Dateien anderer
-  Spieler, die diese selbst auf „Für die Gruppe“ gestellt haben. Das ist eine ausdrückliche Freigabe durch den
-  Besitzer und wurde nicht geändert. Soll das Archiv ebenfalls nur eigene Dateien plus SL-Freigaben zeigen, ist das ein
-  kleiner Folgeschritt (Rollenabfrage beim Besitzer nötig, Alt-SL über `GM_EMAIL` beachten).
+## Nachtrag: Persönliches Archiv (SL-Entscheidung 21.11.2026: „Ja, auch Archiv“)
+Das Archiv (Notizbuch → „Persönliches Archiv“) las über `GET /api/files` auch Dateien anderer Spieler, die diese auf
+„Für die Gruppe“ gestellt hatten. Jetzt:
+- **Neu `domain/file-list.ts`** (`fileListQuery`): Spieler erhalten nur **eigene Dateien** und **Gruppendateien der
+  SL**. SL heißt: aktive Mitgliedschaft `campaign_owner`/`campaign_gm` in der Kampagne, oder – ohne
+  Mitgliedschaftszeile – die Alt-SL über `GM_EMAIL` (gleiche Regel wie `server/role-resolver.ts`). Gesperrte SL-Konten
+  zählen nicht. Die SL sieht wie bisher eigene, alle Gruppen- und alle SL-Dateien, nie private Spielerdateien.
+- `app/api/files/route.ts` nutzt diese Abfrage für die Liste. Der direkte Abruf `?id=` ist unverändert: Gruppendateien
+  bleiben dort abrufbar, wo sie eingesetzt sind (z. B. am Spieltisch), private fremde Dateien ergeben 404.
+- Texte im Archiv angepasst („Freigaben der Spielleitung“, „Dateien anderer Spieler erscheinen hier nie“).
+
+Prüfungen des Nachtrags (beobachtet): `tsc` Exit 0 · ESLint der geänderten Dateien 0 Probleme · Build Exit 0 ·
+`node --experimental-strip-types --test tests/*.test.mjs` **713/713 bestanden** (inkl. neuem `tests/file-list.test.mjs`,
+6 Tests gegen eine echte SQLite-Datenbank im Speicher) · `tests/character-profile-integration.mjs` lokal **65/65**
+(Archiv A ohne Dateien von B auch bei Gruppenfreigabe, Archiv B ohne Dateien von A, SL-Gruppendateien sichtbar, SL sieht
+Spieler-Gruppendateien, nicht angemeldet 401) · `tests/live-deliveries-integration.mjs` lokal **57/57**.
+Prüfbestand `.local-test/ge-01` danach gelöscht, Instanz gestoppt.
+
+Hinweis: Spieler sehen eigene ältere Gruppendateien weiterhin; Gruppendateien anderer Spieler verschwinden aus ihrer
+Liste, werden aber nicht gelöscht oder umgestellt.
+
+## Offene Punkte
 - Vor einem Deploy: `wrangler deployments list` prüfen, Live-Commit muss in HEAD stecken; Konfiguration per
   `wrangler versions view <live-id> --json` übernehmen – nur mit Freigabe.
 

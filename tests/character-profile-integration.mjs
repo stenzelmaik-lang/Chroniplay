@@ -70,6 +70,16 @@ check(slGallery.status===200&&slGallery.text.includes(uploads[0])&&!slGallery.te
 check((await req(gm,'/api/character-gallery?characterId='+encodeURIComponent(own.id)+'&fileId='+uploads[0])).status===200,'the SL loads the shared image');
 check((await req(null,'/api/character-gallery')).status===401,'not signed in: gallery → 401');
 check((await req(null,'/api/character-gallery?characterId='+encodeURIComponent(own.id)+'&fileId='+uploads[0])).status===401,'not signed in: gallery image → 401');
+// Persönliches Archiv (/api/files list, SL decision 21.11.2026): other players' files never appear, not even group files.
+async function uploadAs(who,name,visibility){const form=new FormData();form.set('file',new Blob([png],{type:'image/png'}),name);form.set('visibility',visibility);const r=await fetch(base+'/api/files',{method:'POST',headers:{Origin:base,Cookie:who},body:form});assert.equal(r.status,200,'upload '+name);return (await r.json()).id;}
+const bGroup=await uploadAs(b,'SYNTHETIC_ARCHIVE_B_GROUP.png','group'),slGroup=await uploadAs(gm,'SYNTHETIC_ARCHIVE_SL_GROUP.png','group');
+const archiveA=(await req(a,'/api/files')).data.files.map(f=>f.id),archiveB=(await req(b,'/api/files')).data.files.map(f=>f.id),archiveSl=(await req(gm,'/api/files')).data.files.map(f=>f.id);
+check(!archiveA.includes(bGroup)&&!archiveA.includes(foreign),'Player A\'s archive lists no file of Player B, not even a group file');
+check(!archiveB.includes(uploads[0])&&!archiveB.includes(uploads[1]),'Player B\'s archive lists no file of Player A');
+check(archiveA.includes(uploads[0])&&archiveA.includes(slGroup)&&archiveB.includes(bGroup)&&archiveB.includes(slGroup),'players list their own files and the SL group files');
+check(archiveSl.includes(bGroup)&&archiveSl.includes(slGroup)&&!archiveSl.includes(uploads[1]),'the SL lists group files of players and own files, not private player files');
+check((await req(null,'/api/files')).status===401,'not signed in: file list → 401');
+for(const [who,fileId] of [[b,bGroup],[gm,slGroup]])check((await req(who,'/api/files','DELETE',{id:fileId})).status===200,'synthetic archive file deleted again');
 // Second way in from the gallery page: the picture joins the same image list, private.
 const galleryUpload=await upload(a,'SYNTHETIC_PROFILE_GALLERY.png');
 let gv=(await detail(a)).revision.version;
