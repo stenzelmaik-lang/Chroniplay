@@ -274,3 +274,13 @@ button.stickyGrip:active{cursor:grabbing}.stickyGrip>span{display:flex;align-ite
 .stickyTools button:hover,.stickyTools button:focus-visible{background:rgba(0,0,0,.08);color:rgba(40,34,20,.95)}
 .stickyOwner{margin-right:auto;color:rgba(40,34,20,.65);font:11px Arial,sans-serif}
 .stickyTop>svg{color:rgba(40,34,20,.55)}
+/* Phone top bar (21.11.2026): brand and actions become icons with accessible names, so the Spielerleiste and its */
+/* fold switch keep room instead of being squeezed to 0 px and pushing "Abend beenden" off screen for the SL. */
+.brandName{font:inherit}
+@media(max-width:600px){
+ .brandName,.topLabel{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+ .brand>svg{width:20px;height:20px;margin-right:0}
+ .simulation{flex:none}
+ .simulation>button{justify-content:center;min-width:44px;min-height:44px;padding:0;gap:0}
+ .simulation>button>svg{display:block;width:18px;height:18px}
+}

@@ -8,9 +8,18 @@
 .willpower{display:grid;gap:4px}
 
 /* Auf der Bühne: zwei getrennte Teile, Körper (unten links) und Druck (unten rechts). */
-.hudBox{pointer-events:auto;position:absolute;bottom:18px;z-index:6;display:grid;gap:7px;padding:11px 13px 12px;border:1px solid #c5a46a55;border-radius:10px;background:linear-gradient(180deg,#121f22f5,#0b1416f5);color:#eee8dc;text-align:left;box-shadow:0 10px 28px #0006;font-size:12px;transition:border-color .3s,box-shadow .3s}
+.hudBox{pointer-events:auto;position:relative;box-sizing:border-box;width:100%;display:grid;gap:7px;padding:11px 13px 12px;border:1px solid #c5a46a55;border-radius:10px;background:linear-gradient(180deg,#121f22f5,#0b1416f5);color:#eee8dc;text-align:left;box-shadow:0 10px 28px #0006;font-size:12px;transition:border-color .3s,box-shadow .3s}
 .hudBox:hover{border-color:#d6b36f99;background:linear-gradient(180deg,#1a2b2df5,#101a1cf5)}.hudBox:focus-visible{outline:2px solid #e4c789;outline-offset:3px}.hudBox[data-hidden=true]{display:none}
-.bodyHud{left:12px;width:min(290px,calc(50% - 70px))}.pressureHud{right:12px;width:min(270px,calc(50% - 70px))}
+.hudSlot{pointer-events:none;position:absolute;bottom:18px;z-index:6}.hudSlot[data-side=body]{left:12px;width:min(290px,calc(50% - 70px))}.hudSlot[data-side=pressure]{right:12px;width:min(270px,calc(50% - 70px))}.hudSlot[data-hidden=true]{display:none}.hudSlot[data-collapsed=true]{width:auto}
+/* Fold tab on the top edge of a HUD card; the visible tab is small, its hit area is 44px tall. */
+.hudFold{pointer-events:auto;position:absolute;bottom:calc(100% - 1px);right:14px;display:grid;place-items:center;width:44px;height:24px;padding:0;border:1px solid #c5a46a55;border-bottom:0;border-radius:8px 8px 0 0;background:#0f1a1df5;color:#c5a46a;cursor:pointer;transition:color .2s,border-color .2s}
+.hudFold::before{content:'';position:absolute;inset:-14px 0 -6px}
+.hudFold:hover{color:#f0d8a6;border-color:#d6b36f99}.hudFold:focus-visible,.hudHandle:focus-visible{outline:2px solid #e4c789;outline-offset:3px}
+.hudSlot[data-side=body] .hudFold{right:auto;left:14px}
+/* Folded: a quiet handle in the same corner opens the card again. */
+.hudHandle{pointer-events:auto;display:inline-flex;align-items:center;gap:7px;min-height:44px;max-width:200px;padding:0 13px;border:1px solid #c5a46a55;border-radius:22px;background:linear-gradient(180deg,#121f22e6,#0b1416e6);color:#eee8dc;font:14px/1.2 var(--cp-font-title,Georgia),serif;box-shadow:0 6px 18px #0005;cursor:pointer}
+.hudHandle>svg{flex:none;color:#c5a46a}.hudHandle:hover{border-color:#d6b36f99}
+.hudHandleName{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .hudTitle{display:flex;align-items:center;gap:7px;min-width:0;font:15px/1.2 Georgia,serif;color:#eee8dc}.hudTitle>svg{flex-shrink:0;color:#c5a46a}.hudTitle>svg:last-child{margin-left:auto}
 .hudName{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
@@ -104,7 +113,7 @@
 .log{list-style:none;margin:6px 0 0;padding:0;display:grid;gap:6px;font-size:12px}.log time{color:#c5a46a;font-variant-numeric:tabular-nums}.log small{color:#b7bdb6}
 
 @media(max-width:700px){
- .hudBox{bottom:84px;width:calc(50% - 12px);padding:8px 9px;gap:5px}.bodyHud{left:8px}.pressureHud{right:8px}.hudBox[data-panel=true]{display:none}
+ .hudSlot{bottom:84px}.hudSlot:not([data-collapsed=true]){width:calc(50% - 12px)}.hudSlot[data-side=body]{left:8px}.hudSlot[data-side=pressure]{right:8px}.hudSlot[data-panel=true]{display:none}.hudBox{padding:8px 9px;gap:5px}.hudHandle{max-width:calc(50vw - 40px);font-size:13px}
  .hudTitle{font-size:13px}.healthBar>i{height:18px;font-size:11px}.willDots>i{width:9px;height:9px}
  .pressureRow{grid-template-columns:minmax(0,1fr);padding:4px 5px}.chip{justify-self:start}.roundRow{grid-template-columns:minmax(0,1fr) 60px}.roundRow small{display:none}
 }
@@ -149,7 +158,9 @@
 /* Personal toys need their controls clear on narrow tables. Keep both status
    entry points available in a compact row; full values remain in their panels. */
 @media(max-width:1100px){
- :global([data-chroniplay-stage]):has(:global([data-spielpause]:not([data-blocked=true]):not([data-suspended=true]))) .hudBox:not([data-hidden=true]){bottom:88px;height:40px;width:calc(50% - 18px);padding:8px;display:block;overflow:hidden}
+ :global([data-chroniplay-stage]):has(:global([data-spielpause]:not([data-blocked=true]):not([data-suspended=true]))) .hudSlot:not([data-hidden=true]){bottom:88px}
+ :global([data-chroniplay-stage]):has(:global([data-spielpause]:not([data-blocked=true]):not([data-suspended=true]))) .hudSlot:not([data-hidden=true]):not([data-collapsed=true]){width:calc(50% - 18px)}
+ :global([data-chroniplay-stage]):has(:global([data-spielpause]:not([data-blocked=true]):not([data-suspended=true]))) .hudBox:not([data-hidden=true]){height:40px;padding:8px;display:block;overflow:hidden}
  :global([data-chroniplay-stage]):has(:global([data-spielpause]:not([data-blocked=true]):not([data-suspended=true]))) .hudBox>:not(.hudTitle){display:none}
  :global([data-chroniplay-stage]):has(:global([data-spielpause]:not([data-blocked=true]):not([data-suspended=true]))) .hudName{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 }

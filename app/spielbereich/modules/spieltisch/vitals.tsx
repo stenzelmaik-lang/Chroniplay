@@ -1,6 +1,7 @@
 'use client';
 import {useEffect,useRef,useState} from 'react';
-import {Droplets,Flame,Heart,Activity,EyeOff,Eye,Moon,RotateCcw,Minus,Plus,ChevronRight,ShieldAlert,User,Users} from 'lucide-react';
+import {Droplets,Flame,Heart,Activity,EyeOff,Eye,Moon,RotateCcw,Minus,Plus,ChevronRight,ChevronDown,ChevronUp,ShieldAlert,User,Users} from 'lucide-react';
+import {useCollapsed,type CollapsibleHud} from './use-collapsed';
 import {vitalHealthLevels,damageLabels,damageMarks,controlProfiles,stressBands,stressMaximum,personalStressEffect,masqueradeViews,masqueradeViewLabels,roundViews,roundViewLabels,damageModes,damageModeLabels,type DamageType,type ControlProfile,type MasqueradeView} from '@/domain/character-vitals';
 import type {VitalsSnapshot,TableCharacter,Snapshot} from './types';
 import styles from './vitals.module.css';
@@ -121,21 +122,35 @@ function useReserve(key:'vitals'|'pressure'){
   set();const o=new ResizeObserver(set);o.observe(el);return()=>{o.disconnect();host.style.removeProperty(reserve);host.style.removeProperty(mobile);};});
  return ref;
 }
+/**
+ * Wraps one table HUD part with a fold tab. Folded, only a small handle stays at the same corner to open it again.
+ * The choice is a per-device view preference (localStorage) and changes no data.
+ */
+function HudSlot({id,label,icon,name,hidden,panelOpen,reserve,children}:{id:CollapsibleHud;label:string;icon:React.ReactNode;name:string;hidden:boolean;panelOpen:boolean;reserve:React.Ref<HTMLButtonElement>;children:React.ReactNode}){
+ const [collapsed,setCollapsed]=useCollapsed(id);
+ if(collapsed)return <div className={styles.hudSlot} data-side={id} data-hidden={hidden} data-panel={panelOpen} data-collapsed="true">
+  <button ref={reserve} type="button" className={styles.hudHandle} aria-expanded="false" aria-label={`${label} einblenden`} title={`${label} einblenden`} onClick={()=>setCollapsed(false)}>{icon}<span className={styles.hudHandleName}>{name}</span><ChevronUp size={14} aria-hidden="true"/></button>
+ </div>;
+ return <div className={styles.hudSlot} data-side={id} data-hidden={hidden} data-panel={panelOpen}>
+  {children}
+  <button type="button" className={styles.hudFold} aria-expanded="true" aria-label={`${label} ausblenden`} title={`${label} ausblenden`} onClick={()=>setCollapsed(true)}><ChevronDown size={15} aria-hidden="true"/></button>
+ </div>;
+}
 function BodyHud({vitals,gm,crew,onOpen,hidden,panelOpen}:{vitals:VitalsSnapshot;gm:boolean;crew:Crew;onOpen:()=>void;hidden:boolean;panelOpen:boolean}){
  const round=vitals.round||[],hits=useHits(round),reserve=useReserve('vitals');
  // The SL sees every character in the Regie; at the table only an own character counts (hidden by default).
  if(gm&&!vitals.characters.some(x=>x.own))return null;
  const c=vitals.characters.find(x=>x.own),others=gm?[]:round.filter(r=>!r.own);
- if(!c)return others.length?<button ref={reserve} type="button" className={`${styles.hudBox} ${styles.bodyHud}`} data-hidden={hidden} data-panel={panelOpen} onClick={onOpen} aria-label="Zustände der Runde öffnen"><span className={styles.hudTitle}><Users size={14}/><span className={styles.hudName}>Am Tisch</span><ChevronRight size={14}/></span><span className={styles.roundBlock}><RoundRows round={others} crew={crew} hits={hits}/></span></button>:null;
+ if(!c)return others.length?<HudSlot id="body" label="Zustände der Runde" icon={<Users size={14} aria-hidden="true"/>} name="Am Tisch" hidden={hidden} panelOpen={panelOpen} reserve={reserve}><button ref={reserve} type="button" className={`${styles.hudBox} ${styles.bodyHud}`} data-hidden={hidden} data-panel={panelOpen} onClick={onOpen} aria-label="Zustände der Runde öffnen"><span className={styles.hudTitle}><Users size={14}/><span className={styles.hudName}>Am Tisch</span><ChevronRight size={14}/></span><span className={styles.roundBlock}><RoundRows round={others} crew={crew} hits={hits}/></span></button></HudSlot>:null;
  const b=c.vitals.blood,w=c.vitals.willpower,h=c.vitals.health,tone=healthTone(h);
- return <button ref={reserve} type="button" className={`${styles.hudBox} ${styles.bodyHud}`} data-hidden={hidden} data-panel={panelOpen} data-tone={tone} onClick={onOpen} aria-label={`Zustand von ${c.title}: ${conditionLabel(h)}. Öffnen`}>
+ return <HudSlot id="body" label="Charakterpanel" icon={<Heart size={14} className={styles.heart} aria-hidden="true"/>} name={c.title} hidden={hidden} panelOpen={panelOpen} reserve={reserve}><button ref={reserve} type="button" className={`${styles.hudBox} ${styles.bodyHud}`} data-hidden={hidden} data-panel={panelOpen} data-tone={tone} onClick={onOpen} aria-label={`Zustand von ${c.title}: ${conditionLabel(h)}. Öffnen`}>
   <span className={styles.hudTitle}><Heart size={15} className={styles.heart}/><span className={styles.hudName} title={c.title}>{c.title}</span><ChevronRight size={14}/></span>
   <span className={styles.condition} data-tone={tone}><b>{conditionLabel(h)}</b>{h.status==='active'&&<small>{penaltyText(h.penalty)}</small>}</span>
   <HealthBar h={h}/>
   <span className={styles.bodyRow}><Droplets size={14} aria-hidden="true"/><span className={styles.resourceName}>Blut</span><BloodBar b={b}/><small>{b.current??'–'}/{b.max??'–'}</small></span>
   <span className={styles.bodyRow}><Flame size={14} aria-hidden="true"/><span className={styles.resourceName}>Willenskraft</span><WillDots w={w}/><small>{w.temporary??'–'}/{w.permanent??'–'}</small></span>
   {!!others.length&&<span className={styles.roundBlock} role="group" aria-label="Am Tisch"><RoundRows round={others} crew={crew} hits={hits}/></span>}
- </button>;
+ </button></HudSlot>;
 }
 
 /** Part 2 on the table: personal stress, group stress and masquerade risk, kept apart from the body. */
@@ -143,13 +158,13 @@ function PressureHud({vitals,gm,onOpen,hidden,panelOpen}:{vitals:VitalsSnapshot;
  const reserve=useReserve('pressure');
  const own=vitals.characters.find(c=>c.own),risk=vitals.masqueradeRisk,m=vitals.masquerade;
  const top=gm?[...vitals.characters].sort((x,y)=>y.stress.value-x.stress.value)[0]:undefined;
- return <button ref={reserve} type="button" className={`${styles.hudBox} ${styles.pressureHud}`} data-hidden={hidden} data-panel={panelOpen} onClick={onOpen} aria-label="Stress und Maskerade öffnen">
+ return <HudSlot id="pressure" label="Druck" icon={<Activity size={14} aria-hidden="true"/>} name="Druck" hidden={hidden} panelOpen={panelOpen} reserve={reserve}><button ref={reserve} type="button" className={`${styles.hudBox} ${styles.pressureHud}`} data-hidden={hidden} data-panel={panelOpen} onClick={onOpen} aria-label="Stress und Maskerade öffnen">
   <span className={styles.hudTitle}><Activity size={14}/><span className={styles.hudName}>Druck</span><ChevronRight size={14}/></span>
   {!gm&&own&&<PressureRow icon={<User size={13}/>} name="Ich" value={own.stress.value} label={own.stress.label} level={stressLevel(own.stress.value)}/>}
   {gm&&top&&top.stress.value>0&&<PressureRow icon={<User size={13}/>} name={top.title} value={top.stress.value} label={top.stress.label} level={stressLevel(top.stress.value)} detail="höchster persönlicher Stress"/>}
   <PressureRow icon={<Users size={13}/>} name="Gruppe" value={vitals.stress.value} label={vitals.stress.label} level={stressLevel(vitals.stress.value)}/>
   {risk&&<PressureRow icon={<ShieldAlert size={13}/>} name="Maskerade" value={m?m.value:risk.level} total={m?m.max:3} label={risk.label} level={risk.level} detail={m?`Stufe ${m.value} von ${m.max}`:risk.hint}/>}
- </button>;
+ </button></HudSlot>;
 }
 
 /** Always visible on the table: two separate parts, body and pressure, plus the wound vignette for the own view. */
