@@ -11,18 +11,20 @@ export async function accountApi<T=Mutation>(path:string,method='GET',body?:unkn
   if(!r.headers.get('content-type')?.includes('application/json'))throw new Error('Der Kontodienst ist momentan nicht erreichbar. Bitte erneut versuchen.');
   const d=await r.json() as T&{error?:string};if(!r.ok)throw new Error(d.error??'Der Vorgang konnte nicht abgeschlossen werden.');return d;
 }
-type Profile={displayName:string;email:string;version:number;avatarFileId:string|null;preferences:{reducedMotion:boolean;compactView:boolean;engagementTracking:boolean;realName?:string;introduction?:string;pronouns?:string;banner?:typeof profileBanners[number];playStyles?:Array<typeof profilePlayStyles[number]>;sharePlayerProfileCampaigns?:string[]};campaigns:{id:string;name:string;status:string}[]};
+type Profile={displayName:string;email:string;version:number;avatarFileId:string|null;preferences:{reducedMotion:boolean;compactView:boolean;engagementTracking:boolean;headerName:'account'|'character';realName?:string;introduction?:string;pronouns?:string;banner?:typeof profileBanners[number];playStyles?:Array<typeof profilePlayStyles[number]>;sharePlayerProfileCampaigns?:string[]};campaigns:{id:string;name:string;status:string}[]};
+type HeaderName={mode:'account'|'character';name:string;accountName:string;characterName:string|null};
 type Session={id:string;createdAt:string;expiresAt:string;lastSeenAt:string;current:boolean};
 const bannerLabels:Record<typeof profileBanners[number],string>={neon:'Neon im Regen',fog:'Rheinnebel',candle:'Kerzenlicht'};
 const date=(s:string)=>new Date(s).toLocaleString('de-DE',{dateStyle:'short',timeStyle:'short'});
 export default function AccountProfile({engagementAvailable}:{engagementAvailable:boolean}){
-  const [profile,setProfile]=useState<Profile|null>(null),[sessions,setSessions]=useState<Session[]>([]),[busy,setBusy]=useState(false),[feedback,setFeedback]=useState(''),[error,setError]=useState(''),[dirty,setDirty]=useState(false);
+  const [profile,setProfile]=useState<Profile|null>(null),[sessions,setSessions]=useState<Session[]>([]),[busy,setBusy]=useState(false),[feedback,setFeedback]=useState(''),[error,setError]=useState(''),[dirty,setDirty]=useState(false),[headerName,setHeaderName]=useState<HeaderName|null>(null);
   function updatePreferences(changes:Partial<Profile['preferences']>){
     setProfile(current=>current?{...current,preferences:{...current.preferences,...changes}}:current);
     setDirty(true);
   }
-  async function load(){const [p,s]=await Promise.all([accountApi<Profile>('/api/profile'),accountApi<{sessions:Session[]}>('/api/auth/sessions')]);setProfile(p);setSessions(s.sessions);setDirty(false);}
-  useEffect(()=>{let active=true;void Promise.all([accountApi<Profile>('/api/profile'),accountApi<{sessions:Session[]}>('/api/auth/sessions')]).then(([p,s])=>{if(active){setProfile(p);setSessions(s.sessions);}}).catch(e=>{if(active)setError(e.message);});return()=>{active=false;};},[]);
+  async function load(){const [p,s]=await Promise.all([accountApi<Profile>('/api/profile'),accountApi<{sessions:Session[]}>('/api/auth/sessions')]);setProfile(p);setSessions(s.sessions);setDirty(false);void loadHeaderName();}
+  async function loadHeaderName(){try{setHeaderName(await accountApi<HeaderName>('/api/profile/header-name'));}catch{setHeaderName(null);}}
+  useEffect(()=>{let active=true;void Promise.all([accountApi<Profile>('/api/profile'),accountApi<{sessions:Session[]}>('/api/auth/sessions')]).then(([p,s])=>{if(active){setProfile(p);setSessions(s.sessions);}}).catch(e=>{if(active)setError(e.message);});void accountApi<HeaderName>('/api/profile/header-name').then(h=>{if(active)setHeaderName(h);}).catch(()=>{});return()=>{active=false;};},[]);
   async function run(fn:()=>Promise<void>){setBusy(true);setError('');setFeedback('');try{await fn();}catch(e){setError(e instanceof Error?e.message:'Bitte erneut versuchen.');}finally{setBusy(false);}}
   async function save(event:FormEvent){event.preventDefault();if(!profile)return;await run(async()=>{await accountApi('/api/profile','PATCH',{version:profile.version,displayName:profile.displayName,avatarFileId:profile.avatarFileId,preferences:profile.preferences});await load();setFeedback('Dein Profil wurde dauerhaft gespeichert.');});}
   async function upload(file:File|undefined){if(!file||!profile)return;await run(async()=>{
@@ -71,6 +73,11 @@ export default function AccountProfile({engagementAvailable}:{engagementAvailabl
         <details className={styles.personalSettings}><summary>Konto & Anzeige</summary>
           <div>
         <label>E-Mail<input readOnly value={profile.email}/></label><small>Die bestätigte Kontoidentität wird durch Profiländerungen nicht verändert.</small>
+        <fieldset className={styles.headerName}><legend>Oben in der Kopfleiste zeigen</legend>
+          <label className={styles.check}><input type="radio" name="headerName" value="account" checked={profile.preferences.headerName!=='character'} onChange={()=>updatePreferences({headerName:'account'})}/>Meinen Namen ({profile.displayName})</label>
+          <label className={styles.check}><input type="radio" name="headerName" value="character" checked={profile.preferences.headerName==='character'} onChange={()=>updatePreferences({headerName:'character'})}/>Meinen Charakter{headerName?.characterName?' ('+headerName.characterName+')':''}</label>
+          <small>{headerName?.characterName?'Es zählt dein aktiver Charakter aus der Zuflucht. Wechselst du ihn dort, wechselt auch der Name oben.':'Du hast noch keinen aktiven Charakter gewählt. Bis du ihn in der Zuflucht auswählst, steht oben dein Name.'} Die Spielleitung sieht dich weiterhin unter deinem Konto.</small>
+        </fieldset>
         <label className={styles.check}><input type="checkbox" checked={profile.preferences.reducedMotion} onChange={e=>{setProfile({...profile,preferences:{...profile.preferences,reducedMotion:e.target.checked}});setDirty(true);}}/>Animationen reduzieren</label>
         <label className={styles.check}><input type="checkbox" checked={profile.preferences.compactView} onChange={e=>{setProfile({...profile,preferences:{...profile.preferences,compactView:e.target.checked}});setDirty(true);}}/>Kompakte Spieltischansicht</label>
           </div>

@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 export const profileBanners = ["neon", "fog", "candle"] as const;
+export const headerNameModes = ["account", "character"] as const;
 export const profilePlayStyles = ["Ermittlungen", "Intrigen", "Charakterdrama", "Horror", "Taktik", "Improvisation"] as const;
 
 export const profileInput = z.object({
@@ -11,6 +12,7 @@ export const profileInput = z.object({
     reducedMotion: z.boolean(),
     compactView: z.boolean(),
     engagementTracking: z.boolean().optional(),
+    headerName: z.enum(headerNameModes).optional(),
     realName: z.string().trim().max(100).optional(),
     introduction: z.string().trim().max(600).optional(),
     pronouns: z.string().trim().max(40).optional(),

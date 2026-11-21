@@ -22,3 +22,4 @@
 .campaigns:hover{border-color:#b99a6155;color:#f1e8d7}
 .campaigns:focus-visible{outline:2px solid #e4c681;outline-offset:2px}
 @media(max-width:700px){.campaigns span{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}}
+.accountLabel{font:normal 13px/1.3 Georgia,serif;color:#e5d8bb;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.accountName{font-size:11px;color:#aab3ad;padding:0 8px;overflow-wrap:anywhere}@media(max-width:700px){.accountLabel{display:none}}

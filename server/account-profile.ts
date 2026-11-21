@@ -34,6 +34,7 @@ export async function profile(request: Request) {
       reducedMotion:preferences.reducedMotion===true,
       compactView:preferences.compactView===true,
       engagementTracking:preferences.engagementTracking!==false,
+      headerName:preferences.headerName==='character'?'character' as const:'account' as const,
       ...(typeof preferences.realName==='string'?{realName:preferences.realName}:{}),
       ...(typeof preferences.pronouns==='string'?{pronouns:preferences.pronouns}:{}),
       ...(profileBanners.includes(preferences.banner)?{banner:preferences.banner}:{}),

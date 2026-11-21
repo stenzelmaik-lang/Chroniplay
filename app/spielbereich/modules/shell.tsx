@@ -9,6 +9,9 @@ import {MessageCenter} from './message-center';
 import {api} from './api-client';
 import styles from './player-hub-shell.module.css';
 
+/** Fired after the active character changes so the header name follows it. */
+export const HEADER_NAME_EVENT='chroniplay:header-name';
+
 /** A header dropdown (4c): sorted entries, closes on choice, Escape and click outside. */
 function Dropdown({label,icon,current,children}:{label:string;icon:React.ReactNode;current?:boolean;children:React.ReactNode}){
  const ref=useRef<HTMLDetailsElement>(null);
@@ -22,6 +25,9 @@ function Dropdown({label,icon,current,children}:{label:string;icon:React.ReactNo
 export function WorkspaceShell({a,section,navigate,children}:{a:Actor;section:string;navigate:(id:string)=>void;children:React.ReactNode}){
  const [preferences,setPreferences]=useState({reducedMotion:false,compactView:false}),[campaignName,setCampaignName]=useState(a.campaignId==='chronik-von-kleve'?'Chronik von Kleve':a.campaignId);
  useEffect(()=>{let live=true;api<{preferences:typeof preferences;campaigns:{id:string;name:string}[]}>('/api/profile').then(p=>{if(live){setPreferences(p.preferences);setCampaignName(p.campaigns.find(c=>c.id===a.campaignId)?.name||a.campaignId);}}).catch(()=>{});return()=>{live=false;};},[a.id,a.campaignId]);
+ const [header,setHeader]=useState<{scope:string;name:string;mode:'account'|'character'}|null>(null),headerScope=a.campaignId+':'+a.id;
+ useEffect(()=>{let live=true;const load=()=>{api<{name:string;mode:'account'|'character'}>('/api/profile/header-name').then(h=>{if(live)setHeader({scope:headerScope,name:h.name,mode:h.mode});}).catch(()=>{});};load();window.addEventListener(HEADER_NAME_EVENT,load);return()=>{live=false;window.removeEventListener(HEADER_NAME_EVENT,load);};},[headerScope]);
+ const shownName=header?.scope===headerScope?header.name:a.name,characterShown=header?.scope===headerScope&&header.mode==='character'&&header.name!==a.name;
  const world=section==='weltkarte'||worldSections.some(s=>s.id===section);
  const editorOnly=!a.gm&&a.status==='active'&&a.role==='campaign_editor';
  async function logout(){try{await api('/api/auth/logout','POST',{});window.location.assign('/anmelden');}catch{window.alert('Abmeldung fehlgeschlagen. Bitte erneut versuchen.');}}
@@ -40,7 +46,7 @@ export function WorkspaceShell({a,section,navigate,children}:{a:Actor;section:st
     </Dropdown>}
     {editorOnly&&<a href="/sl/command-center?bereich=ortscms"><MapPinned size={17} aria-hidden="true"/><span>Ortsverwaltung</span></a>}
    </nav>
-   <details className={styles.account}><summary aria-label="Kontomenü"><span>{a.name?.slice(0,1).toUpperCase()}</span><ChevronDown size={14} aria-hidden="true"/></summary><div><strong>{a.name}</strong><a href="/profil">Profil & Einstellungen</a><button type="button" onClick={()=>void logout()}><LogOut size={16} aria-hidden="true"/>Abmelden</button></div></details>
+   <details className={styles.account}><summary aria-label={'Kontomenü – '+shownName}><span>{shownName?.slice(0,1).toUpperCase()}</span><em className={styles.accountLabel}>{shownName}</em><ChevronDown size={14} aria-hidden="true"/></summary><div><strong data-header-name>{shownName}</strong>{characterShown&&<small className={styles.accountName}>Konto: {a.name}</small>}<a href="/profil">Profil & Einstellungen</a><button type="button" onClick={()=>void logout()}><LogOut size={16} aria-hidden="true"/>Abmelden</button></div></details>
   </header>
   {world&&<nav className={styles.world} aria-label="Spielwelt-Navigation">{worldSections.filter(s=>!s.wip).map(s=><button key={s.id} type="button" aria-current={section===s.id||(s.id==='schauplaetze'&&section==='weltkarte')?'page':undefined} onClick={()=>navigate(s.id)}><s.icon size={16} aria-hidden="true"/>{s.name}</button>)}</nav>}
   <main className="workspace-main">{children}</main>

@@ -29,3 +29,6 @@
 .previewBody p{margin:0 0 16px;line-height:1.6}
 .previewBody ul{margin:0}
 @media(max-width:700px){.profilePreview{position:static;margin-bottom:16px}}
+.headerName{display:grid;gap:8px;min-width:0;margin:0;padding:12px;border:1px solid #b79e6355;border-radius:6px}
+.headerName legend{padding-inline:6px;color:#ead6ad;font:15px Georgia,serif}
+.headerName label{overflow-wrap:anywhere;gap:8px}

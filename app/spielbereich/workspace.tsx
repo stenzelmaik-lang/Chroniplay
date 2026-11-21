@@ -60,7 +60,7 @@ import { NPCPanel } from "./modules/npc-panel";
 import { CodexPanel } from "./modules/codex-panel";
 import { InventoryPanel } from "./modules/inventory";
 import { SLWorkspaceShell } from "./modules/sl-workspace-shell";
-import { WorkspaceShell } from "./modules/shell";
+import { HEADER_NAME_EVENT, WorkspaceShell } from "./modules/shell";
 import { useNavigation } from "./modules/use-navigation";
 import { useWorkspaceData } from "./modules/use-workspace-data";
 import { WorldExperience } from "./modules/world-experience";
@@ -112,7 +112,7 @@ export default function Workspace({
         if(surface!=='sl')await api('/api/character-selection','PATCH',{characterId:id});
         if(version!==selectionVersion.current)return;
         invalidatePlayerData(dataScope);
-        setSelection({scope:dataScope,id});setSelectionError('');
+        setSelection({scope:dataScope,id});setSelectionError('');window.dispatchEvent(new Event(HEADER_NAME_EVENT));
         const url=new URL(window.location.href);if(id)url.searchParams.set('character',id);else url.searchParams.delete('character');
         if(url.href!==window.location.href)history.replaceState(null,'',url);
       }catch(e){if(version===selectionVersion.current)setSelectionError((e as Error).message);}
