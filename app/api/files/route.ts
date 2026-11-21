@@ -15,14 +15,14 @@ import {
   input,
 } from "@/server/access";
 import {fileUsages} from '@/server/file-usage';
+// Gallery section of a file sits in its storage path (users/<owner>/<section>/<id>); the list query in domain/file-list.ts reads it.
+import {fileListQuery} from '@/domain/file-list';
 export const dynamic = "force-dynamic";
 const types = LIVE_MEDIA_TYPES;
 /** Files the actor may manage: own files, or shared SL/group files for the GM. Never other players' private files. */
 const manageable = "SELECT id,owner_id,visibility FROM files WHERE id=? AND campaign_id=? AND (owner_id=? OR (?=1 AND visibility IN ('sl','group')))";
 /** Small preview of an image, made by the browser of someone who may manage the file and stored next to the original. */
 const thumbKey = (key: string) => key + ".thumb";
-/** Gallery section of a file, kept in its storage path (users/<owner>/<section>/<id>): no schema change, fixed at upload. */
-const sectionColumn = "CASE WHEN key LIKE 'users/%/visionen/%' THEN 'visionen' WHEN key LIKE 'users/%/botschaften/%' THEN 'botschaften' END AS section";
 const thumbMax = 256 * 1024;
 async function saveThumb(req: Request, id: string) {
   const a = await actor();
@@ -51,12 +51,9 @@ export async function GET(req: Request) {
       return json(await fileUsages(db, a, usage));
     }
     if (!id) {
-      const r = await db
-        .prepare(
-          "SELECT id,owner_id,visibility,name,mime,size,created_at,"+sectionColumn+" FROM files WHERE campaign_id=? AND (owner_id=? OR visibility=? OR (visibility=? AND ?=1)) ORDER BY created_at DESC",
-        )
-        .bind(a.campaignId, a.id, "group", "sl", a.gm ? 1 : 0)
-        .all();
+      // Players: own files and SL group files only, never other players' files (SL decision 21.11.2026).
+      const list = fileListQuery(a, (env as unknown as { GM_EMAIL?: string }).GM_EMAIL || process.env.GM_EMAIL || "");
+      const r = await db.prepare(list.sql).bind(...list.binds).all();
       return json({ files: r.results });
     }
     const f = await db

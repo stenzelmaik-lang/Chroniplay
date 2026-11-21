@@ -26,7 +26,7 @@ function PreparationHelp(){
 function ArchiveHelp(){
  return <InfoButton title="So funktioniert dein persönliches Archiv">
   <ol>
-   <li>Hier liegen deine hochgeladenen Bilder, PDFs und Töne und die Dateien, die mit dir geteilt wurden.</li>
+   <li>Hier liegen deine hochgeladenen Bilder, PDFs und Töne und die Dateien, die die Spielleitung für die Gruppe freigegeben hat. Dateien anderer Spieler erscheinen hier nie.</li>
    <li>Eigene Dateien, die du nicht mehr brauchst, kannst du löschen.</li>
    <li>Dateien für den Spielabend bereitest du unter <strong>Spielabendvorbereitung</strong> vor.</li>
   </ol>
@@ -41,7 +41,7 @@ export function PlayerArchive({a}:{a:Actor}){
  useEffect(()=>{if(tab==='archiv')loadFiles();},[tab,loadFiles]);
  let body:ReactNode;
  if(tab==='vorbereitung')body=<TableMaterialLibrary a={a}/>;
- else if(tab==='archiv')body=fileError?<p role="alert" className={s.error}>{fileError}</p>:<MediaLibrary a={a} files={files} onRefresh={loadFiles} title="Persönliches Archiv" intro="Deine hochgeladenen Bilder, PDFs und Töne sowie mit dir geteilte Dateien. Eigene, nicht mehr verwendete Dateien kannst du hier löschen."/>;
+ else if(tab==='archiv')body=fileError?<p role="alert" className={s.error}>{fileError}</p>:<MediaLibrary a={a} files={files} onRefresh={loadFiles} title="Persönliches Archiv" intro="Deine hochgeladenen Bilder, PDFs und Töne sowie Freigaben der Spielleitung. Eigene, nicht mehr verwendete Dateien kannst du hier löschen."/>;
  else body=<section aria-labelledby="notebook-title"><header className={s.header}><div><h1 id="notebook-title"><NotebookPen aria-hidden="true"/> Notizbuch</h1><p>Deine Mitschriften zur Chronik: was am Abend geschah, wen ihr getroffen habt, was offen ist. Dasselbe Notizbuch liegt am Spieltisch.</p></div></header><Notebook a={a} layout="wide"/></section>;
  return <>
   <div className={s.navRow}><nav className={s.materialNav} aria-label="Notizbuch, Vorbereitung und Archiv">{tabs.map(t=><button key={t.id} aria-pressed={tab===t.id} onClick={()=>choose(t.id)}><t.icon size={16} aria-hidden="true"/>{t.label}</button>)}</nav>{tab==='notizbuch'?<NotebookHelp/>:tab==='vorbereitung'?<PreparationHelp/>:<ArchiveHelp/>}</div>

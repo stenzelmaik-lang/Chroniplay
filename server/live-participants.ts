@@ -8,6 +8,8 @@ import {characterRecord} from './inventory';
 import {profileBanners,profilePlayStyles} from '@/domain/account-access';
 import {publicCharacterCard} from '@/domain/live-participants';
 import type {LegacyRecordRow} from '@/domain/legacy';
+import {sharedImages} from '@/domain/player-gallery';
+export {sharedImages};
 
 export async function participantContext(a:Actor,sessionId:string,memberId:string){
  const {room}=await stageRoom(a,sessionId);
@@ -88,19 +90,6 @@ export async function galleryFiles(a:Actor,ownerId:string,ids:string[]){
  if(!ids.length)return [];
  const placeholders=ids.map(()=>'?').join(',');
  return (await database().prepare(`SELECT id,key,mime FROM files WHERE owner_id=? AND campaign_id=? AND mime IN ('image/png','image/jpeg','image/webp') AND id IN (${placeholders})`).bind(ownerId,a.campaignId,...ids).all<GalleryFile>()).results;
-}
-
-function galleryEntries(value:unknown):{fileId:string;caption:string}[]{
- if(!Array.isArray(value))return [];
- return value.slice(0,8).filter(item=>item&&typeof item.fileId==='string'&&typeof item.caption==='string');
-}
-
-/** Images the owner shared at the table: the one image list of the Charakterprofil, plus a not yet merged appearance gallery. */
-export function sharedImages(body:Record<string,unknown>){
- const media=(Array.isArray(body.characterMedia)?body.characterMedia:[]).slice(0,8).filter((m:Record<string,unknown>)=>m&&m.shared===true&&typeof m.fileId==='string').map((m:Record<string,unknown>)=>({fileId:String(m.fileId),caption:typeof m.caption==='string'?m.caption:'',portrait:m.type==='portrait'}));
- const presentation=body.presentation as {published?:unknown;gallery?:unknown}|undefined;
- const legacy=presentation?.published===true?galleryEntries(presentation.gallery).filter(item=>!media.some(m=>m.fileId===item.fileId)).map(item=>({...item,portrait:false})):[];
- return [...media,...legacy];
 }
 
 async function participantGallery(a:Actor,sessionId:string,memberId:string,row:LegacyRecordRow,body:Record<string,unknown>){

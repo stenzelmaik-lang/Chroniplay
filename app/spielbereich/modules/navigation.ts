@@ -49,7 +49,7 @@ export const sections: Section[] = [
   // Meine Seiten
   { id: "notizen", name: "Notizbuch", icon: NotebookPen, desc: "Dein Notizbuch, deine Spielabendvorbereitung und dein persönliches Archiv.", group: "Meine Seiten" },
   { id: "postfach", name: "Postfach", icon: Mail, desc: "Deine persönlichen Nachrichten zur Chronik.", group: "Meine Seiten" },
-  { id: "galerie", name: "Galerie", icon: Images, desc: "Die Bilder, die eure Charaktere mit der Runde teilen.", group: "Meine Seiten" },
+  { id: "galerie", name: "Galerie", icon: Images, desc: "Die Bilder deiner eigenen Charaktere.", group: "Meine Seiten" },
   // Die Welt
   { id: "chronik", name: "Chronik", icon: BookOpen, desc: "Die Ereignisse der Domäne Kleve.", group: "Die Welt" },
   { id: "schauplaetze", name: "Orte", icon: MapPin, desc: "Jeder Ort bewahrt seine Geschichte. Als Liste oder auf der Karte.", group: "Die Welt" },
