@@ -77,3 +77,19 @@ check('Spinner läuft bei 30 und 120 Bildern gleich weit, bremst und stoppt', ()
   a.impulse(-1); assert.ok(a.speed < 0);
   assert.ok(Math.abs(T.angleDifference(-3.12, 3.12)) < 0.1);
 });
+
+// Live report 21.11.2026: the picker sat inside the isolated stage, below the HUD layer with the
+// player's own vitals panel, so on smaller screens the choices were covered. It now renders into the HUD layer.
+check('Spielpause picker renders above the player HUD and stays reachable on short screens', async () => {
+  const {readFileSync} = await import('node:fs');
+  const component = readFileSync(new URL('../app/spielbereich/modules/spieltisch/spielpause/spielpause.tsx', import.meta.url), 'utf8');
+  const stage = readFileSync(new URL('../app/spielbereich/modules/spieltisch/stage.tsx', import.meta.url), 'utf8');
+  const css = readFileSync(new URL('../app/spielbereich/modules/spieltisch/spielpause/spielpause.module.css', import.meta.url), 'utf8');
+  assert.match(component, /createPortal\(menu,pickerHost\)/);
+  assert.match(stage, /<div ref=\{setHudLayer\}[^>]*className=\{styles\.hud\}>/);
+  assert.match(stage, /<Spielpause open=\{pauseMenu\}.*pickerHost=\{hudLayer\}/);
+  const picker = css.match(/\.picker\{[^}]*\}/)?.[0] || '';
+  assert.match(picker, /pointer-events:auto/);
+  assert.match(picker, /max-height:calc\(100% - 36px\)/);
+  assert.match(picker, /overflow-y:auto/);
+});

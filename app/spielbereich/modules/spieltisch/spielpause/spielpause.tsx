@@ -1,6 +1,7 @@
 "use client";
 
 import {useEffect, useRef, useState} from 'react';
+import {createPortal} from 'react-dom';
 import {mountToys} from './toys-runtime.js';
 import styles from './spielpause.module.css';
 
@@ -8,24 +9,29 @@ type Toy = 'cube' | 'doll' | 'spinner';
 const names: Record<Toy, string> = {cube:'Rubikwürfel', doll:'Graf Knautsch', spinner:'Vampir-Spinner'};
 const faces = [['U','Oben · W / ↑'],['L','Links · A / ←'],['D','Unten · S / ↓'],['R','Rechts · D / →'],['F','Vorne · Q'],['B','Hinten · E'],['M','Mitte X'],['E','Mitte Y'],['S','Mitte Z']];
 
-/** Personal, client-only toys. No stage commands or character state enter this boundary. */
-export function Spielpause({open, onMenuClose, personalKey, blocked}: {
-  open:boolean; onMenuClose:()=>void; personalKey:string; blocked:boolean;
+/**
+ * Personal, client-only toys. No stage commands or character state enter this boundary.
+ * The picker belongs above the table HUD: the stage is an isolated stacking context below
+ * the player's own vitals panel, so inside it the choices were covered on smaller screens.
+ */
+export function Spielpause({open, onMenuClose, personalKey, blocked, pickerHost}: {
+  open:boolean; onMenuClose:()=>void; personalKey:string; blocked:boolean; pickerHost?:HTMLElement|null;
 }) {
   const [toy,setToy] = useState<Toy|null>(null),[keyboardFocus,setKeyboardFocus]=useState(false);
   const picker = useRef<HTMLElement>(null);
   const returnFocus = () => document.querySelector<HTMLButtonElement>('[aria-label="Spielpause"]')?.focus();
   useEffect(() => { if(open) picker.current?.querySelector<HTMLButtonElement>('button[data-choice]')?.focus(); },[open]);
   const closeMenu = () => { onMenuClose(); returnFocus(); };
-  return <>
-    {open && <aside ref={picker} className={styles.picker} aria-label="Spielpause auswählen" onKeyDown={e=>{
+  const menu = <aside ref={picker} className={styles.picker} aria-label="Spielpause auswählen" onKeyDown={e=>{
       if(e.key==='Escape'){e.preventDefault();e.stopPropagation();closeMenu();}
     }}>
       <header><strong>Spielpause</strong><button aria-label="Spielpause-Auswahl schließen" onClick={closeMenu}>×</button></header>
       <p>Ein kleiner Zeitvertreib. Nur auf deinem Tisch.</p>
       {(Object.keys(names) as Toy[]).map(id=><button data-choice key={id} aria-pressed={toy===id} onClick={e=>{setKeyboardFocus(e.detail===0);setToy(id);onMenuClose();}}>{names[id]}</button>)}
       {toy && <button onClick={()=>{setToy(null);closeMenu();}}>Spielzeug wegräumen</button>}
-    </aside>}
+    </aside>;
+  return <>
+    {open && (pickerHost?createPortal(menu,pickerHost):menu)}
     {toy && <ToyTable key={toy} toy={toy} keyboardFocus={keyboardFocus} personalKey={personalKey} blocked={blocked||open} onClose={()=>{setToy(null);returnFocus();}}/>}
   </>;
 }
