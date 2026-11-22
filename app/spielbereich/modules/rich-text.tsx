@@ -11,6 +11,7 @@ import {
   richTextColors,
   richTextPrefix,
   richTextToPlainText,
+  richTextStructureLimits,
   type RichTextDocument,
   type RichTextInline,
 } from "@/domain/location-rich-text";
@@ -206,8 +207,10 @@ export function RichTextEditor({
     const cell=element?.closest('td,th') as HTMLTableCellElement|null,table=cell?.closest('table');
     if(!cell||!table||!editor.contains(table)){setHtmlError('Setze den Cursor zuerst in eine Tabellenzelle.');return;}
     const row=cell.parentElement as HTMLTableRowElement;
-    if(action==='row'&&table.rows.length<30){const next=table.insertRow(row.rowIndex+1);for(let i=0;i<row.cells.length;i++)next.insertCell().textContent=' ';}
-    if(action==='column'&&row.cells.length<10)Array.from(table.rows).forEach(r=>{r.insertCell(Math.min(cell.cellIndex+1,r.cells.length)).textContent=' ';});
+    if(action==='row'&&table.rows.length>=richTextStructureLimits.tableRows){setHtmlError(`Diese Tabelle hat bereits ${richTextStructureLimits.tableRows} Zeilen, das Maximum je Tabelle. Lege für weitere Zeilen eine zweite Tabelle an.`);return;}
+    if(action==='column'&&row.cells.length>=richTextStructureLimits.tableColumns){setHtmlError(`Diese Tabelle hat bereits ${richTextStructureLimits.tableColumns} Spalten, das Maximum je Tabelle.`);return;}
+    if(action==='row'){const next=table.insertRow(row.rowIndex+1);for(let i=0;i<row.cells.length;i++)next.insertCell().textContent=' ';}
+    if(action==='column')Array.from(table.rows).forEach(r=>{r.insertCell(Math.min(cell.cellIndex+1,r.cells.length)).textContent=' ';});
     if(action==='removeRow')row.remove();
     if(action==='removeColumn'){const index=cell.cellIndex;Array.from(table.rows).forEach(r=>r.cells[index]?.remove());}
     if(action==='header')Array.from(table.rows[0].cells).forEach(c=>{const n=document.createElement(c.tagName==='TH'?'td':'th');n.innerHTML=c.innerHTML;c.replaceWith(n);});
@@ -224,7 +227,9 @@ export function RichTextEditor({
     event.preventDefault();
     if(disabled)return;
     const text = event.clipboardData.getData("text/plain");
-    const sheet=text.includes('\t')?'<table><tbody>'+text.trimEnd().split(/\r?\n/).slice(0,30).map(row=>'<tr>'+row.split('\t').slice(0,10).map(cell=>'<td>'+cell.replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;')+'</td>').join('')+'</tr>').join('')+'</tbody></table>':null;
+    // Pasted spreadsheet rows are taken over completely; a table beyond the structure limits is reported by the
+    // regular check (commit) instead of being cut off silently (P1 2026-11-22).
+    const sheet=text.includes('\t')?'<table><tbody>'+text.trimEnd().split(/\r?\n/).map(row=>'<tr>'+row.split('\t').map(cell=>'<td>'+cell.replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;')+'</td>').join('')+'</tr>').join('')+'</tbody></table>':null;
     const formatted = htmlSource ? htmlTextToRichText(sheet||text)||htmlTextToRichText(event.clipboardData.getData('text/html')) : null;
     if (formatted && editorRef.current) {
       const selection = window.getSelection();

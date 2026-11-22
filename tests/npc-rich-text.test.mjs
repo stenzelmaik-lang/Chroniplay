@@ -2,7 +2,7 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {canFormatNPCText} from '../domain/npc-rich-text.ts';
-import {htmlToRichText,readRichText,richTextToPlainText,richTextToHtml} from '../domain/location-rich-text.ts';
+import {htmlToRichText,readRichText,richTextToPlainText,richTextToHtml,richTextStructureLimits} from '../domain/location-rich-text.ts';
 
 test('NPC text retains paragraphs, empty paragraphs, headings, marks and lists through editor roundtrip',()=>{
  const value=htmlToRichText('<h2>Hintergrund</h2><p><strong>Erster Absatz</strong></p><p><br></p><p>Zweiter<br>Zeile</p><ul><li>Hinweis</li></ul>');
@@ -16,7 +16,9 @@ test('NPC text retains paragraphs, empty paragraphs, headings, marks and lists t
 });
 test('Oversized existing NPC text remains on the non-destructive plain-text editor path',()=>{
  assert.equal(canFormatNPCText('x'.repeat(70000)),false);
- assert.equal(canFormatNPCText(Array(130).fill('Absatz').join('\n')),false);
+ // P1 2026-11-22: the block bound rose from 120 to richTextStructureLimits.blocks; the intent is unchanged.
+ assert.equal(canFormatNPCText(Array(130).fill('Absatz').join('\n')),true);
+ assert.equal(canFormatNPCText(Array(richTextStructureLimits.blocks+1).fill('Absatz').join('\n')),false);
 });
 test('NPC editor reuses safe rich editor; reading view explicitly preserves whitespace and list markers',()=>{
  const editor=readFileSync('app/spielbereich/modules/npc-editor.tsx','utf8');

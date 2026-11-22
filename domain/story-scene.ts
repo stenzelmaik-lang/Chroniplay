@@ -6,7 +6,15 @@ import { W10_ATTRIBUTE_KEYS, W10_ABILITY_KEYS } from './trait-ids.ts';
 
 const id = z.string().min(1).max(100);
 const optionalId = z.string().max(100).default('');
-const text = z.string().max(authoringSourceMax).transform((v,ctx)=>{try{return sanitizeRichTextInput(v);}catch{ctx.addIssue({code:'custom',message:'Ungültiges oder zu komplexes HTML.'});return '';}}).refine(v => isRichTextWithinLimit(v, authoringTextMax), 'Dieser Text ist zu lang oder ungültig formatiert.');
+// The importer names the exceeded bound (rows, sections, formatting); that reason reaches the SL instead of a generic one.
+const text = z.string().max(authoringSourceMax,'Dieser Text ist zu lang (höchstens '+authoringSourceMax.toLocaleString('de-DE')+' Zeichen Quelltext).').transform((v,ctx)=>{try{return sanitizeRichTextInput(v);}catch(e){ctx.addIssue({code:'custom',message:e instanceof Error&&e.message?e.message:'Ungültiges oder zu komplexes HTML.'});return '';}}).refine(v => isRichTextWithinLimit(v, authoringTextMax), 'Dieser Text ist zu lang (höchstens '+authoringTextMax.toLocaleString('de-DE')+' sichtbare Zeichen) oder ungültig formatiert.');
+const sceneFieldLabels:Record<string,string>={title:'Titel',narration:'Erzählung',atmosphere:'Atmosphäre',gmNotes:'SL-Notizen',dialogueNotes:'Dialoge',interactions:'Interaktion',secrets:'Geheimnisse',visions:'Visionen',possibleConsequences:'Konsequenzen',possibilities:'Möglichkeiten',elements:'Baustein',whispers:'Botschaft'};
+/** "Erzählung: …" or "Baustein 3: …", so a rejected save names the affected field. */
+export function sceneIssueMessage(issue:{path:(string|number)[];message:string}):string{
+  const path=issue.path[0]==='document'?issue.path.slice(1):issue.path,key=String(path[0]??''),label=sceneFieldLabels[key];
+  if(!label)return issue.message;
+  return (typeof path[1]==='number'&&['elements','whispers','possibilities'].includes(key)?label+' '+(path[1]+1):label)+': '+issue.message;
+}
 const ids = z.array(id).max(30).refine(v => new Set(v).size === v.length, 'Eine Akte darf nur einmal verknüpft werden.');
 export const sceneTabs = { narration: 'Erzählung', persons: 'Personen', interaction: 'Interaktion', secrets: 'Geheimnisse', consequences: 'Konsequenzen' } as const;
 export const sceneStatusNames = { prepared: 'Vorbereitet', active: 'Läuft', paused: 'Pausiert', completed: 'Abgeschlossen' } as const;
