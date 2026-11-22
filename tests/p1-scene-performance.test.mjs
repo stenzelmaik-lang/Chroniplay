@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { emptyScene, sceneDocumentSchema } from '../domain/story-scene.ts';
 import { summarizeSceneRow } from '../domain/scene-list.ts';
-import { api, apiIfChanged, ApiError, API_TRANSPORT_ERROR } from '../app/spielbereich/modules/api-client.ts';
+import { api, ApiError, API_TRANSPORT_ERROR } from '../app/spielbereich/modules/api-client.ts';
 
 const html = v => 'cvk-html-v1:' + v;
 const table = rows => '<table><tbody><tr><th>Sprecher</th><th>Dialog</th></tr>' + Array.from({ length: rows }, (_, i) => `<tr><td><strong>SC</strong></td><td>Zeile ${i + 1} im Keller.</td></tr>`).join('') + '</tbody></table>';
@@ -48,25 +48,6 @@ test('an interrupted or unreadable answer is an error, not a silently empty view
     globalThis.fetch = async () => new Response('nicht json', { status: 500 });
     await assert.rejects(api('/api/command-center'), e => e instanceof ApiError && e.status === 500 && /nicht gelesen/.test(e.message));
   } finally { globalThis.fetch = original; }
-});
-
-test('a polled view answers null on 304 and keeps the last ETag', async () => {
-  const original = globalThis.fetch, seen = [];
-  try {
-    globalThis.fetch = async (_url, init) => { seen.push(init.headers['If-None-Match'] || ''); return seen.length === 1 ? new Response('{"ok":1}', { status: 200, headers: { ETag: '"v1"' } }) : new Response(null, { status: 304, headers: { ETag: '"v1"' } }); };
-    const tag = { current: '' };
-    assert.deepEqual(await apiIfChanged('/api/command-center', tag), { ok: 1 });
-    assert.equal(tag.current, '"v1"');
-    assert.equal(await apiIfChanged('/api/command-center', tag), null);
-    assert.deepEqual(seen, ['', '"v1"']);
-  } finally { globalThis.fetch = original; }
-});
-
-test('the Command Center poll uses the conditional read and the route answers with an ETag', () => {
-  assert.match(readFileSync('app/spielbereich/modules/command-workspace.tsx', 'utf8'), /apiIfChanged<Snapshot>\('\/api\/command-center', snapshotTag\)/);
-  const route = readFileSync('app/api/command-center/route.ts', 'utf8');
-  assert.equal((route.match(/jsonIfChanged\(req,/g) || []).length, 2);
-  assert.match(readFileSync('server/access.ts', 'utf8'), /status: 304/);
 });
 
 test('scene images in the reader load lazily', () => {

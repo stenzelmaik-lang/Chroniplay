@@ -1,4 +1,4 @@
-import { actor, database, failure, gmOnly, jsonIfChanged } from '@/server/access';
+import { actor, database, failure, gmOnly, json } from '@/server/access';
 import { loadEntities, projectEntity, type GrantRow } from '@/server/entities';
 import { commandHandouts } from '@/domain/command-center';
 import { commandCharacterSummary } from '@/domain/character-live';
@@ -32,10 +32,10 @@ export async function GET(req: Request) {
         const projected=projectEntity(viewer,e,grants.results as GrantRow[]);
         return projected?[{id:projected.id,title:projected.title,text:typeof projected.content.text==='string'?projected.content.text:''}]:[];
       });
-      return jsonIfChanged(req,{sessions,handouts,scenes:await scenePlayerPreview(db,a)});
+      return json({sessions,handouts,scenes:await scenePlayerPreview(db,a)});
     }
     const [references, stories, moments, scenes] = await Promise.all([commandReferences(db, a), listStories(db, a), listMoments(db, a), listScenes(db, a)]);
-    return jsonIfChanged(req,{
+    return json({
       campaignId:a.campaignId,
       references, stories, moments, scenes,
       sessions:entities.filter(e=>e.type==='SESSION').map(e=>({id:e.id,kind:'sitzungen',title:e.title,visibility:e.visibility,body:e.content,gmBody:e.gmBody,version:e.version})),

@@ -20,12 +20,11 @@ export const API_READ_TIMEOUT_MS = 45_000;
  * treating it as a decision of the server. */
 export const API_TRANSPORT_ERROR = 0;
 
-async function send(url: string, method: string, body: unknown, headers: Record<string, string> = {}) {
+async function send(url: string, method: string, body: unknown) {
   try {
     return await fetch(url, {
       method,
-      cache: "no-store",
-      headers: body instanceof FormData ? headers : body ? { ...headers, "Content-Type": "application/json" } : headers,
+      headers: body instanceof FormData ? {} : body ? { "Content-Type": "application/json" } : {},
       body: body instanceof FormData ? body : body ? JSON.stringify(body) : undefined,
       ...(method === "GET" && typeof AbortSignal !== "undefined" && "timeout" in AbortSignal ? { signal: AbortSignal.timeout(API_READ_TIMEOUT_MS) } : {}),
     });
@@ -57,14 +56,4 @@ export async function api<T = ApiResult>(
   body?: unknown,
 ): Promise<T> {
   return read<T>(await send(url, method, body));
-}
-
-/** Polling read: sends the last ETag and resolves to null when the server answers 304 (nothing changed),
- * so an unchanged view is neither downloaded again nor re-rendered. */
-export async function apiIfChanged<T = ApiResult>(url: string, tag: { current: string }): Promise<T | null> {
-  const r = await send(url, "GET", undefined, tag.current ? { "If-None-Match": tag.current } : {});
-  if (r.status === 304) return null;
-  const data = await read<T>(r);
-  tag.current = r.headers.get("ETag") || "";
-  return data;
 }

@@ -61,16 +61,6 @@ export function json(data: unknown, status = 200) {
     },
   });
 }
-/** JSON for views that are polled: the ETag is a digest of exactly this answer, computed after all access checks.
- * A client that sends that ETag back gets 304 without a body. Still private and never stored by the browser. */
-export async function jsonIfChanged(req: Request, data: unknown) {
-  const body = JSON.stringify(data);
-  const digest = new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(body)));
-  const etag = '"' + Array.from(digest.slice(0, 16), b => b.toString(16).padStart(2, "0")).join("") + '"';
-  const headers = { "Cache-Control": "private, no-store", "X-Content-Type-Options": "nosniff", ETag: etag };
-  if (req.headers.get("If-None-Match") === etag) return new Response(null, { status: 304, headers });
-  return new Response(body, { status: 200, headers: { ...headers, "Content-Type": "application/json" } });
-}
 export async function failure(e: unknown, req?: Request) {
   if (req?.body && !req.bodyUsed) {
     try {
