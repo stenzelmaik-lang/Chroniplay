@@ -5,7 +5,7 @@ import type { Actor } from '@/domain/types';
 import type { Entry } from '@/domain/legacy';
 import type { CommandCharacterSummary } from '@/domain/character-live';
 import { commandSyncSchema, emptyStory, type CommandPanel, type CommandTool, type CommandWorkspace as Layout, type CommandReference, type MomentView, type WorkspaceMode } from '@/domain/command-workspace';
-import { api, ApiError } from './api-client';
+import { api, apiIfChanged, ApiError } from './api-client';
 import { useCommandWorkspace } from './use-command-workspace';
 import { CommandBoard, commandToolLabels } from './command-board';
 import { CommandStory } from './command-story';
@@ -38,6 +38,7 @@ export function CommandWorkspace({ a, onRefresh, preparation = false }: { a: Act
   const channel = useRef<BroadcastChannel | null>(null), snapshotRef = useRef<Snapshot | null>(null), lockedRef = useRef(false), dirtyPanels = useRef<Record<string, boolean>>({});
   const syncFocus = useRef<Layout['focus'] | null>(null), syncRole = useRef<'main' | 'companion'>('main'), focusRequested = useRef(false);
   const inFlight = useRef(false), alive = useRef(true), createId = useRef<string | null>(null), previewRef = useRef(false);
+  const snapshotTag = useRef(''), playerTag = useRef(''), playerRef = useRef<PlayerCommandData | null>(null);
   const deny = useCallback(() => { cancel(); lockedRef.current = true; setLocked(true); setSnapshot(null); snapshotRef.current = null; setPreview(null); setGroupStand(null); channel.current?.postMessage({ type: 'lock' }); }, [cancel]);
   const prefs = useCommandWorkspace(mode, windowRole, deny);
   const { view, change, save, load } = prefs;
@@ -47,11 +48,18 @@ export function CommandWorkspace({ a, onRefresh, preparation = false }: { a: Act
     if (inFlight.current || lockedRef.current) return;
     inFlight.current = true;
     try {
-      const data = await api<Snapshot>('/api/command-center');
+      // The 10-second poll only downloads and re-renders when something changed (304 otherwise, P1 2026-11-22).
+      if (!snapshotRef.current) snapshotTag.current = '';
+      const data = await apiIfChanged<Snapshot>('/api/command-center', snapshotTag);
       if (!alive.current || lockedRef.current) return;
-      snapshotRef.current = data; setSnapshot(data); setError('');
-      if (!preparation) { const safe = await api<PlayerCommandData>('/api/command-center?view=player'); if (alive.current && !lockedRef.current) setGroupStand(safe); }
-      if (previewRef.current) { const safe = await api<PlayerCommandData>('/api/command-center?view=player'); if (alive.current && !lockedRef.current) setPreview(safe); }
+      if (data) { snapshotRef.current = data; setSnapshot(data); }
+      setError('');
+      if (!preparation || previewRef.current) {
+        if (!playerRef.current) playerTag.current = '';
+        const safe = await apiIfChanged<PlayerCommandData>('/api/command-center?view=player', playerTag);
+        if (safe) playerRef.current = safe;
+        if (alive.current && !lockedRef.current && playerRef.current) { if (!preparation) setGroupStand(playerRef.current); if (previewRef.current) setPreview(playerRef.current); }
+      }
     } catch (e) { if (alive.current) { setError((e as Error).message); setGroupStand(null); if (previewRef.current) setPreview(null); if (e instanceof ApiError && [401, 403].includes(e.status)) deny(); } }
     finally { inFlight.current = false; }
   }, [deny, preparation]);

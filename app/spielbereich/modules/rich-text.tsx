@@ -61,7 +61,8 @@ export function RichTextView({ value, className, readable = false, flowing = fal
     {documentModel.blocks.map((block, index) => {
       if(block.type==='details')return <details key={index} className={block.className}><summary>{block.summary}</summary><RichTextView value={encodeRichText(block.content)} readable={readable} flowing={flowing} fileUrl={fileUrl}/></details>;
       if(block.type==='divider')return <hr key={index} className={block.className}/>;
-      if(block.type==='image')return <img key={index} src={fileUrl?fileUrl(block.fileId):'/api/files?id='+encodeURIComponent(block.fileId)} alt={block.alt} style={{maxWidth:'100%',height:'auto'}}/>;
+      // Long scenes carry many images: load each only when it approaches the visible area (P1 2026-11-22).
+      if(block.type==='image')return <img key={index} loading="lazy" decoding="async" src={fileUrl?fileUrl(block.fileId):'/api/files?id='+encodeURIComponent(block.fileId)} alt={block.alt} style={{maxWidth:'100%',height:'auto'}}/>;
       if(block.type==='table')return <div key={index} style={{overflowX:'auto'}}><table className={block.className}><tbody>{block.rows.map((r,ri)=><tr key={ri}>{r.map((c,ci)=>block.header&&ri===0?<th key={ci} scope="col">{inlineElements(c,`t${index}-${ri}-${ci}`,proseFlow)}</th>:<td key={ci}>{inlineElements(c,`t${index}-${ri}-${ci}`,proseFlow)}</td>)}</tr>)}</tbody></table></div>;
       if(block.type==='quote')return <blockquote key={index} className={block.className}>{inlineElements(block.children,`q${index}`,proseFlow)}</blockquote>;
       if (block.type === "bulletList" || block.type === "orderedList") {
