@@ -25,7 +25,9 @@ Hier steht der längere Community-Bericht.
 Dieser Abschnitt wird NICHT an Discord gesendet.
 ~~~
 
-Nur **Titel und der Abschnitt Kurzfassung** gelangen in ein farbiges Discord-Embed. Die Kurzfassung ist einfache Prosa ohne Links, Erwähnungen, persönliche Daten, Pfade, Kennungen, Tokens oder Konfigurationsnamen. Unsichere Texte werden vollständig **abgebrochen**, nicht gekürzt. Titel: maximal 180 Zeichen im Format Entwicklertagebuch #N – ...; Kurzfassung: 12–700 Zeichen.
+Die neue Vorlage unter `.github/DISCUSSION_TEMPLATE/entwicklertagebuch.yml` bietet passende Felder für Kurzfassung, abgeschlossene Verbesserungen, Fehlerbehebungen, laufende Arbeiten und Feedback. Das Pflichtfeld **Kurzfassung** wird von GitHub als `### Kurzfassung` ausgegeben und vom Workflow gezielt ausgelesen. Die drei Sicherheits-Häkchen müssen bestätigt sein. Im Titel die Nummer und nach `–` ein Thema ergänzen.
+
+In Discord erscheinen **Titel, Kurzfassung und ein klickbarer Titel-Link zur vollständigen GitHub-Discussion** sowie ein fester ChroniPlay-Footer. Der Link stammt ausschließlich aus der GitHub-GraphQL-Antwort und muss zur genau freigegebenen Discussion im eigenen Repository gehören. Fremde oder abweichende Links führen zum Abbruch. Titel und Kurzfassung dürfen weiterhin keine Links, Erwähnungen, persönlichen Daten, Pfade, Kennungen, Tokens oder Konfigurationsnamen enthalten. Unsichere Texte werden vollständig **abgebrochen**, nicht gekürzt. Titel: maximal 180 Zeichen im Format Entwicklertagebuch #N – ...; Kurzfassung: 12–700 Zeichen.
 
 ## Erstbetrieb
 
@@ -38,7 +40,7 @@ Nur **Titel und der Abschnitt Kurzfassung** gelangen in ein farbiges Discord-Emb
 ## Sicherheitsregeln
 
 - Einziger Workflow-Trigger: discussion:labeled. Owner, eigenes Autorenkonto, Kategorie und Freigabelabel müssen im Ereignis passen und werden anschließend anhand der aktuellen Discussion nochmals geprüft.
-- Keine Pings: allowed_mentions ist leer. Keine Dateien, Links oder versteckten Volltexte im Discord-Post.
+- Keine Pings: `allowed_mentions` ist leer. Keine Dateien, unkontrollierten Links oder versteckten Volltexte im Discord-Post. Einzige URL ist der streng validierte Link auf die eigene GitHub-Discussion.
 - Das Ziel wird über exakten Webhook-Namen, Webhooktyp und Kanal-ID gegen #chroniplay-updates validiert; bei Abweichung erfolgt ein Abbruch.
 - Nur contents:read und discussions:write; keine zusätzlichen Python-Pakete, keine weiteren App-Änderungen.
 - Serielle Abarbeitung pro Discussion plus Kommentar-Vermerke gegen Doppelversand. Vor der Sendung wird ein **claimed**-Vermerk und nach bestätigtem Versand ein **sent**-Vermerk in der Discussion hinterlassen.
