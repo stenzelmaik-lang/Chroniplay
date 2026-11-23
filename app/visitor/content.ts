@@ -26,6 +26,26 @@ export const visitorContent = {
     "Spielbereich für freigegebene Runden",
     "Erste Kampagne: Chronik von Kleve",
   ],
+  community: {
+    kicker: "Community",
+    title: "Komm ans Lagerfeuer.",
+    intro: "ChroniPlay entsteht nicht im stillen Kämmerlein. Auf dem Discord-Server von pan0ram triffst du Spieler, Spielleitungen und das Entwicklungsteam – und auf GitHub kannst du jeden Schritt mitverfolgen.",
+    discord: {
+      title: "Discord: Die Weltenrast",
+      text: "Neuigkeiten zu ChroniPlay, Austausch rund um Pen & Paper und dein Feedback direkt an das Team. Am Waldrand wartet schon ein Platz auf dich.",
+      action: "Discord beitreten",
+      // Dauerhafte Einladung (läuft nicht ab), Ziel: #am-waldrand
+      href: "https://discord.gg/y3n5JETXv3",
+    },
+    github: {
+      title: "Offen entwickelt auf GitHub",
+      text: "Der Code von ChroniPlay ist öffentlich einsehbar. Im Entwicklertagebuch erzählen wir regelmäßig, was neu ist und woran wir gerade arbeiten.",
+      diaryAction: "Zum Entwicklertagebuch",
+      diaryHref: "https://github.com/stenzelmaik-lang/chronik-von-kleve/discussions/categories/entwicklertagebuch",
+      repoAction: "Projekt auf GitHub",
+      repoHref: "https://github.com/stenzelmaik-lang/chronik-von-kleve",
+    },
+  },
 };
 
 export type VisitorContent = typeof visitorContent;
