@@ -13,6 +13,7 @@ const toc = [
   { id: 'cookies', label: 'Cookies und Browser-Speicher' },
   { id: 'konto', label: 'Konto und Spielbereich' },
   { id: 'engagement', label: 'Freiwillige Aktivitätsmessung' },
+  { id: 'sprache', label: 'Sprachchat am Spieltisch' },
   { id: 'extern', label: 'Externe Inhalte im Spielbereich' },
   { id: 'links', label: 'Links zu Discord, GitHub und Co.' },
   { id: 'kontakt', label: 'Kontakt und Werbeanfragen' },
@@ -73,6 +74,12 @@ export default function Datenschutz() {
       <p>Du kannst die Messung jederzeit unter <Link href="/profil#aktivitaetsmessung">Profil &amp; Einstellungen</Link> ausschalten und die Änderung mit „Profil speichern“ übernehmen. Danach kannst du ChroniPlay weiterspielen. Die Einstellung gilt für dein Konto und bleibt beim Neuladen und auf anderen Geräten erhalten. ChroniPlay wertet Zeit- und Nachweisdaten aus den letzten 365 Berliner Kalendertagen aus. Ein täglicher Löschlauf entfernt ältere Daten aus der laufenden Datenbank. Bereits gebuchte EP bleiben im Charakter-Ledger nachvollziehbar.</p>
     </LegalSection>
 
+    <LegalSection id="sprache" title="Sprachchat am Spieltisch">
+      <p>Für freigeschaltete Kampagnen gibt es am Spieltisch einen Sprachchat. Er ist <strong>freiwillig</strong> und startet erst, wenn du selbst auf „Beitreten“ klickst. Dein Mikrofon bleibt aus, bis du es einschaltest. Du kannst den Sprachchat jederzeit wieder verlassen.</p>
+      <p>Die Sprachübertragung läuft über <strong>Cloudflare Realtime</strong> (Cloudflare, Inc., siehe „Hosting“). Der Dienst arbeitet in unserem Auftrag. Verarbeitet werden dein Anzeigename, eine interne Teilnehmerkennung, deine IP-Adresse, Beitritts- und Austrittszeiten sowie deine Stimme, solange dein Mikrofon an ist. <strong>Gespräche werden weder aufgezeichnet noch transkribiert.</strong> Die Stimme wird nur live an die anderen Teilnehmenden des Spielabends übertragen. Den Zugang zum Raum erhalten nur Mitglieder des laufenden Spielabends, und er gilt höchstens zwölf Stunden.</p>
+      <p>Rechtsgrundlage ist die Nutzung des Dienstes auf deinen Wunsch (Art. 6 Abs. 1 lit. b DSGVO). Für eine mögliche Verarbeitung in den USA gilt dasselbe wie beim Hosting: Grundlage sind das EU-US Data Privacy Framework und ergänzend Standardvertragsklauseln.</p>
+    </LegalSection>
+
     <LegalSection id="extern" title="Externe Inhalte im Spielbereich">
       <p>Die öffentliche Startseite lädt keine Inhalte von Drittanbietern. Im angemeldeten Spielbereich werden in zwei Fällen Inhalte externer Anbieter geladen. Dabei erhält der jeweilige Anbieter technisch bedingt deine IP-Adresse:</p>
       <table className={s.tabelle}>
@@ -98,6 +105,7 @@ export default function Datenschutz() {
       <ul>
         <li><strong>Konto- und Spieldaten:</strong> solange dein Konto besteht. Auf Wunsch löschen wir dein Konto und die zugehörigen persönlichen Daten.</li>
         <li><strong>Aktivitätsdaten:</strong> Auswertung der letzten 365 Tage, ältere Daten entfernt ein täglicher Löschlauf.</li>
+        <li><strong>Sprachchat:</strong> keine Aufzeichnung. Technische Sitzungsdaten wie Beitritts- und Austrittszeiten speichert Cloudflare nach seinen Standardfristen.</li>
         <li><strong>Anmelde-Cookie:</strong> höchstens 30 Tage oder bis zur Abmeldung.</li>
         <li><strong>Server-Protokolle:</strong> nach den kurzen Standardfristen von Cloudflare.</li>
         <li><strong>E-Mails:</strong> bis zur Erledigung deines Anliegens.</li>
