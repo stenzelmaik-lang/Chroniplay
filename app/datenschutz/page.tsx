@@ -38,7 +38,7 @@ export default function Datenschutz() {
     <LegalSection id="verantwortlich" title="Verantwortlicher">
       <p>Verantwortlich für die Datenverarbeitung auf chroniplay.cc im Sinne der Datenschutz-Grundverordnung (DSGVO) ist:</p>
       {k.name
-        ? <address className={s.adresse}>{k.name}{k.anschrift.map((zeile) => <span key={zeile}><br />{zeile}</span>)}{k.email && <><br /><a href={`mailto:${k.email}`}>{k.email}</a></>}</address>
+        ? <address className={s.adresse}>{k.name}{k.email && <><br /><a href={`mailto:${k.email}`}>{k.email}</a></>}</address>
         : <Hinweis>Die Angaben zum Verantwortlichen werden gerade ergänzt. Siehe auch das <Link href="/impressum">Impressum</Link>.</Hinweis>}
       <p>Ein Datenschutzbeauftragter ist nicht benannt, da hierfür keine gesetzliche Pflicht besteht.</p>
     </LegalSection>
