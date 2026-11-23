@@ -11,7 +11,7 @@ import styles from './voice-bar.module.css';
 type Meeting=Awaited<ReturnType<typeof RealtimeKitClient.init>>;
 type Peer={id:string;name:string;self:boolean;audio:boolean;video:boolean;registerVideoElement?:(el:HTMLVideoElement,preview?:boolean)=>void;deregisterVideoElement?:(el?:HTMLVideoElement,preview?:boolean)=>void};
 type Emitter={on:(event:string,fn:(...args:unknown[])=>void)=>void;off?:(event:string,fn:(...args:unknown[])=>void)=>void;removeListener?:(event:string,fn:(...args:unknown[])=>void)=>void};
-type Status={available:boolean;mode:'live'|'attrappe'|'unconfigured';runId:string|null};
+type Status={available:boolean;mode:'live'|'attrappe'|'unconfigured';video?:boolean;runId:string|null};
 type Join={mode:'live';authToken:string;role:string}|{mode:'attrappe';role:string};
 type Phase='idle'|'joining'|'joined'|'error';
 
@@ -104,6 +104,7 @@ export function VoiceBar({sessionId,runId}:{sessionId:string;runId:string}){
   if(!m){setPeers(old=>old.map(p=>p.self?{...p,[kind]:!p[kind]}:p));return;}
   setBusy(true);setError('');
   try{
+   if(kind==='video'&&!status?.video){setBusy(false);return;}
    if(kind==='audio')await (m.self.audioEnabled?m.self.disableAudio():m.self.enableAudio());
    else await (m.self.videoEnabled?m.self.disableVideo():m.self.enableVideo());
    refresh();
@@ -124,10 +125,10 @@ export function VoiceBar({sessionId,runId}:{sessionId:string;runId:string}){
   {error&&<p className={styles.error} role="alert">{error}</p>}
   {phase==='joined'?<div className={styles.controls}>
    <button onClick={()=>void toggle('audio')} disabled={busy} aria-pressed={!!me?.audio} aria-label={me?.audio?'Mikrofon ausschalten':'Mikrofon einschalten'}>{me?.audio?<Mic size={17}/>:<MicOff size={17}/>}</button>
-   <button onClick={()=>void toggle('video')} disabled={busy} aria-pressed={!!me?.video} aria-label={me?.video?'Kamera ausschalten':'Kamera einschalten'}>{me?.video?<Video size={17}/>:<VideoOff size={17}/>}</button>
+   {status.video&&<button onClick={()=>void toggle('video')} disabled={busy} aria-pressed={!!me?.video} aria-label={me?.video?'Kamera ausschalten':'Kamera einschalten'}>{me?.video?<Video size={17}/>:<VideoOff size={17}/>}</button>}
    <button className={styles.leave} onClick={()=>void leave()} aria-label="Voice verlassen"><PhoneOff size={17}/></button>
   </div>:status.mode!=='unconfigured'&&<>
-   <p className={styles.hint}>Mikrofon und Kamera bleiben aus, bis du sie einschaltest. Es wird nichts aufgezeichnet.</p>
+   <p className={styles.hint}>{status.video?'Mikrofon und Kamera bleiben aus, bis du sie einschaltest.':'Nur Sprache. Dein Mikrofon bleibt aus, bis du es einschaltest.'} Es wird nichts aufgezeichnet.</p>
    <button className={styles.join} onClick={()=>void join()} disabled={phase==='joining'}>{phase==='joining'?'Verbinde …':'Beitreten'}</button>
   </>}
  </section></div>;

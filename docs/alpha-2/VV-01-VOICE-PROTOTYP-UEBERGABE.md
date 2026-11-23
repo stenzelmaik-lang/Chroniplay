@@ -11,6 +11,7 @@ Spielende und SL können während eines laufenden Spielabends direkt am Spieltis
 | Variable | Bedeutung |
 |---|---|
 | `CVK_VOICE_CAMPAIGNS` | Komma-Liste der freigeschalteten Kampagnen, `*` wird ignoriert. **Fehlt sie, ist Voice aus** (Route 404, keine Leiste). |
+| `CVK_VOICE_VIDEO` | **Eigentümerentscheidung 23.11.2026: zuerst nur Sprache.** Nur der Wert `1` zeigt die Kamera. Ohne die Variable gibt es keinen Kamera-Knopf. Für eine harte Grenze und den günstigeren Nur-Audio-Preis sollten die RealtimeKit-Presets den Meeting-Typ „Voice“ haben. |
 | `CVK_VOICE=local-only` | Nur zusammen mit `AUTH_ACCESS_ENVIRONMENT=local-test`: überall verfügbar, ohne Secrets als Attrappe ohne Verbindung. In Produktion wirkungslos. |
 | `CF_REALTIME_ACCOUNT_ID`, `CF_REALTIME_APP_ID`, `CF_REALTIME_API_TOKEN` | **Worker-Secrets**, setzt der Eigentümer selbst (Token mit Recht „Realtime“). Nur alle drei zusammen gelten. |
 | `CF_REALTIME_PRESET_HOST` / `CF_REALTIME_PRESET_PARTICIPANT` | optional, Standard `group_call_host` / `group_call_participant` (Standard-Presets einer im Dashboard angelegten App) |
@@ -67,7 +68,7 @@ Die `VOICE`-Integration läuft direkt nach `dashboardHubIntegration`, und das ha
 - **Vor dem ersten Testabend:** Abschnitt zur Datenschutzerklärung (Cloudflare als Auftragsverarbeiter, keine Aufnahme).
 
 ## Aufgaben des Eigentümers vor einem echten Test
-1. Im Cloudflare-Dashboard unter Realtime → RealtimeKit eine App anlegen. Die Standard-Presets werden dabei angelegt.
+1. Im Cloudflare-Dashboard unter Realtime → RealtimeKit eine App anlegen. Für den Start mit nur Sprache zwei Presets mit dem Meeting-Typ „Voice“ anlegen (Host und Teilnehmer). Ihre Namen kommen in `CF_REALTIME_PRESET_HOST` / `CF_REALTIME_PRESET_PARTICIPANT`.
 2. Ein API-Token mit dem Recht „Realtime“ erstellen.
 3. Die Secrets selbst per `wrangler secret put` setzen (nicht im Chat).
 4. Nach Freigabe eines Deployments `CVK_VOICE_CAMPAIGNS=chronik-von-kleve` setzen. Das Leeren der Variable schaltet Voice ohne Codeänderung ab.

@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {voiceAvailable,voiceConfig,voiceMode,voicePreset,participantBody,meetingBody,apiData,currentMeeting,voiceBase,VOICE_TOKEN_HOURS,DEFAULT_HOST_PRESET,DEFAULT_PARTICIPANT_PRESET} from '../domain/live-voice.ts';
+import {voiceAvailable,voiceVideo,voiceConfig,voiceMode,voicePreset,participantBody,meetingBody,apiData,currentMeeting,voiceBase,VOICE_TOKEN_HOURS,DEFAULT_HOST_PRESET,DEFAULT_PARTICIPANT_PRESET} from '../domain/live-voice.ts';
 
 const secrets={CF_REALTIME_ACCOUNT_ID:'0123456789abcdef0123456789abcdef',CF_REALTIME_APP_ID:'app-1234-abcd',CF_REALTIME_API_TOKEN:'x'.repeat(40)};
 
@@ -66,4 +66,11 @@ test('the Cloudflare API token never reaches a response or the browser bundle',(
  assert.ok(!/CF_REALTIME|apiToken|api\.cloudflare\.com/.test(client));
  assert.match(client,/defaults:\{audio:false,video:false\}/,'microphone and camera start switched off');
  assert.ok(!/recording|transcri/i.test(server)&&!/startRecording|transcri/i.test(client),'no recording or transcription');
+});
+test('voice only by default: the camera needs CVK_VOICE_VIDEO=1',()=>{
+ assert.equal(voiceVideo({}),false);
+ assert.equal(voiceVideo({CVK_VOICE_VIDEO:'true'}),false,'only the exact value opens video');
+ assert.equal(voiceVideo({CVK_VOICE_VIDEO:'1'}),true);
+ const client=readFileSync(new URL('../app/spielbereich/modules/spieltisch/voice-bar.tsx',import.meta.url),'utf8');
+ assert.match(client,/\{status\.video&&<button onClick=\{\(\)=>void toggle\('video'\)\}/,'camera button only with video released');
 });

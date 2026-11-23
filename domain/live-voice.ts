@@ -4,7 +4,10 @@
  * - Isolated local test instance (CVK_VOICE=local-only and AUTH_ACCESS_ENVIRONMENT=local-test): available everywhere and,
  *   without RealtimeKit secrets, served by a dummy that never contacts Cloudflare.
  * - No recording, no transcription: the server only creates meetings and participant tokens. */
-export type VoiceGateEnv={CVK_VOICE?:string;CVK_VOICE_CAMPAIGNS?:string;AUTH_ACCESS_ENVIRONMENT?:string};
+export type VoiceGateEnv={CVK_VOICE?:string;CVK_VOICE_CAMPAIGNS?:string;CVK_VOICE_VIDEO?:string;AUTH_ACCESS_ENVIRONMENT?:string};
+/** Owner decision 23.11.2026: start with voice only. The camera appears only with CVK_VOICE_VIDEO=1.
+ * For a hard limit (and audio-only pricing) the RealtimeKit presets should use the meeting type "Voice". */
+export const voiceVideo=(env:VoiceGateEnv)=>env.CVK_VOICE_VIDEO==='1';
 export type VoiceSecretsEnv={CF_REALTIME_ACCOUNT_ID?:string;CF_REALTIME_APP_ID?:string;CF_REALTIME_API_TOKEN?:string;CF_REALTIME_PRESET_HOST?:string;CF_REALTIME_PRESET_PARTICIPANT?:string};
 export type VoiceConfig={accountId:string;appId:string;apiToken:string;hostPreset:string;participantPreset:string};
 
