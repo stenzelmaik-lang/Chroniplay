@@ -2,6 +2,14 @@ import { parseFragment } from 'parse5';
 import { authoringSourceMax } from './authoring-limits.ts';
 export const richTextPrefix = "cvk-rich-v1:";
 
+/** Structural bounds of one rich-text document (P1 2026-11-22).
+ * The visible-text limit of each field and the bounded source length remain the primary limits; these values only stop
+ * pathological nesting. The former values (120 blocks, 30 table rows, 800 formatted passages, 5,000 HTML nodes)
+ * rejected ordinary long scenes far below 20,000 visible characters, for example a dialogue table with 30 lines. */
+export const richTextStructureLimits = { blocks: 1000, partsPerBlock: 1000, listItems: 500, tableRows: 300, tableColumns: 10, inlines: 10000, htmlNodes: 60000 } as const;
+const L = richTextStructureLimits;
+const de = (n: number) => n.toLocaleString("de-DE");
+
 /** Campaign presets offered first in the colour menu; any other #rrggbb colour from the colour wheel is allowed too. */
 export const richTextColors = ["#d6b36f", "#eee6d6", "#a9c3cf", "#d38b82"] as const;
 export type RichTextColor = string;
@@ -80,7 +88,7 @@ export function parseRichTextDocument(value: unknown, nesting = 0): RichTextDocu
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
   const row = value as Record<string, unknown>;
   if (Object.keys(row).some(key => key !== "version" && key !== "blocks")) return null;
-  if (row.version !== 1 || !Array.isArray(row.blocks) || row.blocks.length > 120) return null;
+  if (row.version !== 1 || !Array.isArray(row.blocks) || row.blocks.length > L.blocks) return null;
   const blocks: RichTextBlock[] = [];
   let inlineCount = 0;
   for (const candidate of row.blocks) {
@@ -90,17 +98,17 @@ export function parseRichTextDocument(value: unknown, nesting = 0): RichTextDocu
     if (rawClassName !== undefined && (!className || className !== rawClassName)) return null;
     if (["paragraph", "heading2", "heading3", "quote"].includes(String(block.type))) {
       if (Object.keys(block).some(key => key !== "type" && key !== "children")) return null;
-      if (!Array.isArray(block.children) || block.children.length > 120) return null;
+      if (!Array.isArray(block.children) || block.children.length > L.partsPerBlock) return null;
       const children = block.children.map(parseInline);
       if (children.some(item => item === null)) return null;
       inlineCount += children.length;
       blocks.push({ type: block.type as "paragraph" | "heading2" | "heading3" | "quote", children: children as RichTextInline[] });
     } else if (block.type === "bulletList" || block.type === "orderedList") {
       if (Object.keys(block).some(key => key !== "type" && key !== "items")) return null;
-      if (!Array.isArray(block.items) || block.items.length > 120) return null;
+      if (!Array.isArray(block.items) || block.items.length > L.listItems) return null;
       const items: RichTextInline[][] = [];
       for (const rawItem of block.items) {
-        if (!Array.isArray(rawItem) || rawItem.length > 120) return null;
+        if (!Array.isArray(rawItem) || rawItem.length > L.partsPerBlock) return null;
         const parsed = rawItem.map(parseInline);
         if (parsed.some(item => item === null)) return null;
         inlineCount += parsed.length;
@@ -117,13 +125,13 @@ export function parseRichTextDocument(value: unknown, nesting = 0): RichTextDocu
       const content=parseRichTextDocument(block.content,nesting+1);if(!content)return null;
       blocks.push({type:'details',summary:block.summary,content});
     } else if (block.type === 'table') {
-      if(Object.keys(block).some(k=>!['type','rows','header'].includes(k)) || !Array.isArray(block.rows) || block.rows.length>30) return null;
+      if(Object.keys(block).some(k=>!['type','rows','header'].includes(k)) || !Array.isArray(block.rows) || block.rows.length>L.tableRows) return null;
       const rows: RichTextInline[][][]=[];
       for(const raw of block.rows) {
-        if(!Array.isArray(raw)||raw.length>10)return null;
+        if(!Array.isArray(raw)||raw.length>L.tableColumns)return null;
         const cells: RichTextInline[][]=[];
         for(const cell of raw) {
-          if(!Array.isArray(cell)||cell.length>120)return null;
+          if(!Array.isArray(cell)||cell.length>L.partsPerBlock)return null;
           const parts=cell.map(parseInline);if(parts.some(p=>p===null))return null;
           inlineCount+=parts.length;cells.push(parts as RichTextInline[]);
         }
@@ -133,7 +141,7 @@ export function parseRichTextDocument(value: unknown, nesting = 0): RichTextDocu
       blocks.push({type:'table',rows,...(block.header?{header:true}:{})});
     } else return null;
     if (className) blocks[blocks.length - 1].className = className;
-    if (inlineCount > 800) return null;
+    if (inlineCount > L.inlines) return null;
   }
   return { version: 1, blocks };
 }
@@ -277,7 +285,7 @@ export function htmlImportNotes(html:string):string[] {
   let root:HtmlNode;try{root=parseFragment(source) as unknown as HtmlNode;}catch{return [];}
   const notes:string[]=[],lost=new Set<string>(),classes=new Set<string>();let count=0,styleBlock=false,unsafe=false,externalImage=false;
   const visit=(n:HtmlNode,depth=0)=>{
-    if(++count>5000||depth>40)return;
+    if(++count>L.htmlNodes||depth>40)return;
     const tag=n.tagName||'';
     if(tag==='style')styleBlock=true;
     else if(['script','iframe','object','embed','form','input','button','video','audio','svg','math'].includes(tag))unsafe=true;
@@ -303,12 +311,33 @@ export const htmlAuthoringGuide=[
   'Farben nur direkt am Text als style="color:#rrggbb". Fett, kursiv und Ausrichtung dürfen auch als style angegeben werden.',
   'Keine Rahmen, Hintergründe, Schriftgrößen, Schriftarten, Abstände, Bilder oder Einbettungen – die Darstellung übernimmt ChroniPlay.',
 ].join('\n');
+const tooComplex='Das HTML ist zu tief verschachtelt oder enthält mehr als '+de(L.htmlNodes)+' Elemente. Bitte vereinfache die Struktur oder teile den Inhalt auf mehrere Felder auf.';
+/** Names the first structural bound a document exceeds, in plain German, so nothing is rejected without a reason. */
+export function richTextStructureIssue(blocks:RichTextBlock[],nesting=0):string|null {
+  if(nesting>4)return 'Aufklappbare Abschnitte sind zu tief ineinander verschachtelt (höchstens 4 Ebenen).';
+  if(blocks.length>L.blocks)return 'Der Text hat '+de(blocks.length)+' Abschnitte; erlaubt sind höchstens '+de(L.blocks)+'. Bitte teile ihn auf mehrere Felder oder Bausteine auf.';
+  let parts=0;
+  for(const b of blocks){
+    if(b.type==='table'){
+      if(b.rows.length>L.tableRows)return 'Eine Tabelle hat '+de(b.rows.length)+' Zeilen; erlaubt sind höchstens '+de(L.tableRows)+' je Tabelle. Bitte teile sie in mehrere Tabellen auf.';
+      const widest=Math.max(0,...b.rows.map(r=>r.length));
+      if(widest>L.tableColumns)return 'Eine Tabelle hat '+widest+' Spalten; erlaubt sind höchstens '+L.tableColumns+'.';
+      parts+=b.rows.reduce((n,r)=>n+r.reduce((m,c)=>m+c.length,0),0);
+    } else if(b.type==='bulletList'||b.type==='orderedList'){
+      if(b.items.length>L.listItems)return 'Eine Liste hat '+de(b.items.length)+' Einträge; erlaubt sind höchstens '+de(L.listItems)+'.';
+      parts+=b.items.reduce((n,i)=>n+i.length,0);
+    } else if(b.type==='details'){const inner=richTextStructureIssue(b.content.blocks,nesting+1);if(inner)return inner;}
+    else if('children' in b){if(b.children.length>L.partsPerBlock)return 'Ein Absatz enthält mehr als '+de(L.partsPerBlock)+' einzeln formatierte Textstellen. Bitte vereinfache die Formatierung.';parts+=b.children.length;}
+  }
+  if(parts>L.inlines)return 'Der Text enthält '+de(parts)+' einzeln formatierte Textstellen; erlaubt sind höchstens '+de(L.inlines)+'. Bitte vereinfache die Formatierung oder teile den Text auf.';
+  return null;
+}
 export function htmlToRichText(html:string):string {
-  if(html.length>authoringSourceMax)throw new Error('HTML zu lang.');
+  if(html.length>authoringSourceMax)throw new Error('Das HTML ist zu lang (höchstens '+de(authoringSourceMax)+' Zeichen Quelltext je Feld). Bitte teile den Inhalt auf mehrere Felder oder Bausteine auf.');
   const root=parseFragment(cleanHtmlSource(html)) as unknown as HtmlNode;
   let visited=0;
   const inline=(n:HtmlNode,marks:Omit<RichTextInline,'text'>={},depth=0):RichTextInline[]=>{
-    if(++visited>5000||depth>40)throw new Error('HTML zu komplex.');
+    if(++visited>L.htmlNodes||depth>40)throw new Error(tooComplex);
     if(n.nodeName==='#text')return [{text:n.value||'',...marks}];
     const tag=n.tagName||'';if(forbidden.has(tag))return [];
     const m={...marks},style=styleOf(n),decoration=style['text-decoration-line']||style['text-decoration']||'';
@@ -336,7 +365,7 @@ export function htmlToRichText(html:string):string {
   };
   const blocks:RichTextBlock[]=[];
   const walk=(n:HtmlNode,depth=0,inheritedAlign:Align='')=>{
-    if(depth>40||++visited>5000)throw new Error('HTML zu komplex.');
+    if(depth>40||++visited>L.htmlNodes)throw new Error(tooComplex);
     const tag=n.tagName||'';if(forbidden.has(tag))return;
     const align=n.nodeName==='#text'?inheritedAlign:alignOf(n,inheritedAlign);
     const className=allowedClasses([n.attrs?.find(a=>a.name==='class')?.value,align==='center'?'cp-align-center':align==='right'?'cp-align-right':''].filter(Boolean).join(' '));
@@ -353,7 +382,7 @@ export function htmlToRichText(html:string):string {
     }
     if(tag==='table'){
       const rows:RichTextInline[][][]=[];
-      const tr=(node:HtmlNode,d=0)=>{if(d>40)throw new Error('Tabelle zu komplex.');if(node.tagName==='tr')rows.push((node.childNodes||[]).filter(c=>['td','th'].includes(c.tagName||'')).map(c=>inline(c)));else(node.childNodes||[]).forEach(c=>{if(++visited>5000)throw new Error('Tabelle zu komplex.');tr(c,d+1);});};tr(n);
+      const tr=(node:HtmlNode,d=0)=>{if(d>40)throw new Error(tooComplex);if(node.tagName==='tr')rows.push((node.childNodes||[]).filter(c=>['td','th'].includes(c.tagName||'')).map(c=>inline(c)));else(node.childNodes||[]).forEach(c=>{if(++visited>L.htmlNodes)throw new Error(tooComplex);tr(c,d+1);});};tr(n);
       const hasHeader=(node:HtmlNode):boolean=>node.tagName==='th'||(node.childNodes||[]).some(hasHeader);
       blocks.push({type:'table',rows,...(hasHeader(n)?{header:true}:{}),...decoration});return;
     }
@@ -370,7 +399,7 @@ export function htmlToRichText(html:string):string {
     (n.childNodes||[]).forEach(c=>walk(c,depth+1,align));
   };
   (root.childNodes||[]).forEach(n=>walk(n));
-  const parsed=parseRichTextDocument({version:1,blocks});if(!parsed)throw new Error('HTML überschreitet die zulässige Dokumentstruktur.');return encodeRichText(parsed);
+  const parsed=parseRichTextDocument({version:1,blocks});if(!parsed)throw new Error(richTextStructureIssue(blocks)||'HTML überschreitet die zulässige Dokumentstruktur.');return encodeRichText(parsed);
 }
 export function sanitizeRichTextInput(value:string):string { return value.startsWith(richHtmlPrefix)?htmlToRichText(value.slice(richHtmlPrefix.length)):value; }
 

@@ -1,7 +1,6 @@
-import { scenePreparation } from '@/domain/session-overview';
+import { summarizeSceneRow, type SceneListRow } from '@/domain/scene-list';
 import { validatePreparationMedia, withoutDeletedFiles } from './preparation-media';
 import { validateSceneMaterials } from './display-assets';
-import { richTextToPlainText } from '@/domain/location-rich-text';
 import type { Actor, Entity } from '@/domain/types';
 import { sceneDocumentSchema, sceneStateSchema, targetKey, participantMatches, type SceneCommand, type SceneDocument, type SceneView, type SceneState, type SceneSummary, type SceneHistory, type SceneTarget, type PlayerScene } from '@/domain/story-scene';
 import { gmOnly, HttpError } from '@/server/access';
@@ -15,8 +14,9 @@ function decode(row: EntityRow): SceneView {
   if (!document.success || !state.success) throw new HttpError(409, 'Diese Szene enthält einen nicht unterstützten Stand. Vorhandene Daten werden nicht überschrieben.');
   return { id: row.id, version: row.version, updatedAt: row.updated_at, document: document.data, state: state.data };
 }
-async function sceneRows(db: D1Database, campaignId: string) {
-  return (await db.prepare(`SELECT * FROM entities WHERE campaign_id=? AND ${predicate} ORDER BY title,id`).bind(campaignId).all<EntityRow>()).results;
+// Only the columns each caller needs: the player projection never reads the SL document (gm_body) at all.
+async function sceneRows<T>(db: D1Database, campaignId: string, columns: string) {
+  return (await db.prepare(`SELECT ${columns} FROM entities WHERE campaign_id=? AND ${predicate} ORDER BY title,id`).bind(campaignId).all<T>()).results;
 }
 export async function readScene(db: D1Database, a: Actor, id: string) {
   gmOnly(a);
@@ -24,9 +24,9 @@ export async function readScene(db: D1Database, a: Actor, id: string) {
   if (!row) throw new HttpError(404, 'Szene nicht verfügbar.');
   return decode(row);
 }
-export async function listScenes(db: D1Database, a: Actor): Promise<SceneSummary[]> {
+export async function listScenes(db: D1Database, a: Actor, options: { search?: boolean } = {}): Promise<SceneSummary[]> {
   gmOnly(a);
-  return (await sceneRows(db, a.campaignId)).map(row => { const s = decode(row); return { id: s.id, title: s.document.title, archived:s.document.archived, storyId: s.document.storyId, placeId: s.document.placeId, version: s.version, updatedAt: s.updatedAt, runs: s.state.runs,preparation:scenePreparation(s.document),parentId:s.document.parentId,sessionIds:s.document.sessionIds,favorite:s.document.favorite,pinned:s.document.pinned,elements:s.document.elements.map(({id,title,kind})=>({id,title,kind})),searchText:[s.document.narration,...s.document.elements.map(e=>e.title+' '+richTextToPlainText(e.text))].join(' ') }; });
+  return (await sceneRows<SceneListRow>(db, a.campaignId, 'id,version,updated_at,title,gm_body,content')).map(row => summarizeSceneRow(row, options));
 }
 async function validateDocument(db: D1Database, a: Actor, d: SceneDocument, sceneId:string) {
   if (d.storyId) await readStory(db, a, d.storyId);
@@ -150,7 +150,7 @@ function releasedTo(a: Actor, entityId: string, target: SceneTarget, grants: Gra
  * lists, revision numbers or histories can enter this response. */
 export async function playerScenes(db: D1Database, a: Actor, character?: CharacterKnowledgeContext, sessionId?: string): Promise<PlayerScene[]> {
   if (a.status !== 'active' || a.gm || character && (character.ownerId !== a.id || character.campaignId !== a.campaignId)) throw new HttpError(403, 'Diese Spieleransicht ist nicht zulässig.');
-  const grants = await grantsFor(db, a, character), rows = await sceneRows(db, a.campaignId);
+  const grants = await grantsFor(db, a, character), rows = await sceneRows<{ id: string; content: string }>(db, a.campaignId, 'id,content');
   const selected = rows.flatMap(row => {
     // Malformed scenes fail closed individually, without exposing their IDs.
     const parsed = sceneStateSchema.safeParse(parseObject(row.content)); if (!parsed.success) return [];

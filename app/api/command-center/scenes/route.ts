@@ -1,6 +1,6 @@
 import { authoringRequestMax } from '@/domain/authoring-limits';
 import { actor, database, gmOnly, input, sameOrigin, json, failure, HttpError } from '@/server/access';
-import { sceneCommandSchema } from '@/domain/story-scene';
+import { sceneCommandSchema, sceneIssueMessage } from '@/domain/story-scene';
 import { readScene, listScenes, sceneHistory, executeScene, scenePlayerPreview } from '@/server/story-scenes';
 import { deletePreparation, deletePreparationCommand } from '@/server/preparation-delete';
 export const dynamic = 'force-dynamic';
@@ -16,7 +16,7 @@ export async function POST(req: Request) {
   try { sameOrigin(req); const a = await actor(); gmOnly(a); const body = await input(req, authoringRequestMax);
     if (body?.action === 'delete') { const p = deletePreparationCommand.safeParse(body); if (!p.success) throw new HttpError(400, p.error.issues[0].message); return json({ deleted: await deletePreparation(database(), a, 'scene', p.data.id, p.data.version) }); }
     const command = sceneCommandSchema.safeParse(body);
-    if (!command.success) throw new HttpError(400, command.error.issues[0].message);
+    if (!command.success) throw new HttpError(400, sceneIssueMessage(command.error.issues[0]));
     return json({ scene: await executeScene(database(), a, command.data) }, command.data.action === 'create' ? 201 : 200);
   } catch (e) { return failure(e, req); }
 }
