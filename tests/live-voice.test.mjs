@@ -62,7 +62,7 @@ test('the Cloudflare API token never reaches a response or the browser bundle',(
  const returns=server.match(/return \{[^}]*\}/g)||[];
  assert.ok(returns.length>=2);
  for(const r of returns)assert.ok(!/apiToken|accountId|appId|meetingId/.test(r),'response leaks configuration: '+r);
- const client=readFileSync(new URL('../app/spielbereich/modules/spieltisch/voice-bar.tsx',import.meta.url),'utf8');
+ const read=p=>readFileSync(new URL('../app/spielbereich/modules/spieltisch/'+p,import.meta.url),'utf8'),client=read('use-voice.ts')+read('voice-control.tsx');
  assert.ok(!/CF_REALTIME|apiToken|api\.cloudflare\.com/.test(client));
  assert.match(client,/defaults:\{audio:false,video:false\}/,'microphone and camera start switched off');
  assert.ok(!/recording|transcri/i.test(server)&&!/startRecording|transcri/i.test(client),'no recording or transcription');
@@ -71,6 +71,15 @@ test('voice only by default: the camera needs CVK_VOICE_VIDEO=1',()=>{
  assert.equal(voiceVideo({}),false);
  assert.equal(voiceVideo({CVK_VOICE_VIDEO:'true'}),false,'only the exact value opens video');
  assert.equal(voiceVideo({CVK_VOICE_VIDEO:'1'}),true);
- const client=readFileSync(new URL('../app/spielbereich/modules/spieltisch/voice-bar.tsx',import.meta.url),'utf8');
- assert.match(client,/\{status\.video&&<button onClick=\{\(\)=>void toggle\('video'\)\}/,'camera button only with video released');
+ const client=readFileSync(new URL('../app/spielbereich/modules/spieltisch/use-voice.ts',import.meta.url),'utf8')+readFileSync(new URL('../app/spielbereich/modules/spieltisch/voice-control.tsx',import.meta.url),'utf8');
+ assert.ok(!/enableVideo/.test(client),'the top-bar voice never switches a camera on (video UI follows in a later phase)');
+});
+test('top bar: speaking highlight is measured locally and never played back twice',()=>{
+ const hook=readFileSync(new URL('../app/spielbereich/modules/spieltisch/use-voice.ts',import.meta.url),'utf8');
+ assert.match(hook,/createAnalyser\(\)/,'level meter per audio track');
+ assert.ok(!/\.connect\((ctx|a\.ctx)\.destination\)/.test(hook),'analyser is never connected to the speakers');
+ assert.match(hook,/customParticipantId/,'room participants map back to ChroniPlay members');
+ const roster=readFileSync(new URL('../app/spielbereich/modules/spieltisch/participants.tsx',import.meta.url),'utf8');
+ assert.match(roster,/data-speaking=\{voice\?\.speaking\|\|undefined\}/);
+ assert.match(roster,/' · spricht'/,'speaking is announced to screen readers too');
 });

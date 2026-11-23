@@ -72,3 +72,15 @@ Die `VOICE`-Integration läuft direkt nach `dashboardHubIntegration`, und das ha
 2. Ein API-Token mit dem Recht „Realtime“ erstellen.
 3. Die Secrets selbst per `wrangler secret put` setzen (nicht im Chat).
 4. Nach Freigabe eines Deployments `CVK_VOICE_CAMPAIGNS=chronik-von-kleve` setzen. Das Leeren der Variable schaltet Voice ohne Codeänderung ab.
+
+## Nachtrag 23.11.2026: Voice in der oberen Leiste (Eigentümerwunsch)
+- Die schwebende Karte (`voice-bar.tsx`) ist entfernt. Die Steuerung sitzt jetzt in der oberen Leiste neben dem Spielabend-Titel (`voice-control.tsx`): „Voice“ zum Beitreten, danach Mikro an/aus, Zahl der Personen, Auflegen.
+- Die Zustandslogik steckt in `use-voice.ts`. **Sprechen wird lokal gemessen:** Pro Audiospur läuft ein Web-Audio-Analyser, der nie mit den Lautsprechern verbunden ist. Liegt der Pegel über der Schwelle, gilt die Person als sprechend, mit 450 ms Nachlauf.
+- Die Zuordnung erfolgt über `customParticipantId` (= Mitglieds-ID).
+- **Spielerleiste:** Wer im Sprachchat ist, bekommt ein Mikro-Abzeichen am Profilbild (gold = Mikro an, grau mit rotem Symbol = stumm). Wer spricht, bekommt einen pulsierenden goldenen Ring. Der Status steht auch im zugänglichen Namen („spricht“, „im Sprachchat, stumm“).
+- **Video-UI** gibt es in der oberen Leiste nicht. Sie folgt in einer späteren Phase. `CVK_VOICE_VIDEO` bleibt ohne Wirkung auf die Oberfläche.
+- **Geprüft:**
+  - typecheck, ESLint (geänderte Dateien), `pnpm test` 635/635, alle Unit-Tests 746/746.
+  - Lokale Browser-Sichtprüfung im Testmodus (1100 px): Leiste, Mikro-Zustände, Abzeichen und Ring. Den Sprechzustand habe ich dafür im DOM gesetzt, weil die Attrappe keinen Ton hat.
+  - Die Integration wurde nicht neu ausgeführt, weil am Server nichts geändert ist.
+- **Bekannt und nicht neu:** Unter etwa 850 px ist die obere Leiste der SL schon ohne Voice zu voll. Die Voice-Gruppe wird unter 900 px auf Symbole verkleinert.
