@@ -3,6 +3,8 @@
 Stand: 23.11.2026. Branch: `codex/legal-address-privacy`.
 Basis: `origin/main` nach Fetch, `4ee1a510b3f862834e6faa1b70df9d82962ac408` (Merge PR #93).
 
+Fortsetzung: Der Besitzer hat anschließend mit „dann live bringen“ die Veröffentlichung dieser Vorbereitung ausdrücklich freigegeben. Die folgenden Angaben zu „kein Push/Deploy“ beschreiben den abgeschlossenen Vorbereitungsstand vor dieser Freigabe. Veröffentlichungsnachweis und aktuelle Live-Prüfung werden außerhalb des öffentlichen Repositories geführt.
+
 ## Auftrag und Ergebnis
 
 Öffentliche Vorkommen der privaten Wohnanschrift prüfen, deutsche Informationspflichten recherchieren und eine datensparsame Vorbereitung erstellen. Die Anschrift wird hier nicht wiederholt. Der Besitzer hat angegeben, noch keine alternative Anschrift zu haben.
