@@ -1,0 +1,40 @@
+name: ChroniPlay – Entwicklertagebuch nach Discord
+
+on:
+  discussion:
+    types: [labeled]
+
+permissions:
+  contents: read
+  discussions: write
+
+concurrency:
+  group: chroniplay-discord-${{ github.event.discussion.number }}
+  cancel-in-progress: false
+
+jobs:
+  send-approved-discussion:
+    if: >-
+      github.event.label.name == 'discord-freigabe' &&
+      github.actor == 'stenzelmaik-lang' &&
+      github.event.sender.login == 'stenzelmaik-lang' &&
+      github.event.discussion.user.login == 'stenzelmaik-lang' &&
+      github.event.discussion.category.name == 'Entwicklertagebuch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    environment: discord-chroniplay
+    steps:
+      - name: Read trusted bridge from default branch
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Check bridge safety rules
+        run: python3 -m unittest discover -s .github/chroniplay-discord -p 'test_*.py'
+      - name: Validate and conditionally send
+        env:
+          GITHUB_ACTOR: ${{ github.actor }}
+          GH_DISCUSSIONS_TOKEN: ${{ github.token }}
+          DISCORD_WEBHOOK_CHRONIPLAY: ${{ secrets.DISCORD_WEBHOOK_CHRONIPLAY }}
+          CHRONIPLAY_UPDATES_CHANNEL_ID: ${{ vars.CHRONIPLAY_UPDATES_CHANNEL_ID }}
+          CHRONIPLAY_SEND_ENABLED: ${{ vars.CHRONIPLAY_SEND_ENABLED }}
+        run: python3 .github/chroniplay-discord/publish.py
