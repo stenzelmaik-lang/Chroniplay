@@ -81,6 +81,87 @@ class PublicationSafetyTests(unittest.TestCase):
         marker = "<!-- chroniplay-discord:claimed:v1 -->"
         self.assertTrue(already_posted([{"body": marker, "author": {"login": "github-actions[bot]"}}]))
 
+    def test_graphql_github_actions_comment_blocks_duplicate(self):
+        # GitHub GraphQL returns this login for GITHUB_TOKEN comments (no [bot]).
+        for marker in ('<!-- chroniplay-discord:claimed:v1 -->',
+                       '<!-- chroniplay-discord:sent:v1 -->'):
+            with self.subTest(marker=marker):
+                self.assertTrue(already_posted([
+                    {'body': marker, 'author': {'login': 'github-actions'}}
+                ]))
+
+    def test_owner_marker_also_blocks_duplicate(self):
+        self.assertTrue(already_posted([
+            {'body': '<!-- chroniplay-discord:sent:v1 -->',
+             'author': {'login': 'stenzelmaik-lang'}}
+        ]))
+
+    def test_discussion_url_is_trusted_and_matches_event(self):
+        from publish import validate_discussion_url
+        valid = 'https://github.com/stenzelmaik-lang/chronik-von-kleve/discussions/4'
+        self.assertEqual(validate_discussion_url(valid, 4), valid)
+        for bad in (
+            'https://github.com/other/repo/discussions/4',
+            'https://github.com/stenzelmaik-lang/chronik-von-kleve/discussions/5',
+            'https://github.com/stenzelmaik-lang/chronik-von-kleve/discussions/4?view=1',
+            'https://github.com/stenzelmaik-lang/chronik-von-kleve/discussions/4/extra',
+            'http://github.com/stenzelmaik-lang/chronik-von-kleve/discussions/4',
+            'https://github.com.evil.test/stenzelmaik-lang/chronik-von-kleve/discussions/4',
+            'https://example.net/malicious',
+            '', None,
+        ):
+            with self.subTest(url=bad), self.assertRaises(SafetyError):
+                validate_discussion_url(bad, 4)
+
+    def test_graphql_query_fetches_discussion_url(self):
+        from publish import DISCUSSION_QUERY
+        self.assertRegex(DISCUSSION_QUERY, r'\bid\s+title\s+url\s+body\b')
+
+    def test_run_rejects_foreign_discussion_url_before_claim_and_send(self):
+        import json
+        import os
+        import tempfile
+        from unittest.mock import patch
+        import publish
+
+        fake_discussion = {
+            'id': 'opaque-id',
+            'title': 'Entwicklertagebuch #4 – Mehr Platz für Geschichten',
+            'body': '### Kurzfassung\nEin besserer Spieltisch für eure gemeinsamen Geschichten.',
+            'url': 'https://github.com/fremd/repo/discussions/4',
+            'author': {'login': 'stenzelmaik-lang'},
+            'category': {'name': 'Entwicklertagebuch'},
+            'labels': {'nodes': [{'name': 'discord-freigabe'}]},
+        }
+        with tempfile.NamedTemporaryFile(mode='w', encoding='utf-8') as event_file:
+            json.dump(self.payload, event_file)
+            event_file.flush()
+            with patch.dict(os.environ, {
+                'GITHUB_EVENT_PATH': event_file.name,
+                'GITHUB_ACTOR': 'stenzelmaik-lang',
+                'GH_DISCUSSIONS_TOKEN': 'dummy-test-token',
+                'CHRONIPLAY_SEND_ENABLED': 'true',
+            }):
+                with patch.object(publish, 'get_discussion_with_comments', return_value=(fake_discussion, [])):
+                    with patch.object(publish, 'graphql') as gql, patch.object(publish, 'request_json') as api:
+                        with self.assertRaises(SafetyError):
+                            publish.run()
+                        gql.assert_not_called()
+                        api.assert_not_called()
+
+    def test_discussion_form_has_expected_headings_and_three_required_checks(self):
+        from pathlib import Path
+        form = (Path(__file__).resolve().parents[1] / 'DISCUSSION_TEMPLATE'
+                / 'entwicklertagebuch.yml').read_text(encoding='utf-8')
+        self.assertIn('title: "Entwicklertagebuch #"', form)
+        for title in ('Kurzfassung', 'Abgeschlossene Verbesserungen', 'Fehlerbehebungen',
+                      'Woran wir gerade arbeiten', 'Eure Meinung zählt'):
+            self.assertIn(f'label: {title}', form)
+        self.assertIn('id: kurzfassung', form)
+        self.assertIn('required: false', form)
+        checks = form.split('type: checkboxes', 1)[1]
+        self.assertEqual(checks.count('required: true'), 3)
+
     def test_webhook_channel_name_and_type_must_all_match(self):
         good = {"type": 1, "channel_id": "123456789012345678",
                 "name": "ChroniPlay · Entwicklertagebuch"}
@@ -95,8 +176,13 @@ class PublicationSafetyTests(unittest.TestCase):
 
     def test_embed_contains_only_title_and_summary_with_mentions_disabled(self):
         embed = build_embed("Entwicklertagebuch #4 – Ein Abend voller Geschichten",
-                            "Mehr Platz für eure Geschichte.")
-        self.assertEqual(set(embed["embeds"][0]), {"title", "description", "color"})
+                            "Mehr Platz für eure Geschichte.",
+                            "https://github.com/stenzelmaik-lang/chronik-von-kleve/discussions/4", 4)
+        self.assertEqual(set(embed["embeds"][0]), {"title", "description", "color", "url", "footer"})
+        self.assertEqual(embed["embeds"][0]["url"],
+                         "https://github.com/stenzelmaik-lang/chronik-von-kleve/discussions/4")
+        self.assertEqual(embed["embeds"][0]["footer"],
+                         {"text": "ChroniPlay – Verschiedene Welten. Eine Zeitlinie."})
         self.assertEqual(embed["allowed_mentions"]["parse"], [])
         self.assertNotIn("content", embed)
 
