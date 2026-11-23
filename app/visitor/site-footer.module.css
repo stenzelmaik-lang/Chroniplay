@@ -1,0 +1,11 @@
+.footer{display:grid;grid-template-columns:minmax(0,1fr);gap:18px;padding:30px max(22px,7vw) 26px;border-top:1px solid #29424e;background:#040b10;color:#b6c0c4;font:12px/1.5 Arial,Helvetica,sans-serif}
+.top,.bottom{width:100%;display:flex;align-items:center;justify-content:space-between;gap:18px;flex-wrap:wrap}
+.bottom{padding-top:16px;border-top:1px solid #ffffff12}
+.brand{display:inline-flex}
+.logo{display:block;width:150px;height:34px;object-fit:contain;object-position:left center;filter:drop-shadow(0 0 8px #e9b96e22)}
+.community,.legal{display:flex;gap:20px;flex-wrap:wrap}
+.community a,.legal a{display:inline-flex;align-items:center;gap:7px;color:#b6c0c4;text-decoration:none;letter-spacing:normal}
+.community a:hover,.legal a:hover{color:#e9b96e}
+.legal a{font-weight:700;color:#f5f0e7}
+.footer a{outline-offset:4px}.footer a:focus-visible{outline:2px solid #e9b96e}
+@media (max-width:760px){.top,.bottom{flex-direction:column;align-items:flex-start}}

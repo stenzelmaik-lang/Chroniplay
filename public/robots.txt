@@ -1,0 +1,17 @@
+# ChroniPlay – öffentliche Seiten dürfen erfasst werden, der Spielbereich nicht.
+User-agent: *
+Allow: /
+Allow: /impressum
+Allow: /datenschutz
+Disallow: /api/
+Disallow: /spielbereich
+Disallow: /sl
+Disallow: /profil
+Disallow: /kampagne
+Disallow: /anmelden
+Disallow: /einladung
+Disallow: /zugang
+Disallow: /passwort-zuruecksetzen
+Disallow: /visitor
+
+Sitemap: https://chroniplay.cc/sitemap.xml

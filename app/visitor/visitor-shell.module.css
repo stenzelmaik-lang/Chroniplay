@@ -29,3 +29,12 @@
 .footerLinks{display:flex;gap:18px}.footerLinks a{display:inline-flex;align-items:center;gap:7px;color:var(--muted);text-decoration:none;letter-spacing:normal}.footerLinks a:hover{color:var(--gold)}
 @media (max-width:1050px){.communitySection{grid-template-columns:1fr}}
 @media (max-width:760px){.communitySection{padding:66px 22px}.communityGrid{grid-template-columns:1fr}.communityCard{padding:22px}.discordAction,.communityActions>*{width:100%}}
+/* FAQ: aufklappbare Fragen ohne JavaScript (details/summary) */
+.faqSection{grid-template-columns:minmax(260px,.7fr) minmax(0,1.3fr);gap:clamp(36px,6vw,90px);align-items:start;padding:clamp(70px,8vw,115px) max(22px,7vw)}.faqIntro{position:sticky;top:96px;max-width:420px}.faqIntro p:not(.kicker){margin:20px 0 24px}
+.faqList{display:grid;gap:10px}.faqItem{border:1px solid var(--line);border-radius:10px;background:#0a1b25aa;transition:border-color .2s}.faqItem[open]{border-color:#e9b96e66;background:#0b202bcc}
+.faqItem summary{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:18px 22px;cursor:pointer;list-style:none;color:var(--bone);font:400 19px/1.35 Georgia,serif}.faqItem summary::-webkit-details-marker{display:none}.faqItem summary:hover{color:var(--gold)}.faqItem summary svg{flex:none;color:var(--gold);transition:transform .2s}.faqItem[open] summary svg{transform:rotate(180deg)}
+.faqAnswer{padding:0 22px 20px}.faqSection .faqAnswer p{margin:0;color:var(--muted);font-size:16px;line-height:1.65}.faqSection .faqAnswer .faqLinks{display:flex;flex-wrap:wrap;gap:18px;margin-top:12px}.faqLinks a{display:inline-flex;align-items:center;gap:6px;color:var(--gold);font-weight:700;font-size:14px;text-decoration:none}.faqLinks a:hover{text-decoration:underline}
+.faqIntro .discordAction{gap:9px}
+@media (max-width:900px){.faqSection{grid-template-columns:1fr}.faqIntro{position:static;max-width:none}}
+@media (max-width:760px){.faqSection{padding:66px 22px}.faqItem summary{padding:16px 18px;font-size:17px}.faqAnswer{padding:0 18px 18px}}
+.statusSection h2+p{margin-top:22px}
