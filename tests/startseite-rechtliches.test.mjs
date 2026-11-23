@@ -93,3 +93,12 @@ test('SEO: Metadaten mit absoluter Adresse, Vorschaubild 1200×630, robots und S
   }
   assert.ok(!/spielbereich|\/sl|profil/.test(sitemap));
 });
+
+
+test('Rechtsseiten zeigen keine private Anschrift, behalten aber den E-Mail-Kontakt', () => {
+  for (const pfad of ['app/impressum/page.tsx', 'app/datenschutz/page.tsx']) {
+    const quelle = lies(pfad);
+    assert.doesNotMatch(quelle, /k\.anschrift|CVK_IMPRESSUM_ANSCHRIFT/, pfad);
+    assert.match(quelle, /mailto:\$\{k\.email\}/, pfad);
+  }
+});
