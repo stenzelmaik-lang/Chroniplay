@@ -4,7 +4,7 @@ import { Hinweis, LegalSection, LegalShell, legalStyles as s } from '../rechtlic
 import { legalContact, werbeanfrageMailto } from '@/server/legal-config';
 
 export const dynamic = 'force-dynamic';
-export const metadata: Metadata = { title: 'Impressum', description: 'Impressum von ChroniPlay: Anbieter, Kontakt, Werbe- und Kooperationsanfragen, Haftung und Urheberrecht.', alternates: { canonical: '/impressum' }, openGraph: { url: '/impressum', title: 'Impressum · ChroniPlay' } };
+export const metadata: Metadata = { title: 'Impressum', description: 'Impressum von ChroniPlay: Anbieter, Kontakt, Werbe- und Kooperationsanfragen, Haftung und Urheberrecht.', robots: { index: false, follow: true, nosnippet: true }, alternates: { canonical: '/impressum' }, openGraph: { url: '/impressum', title: 'Impressum · ChroniPlay' } };
 
 const toc = [
   { id: 'anbieter', label: 'Anbieter' },
