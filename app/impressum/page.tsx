@@ -20,16 +20,14 @@ const toc = [
 
 export default function Impressum() {
   const k = legalContact();
-  const adresse = k.name && k.anschrift.length > 0
-    ? <address className={s.adresse}>{k.name}{k.anschrift.map((zeile) => <span key={zeile}><br />{zeile}</span>)}</address>
-    : null;
+  const betreiber = k.name ? <p>{k.name}</p> : null;
   return <LegalShell kicker="Rechtliches" title="Impressum" stand="23. November 2026" toc={toc}
     intro={<p>Angaben zum Anbieter von chroniplay.cc, Kontaktwege und Hinweise zu Haftung und Urheberrecht.</p>}>
     {!k.vollstaendig && <Hinweis>Die vollständigen Anbieterangaben werden gerade ergänzt. Bis dahin erreichst du uns über den unten genannten Kontakt.</Hinweis>}
 
     <LegalSection id="anbieter" title="Anbieter">
       <p>Angaben gemäß § 5 Digitale-Dienste-Gesetz (DDG):</p>
-      {adresse}
+      {betreiber}
     </LegalSection>
 
     <LegalSection id="kontakt" title="Kontakt">
@@ -49,7 +47,7 @@ export default function Impressum() {
 
     <LegalSection id="verantwortlich" title="Verantwortlich für den Inhalt">
       <p>Verantwortlich für den Inhalt nach § 18 Abs. 2 Medienstaatsvertrag (MStV):</p>
-      {adresse}
+      {betreiber}
     </LegalSection>
 
     <LegalSection id="projekt" title="Über das Projekt">
