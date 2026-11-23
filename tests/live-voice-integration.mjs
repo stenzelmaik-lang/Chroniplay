@@ -9,7 +9,7 @@ export async function liveVoiceIntegration({req,check}){
  await req('/api/live-table','gm','POST',{action:'start',sessionId,title:'SYNTHETIC voice evening',create:true});
  const runId=(await req('/api/live-stage?sessionId='+sessionId,'gm')).d.runId;
  const gmStatus=await status('gm'),playerStatus=await status('a');
- check(gmStatus.s===200&&gmStatus.d.available&&gmStatus.d.mode==='attrappe'&&gmStatus.d.runId===runId,'VOICE GM sees the dummy mode for the running evening');
+ check(gmStatus.s===200&&gmStatus.d.available&&gmStatus.d.mode==='attrappe'&&gmStatus.d.video===false&&gmStatus.d.runId===runId,'VOICE GM sees the dummy mode, voice only, for the running evening');
  check(playerStatus.s===200&&playerStatus.d.available,'VOICE player at the table sees voice');
  check((await join(undefined,runId)).s===401,'VOICE anonymous join denied');
  for(const role of ['blockedPlayer','otherCampaign','editor'])check([403,404].includes((await join(role,runId)).s),'VOICE blocked, foreign or nonparticipant '+role+' denied');

@@ -4,7 +4,7 @@ import {env} from 'cloudflare:workers';
 import {z} from 'zod';
 import {database,HttpError,type Actor} from './access';
 import {stageRoom} from './live-stage';
-import {voiceAvailable,voiceConfig,voiceMode,voiceBase,meetingBody,participantBody,apiData,currentMeeting,type VoiceGateEnv,type VoiceSecretsEnv,type VoiceConfig,type RoomVoice} from '@/domain/live-voice';
+import {voiceAvailable,voiceVideo,voiceConfig,voiceMode,voiceBase,meetingBody,participantBody,apiData,currentMeeting,type VoiceGateEnv,type VoiceSecretsEnv,type VoiceConfig,type RoomVoice} from '@/domain/live-voice';
 
 const gate=()=>env as unknown as VoiceGateEnv;
 const secrets=()=>env as unknown as VoiceSecretsEnv;
@@ -27,7 +27,7 @@ export async function voiceStatus(a:Actor,sessionId:string){
  if(!liveVoiceAvailable(a))throw new HttpError(404,'Nicht gefunden.');
  if(!sessionSchema.safeParse(sessionId).success)throw new HttpError(400,'Spielabend wählen.');
  const {room}=await stageRoom(a,sessionId);
- return {available:true,mode:voiceMode(gate(),secrets()),runId:room.runId||null};
+ return {available:true,mode:voiceMode(gate(),secrets()),video:voiceVideo(gate()),runId:room.runId||null};
 }
 
 /** One meeting per evening, stored on the room record. Concurrent first joins may create two meetings; the conditional
@@ -57,11 +57,11 @@ export async function voiceJoin(a:Actor,raw:unknown,fetchImpl?:typeof fetch){
   if(voiceMode(gate(),secrets())!=='attrappe')throw new HttpError(503,'Voice und Video sind für diese Runde noch nicht eingerichtet.');
   const {room}=await stageRoom(a,d.sessionId);
   if(room.runId!==d.runId)throw new HttpError(409,'Spielabend inzwischen gewechselt.');
-  return {mode:'attrappe' as const,role:a.gm?'host':'participant'};
+  return {mode:'attrappe' as const,role:a.gm?'host':'participant',video:voiceVideo(gate())};
  }
  const meetingId=await evenMeeting(a,d.sessionId,d.runId,c,fetchImpl);
  const participant=await realtime(c,'/meetings/'+encodeURIComponent(meetingId)+'/participants',participantBody(a,c),fetchImpl);
  const authToken=typeof participant.token==='string'?participant.token:typeof participant.authToken==='string'?participant.authToken:'';
  if(!authToken)throw new HttpError(502,'Der Sprachdienst hat keinen Zugang ausgestellt.');
- return {mode:'live' as const,role:a.gm?'host':'participant',authToken};
+ return {mode:'live' as const,role:a.gm?'host':'participant',video:voiceVideo(gate()),authToken};
 }
