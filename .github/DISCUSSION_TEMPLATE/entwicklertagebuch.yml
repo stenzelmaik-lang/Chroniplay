@@ -1,0 +1,63 @@
+name: ChroniPlay Entwicklertagebuch
+description: Wöchentlicher, spoilerfreier Bericht zur Entwicklung von ChroniPlay.
+title: "Entwicklertagebuch #"
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Schreibt für die Community: verständlich, ausführlich und ohne interne Technikdetails.
+        Ergänzt nach der Ausgabennummer im Titel ein Thema, zum Beispiel: 4 – Mehr Freiheit am Spieltisch.
+        Datum, Versionsstand und Berichtszeitraum können im ausführlichen Bericht stehen.
+        Das Freigabelabel wird erst nach Prüfung vom Eigentümer gesetzt.
+  - type: textarea
+    id: kurzfassung
+    attributes:
+      label: Kurzfassung
+      description: Nur dieser Text gelangt zusammen mit dem Titel und einem geprüften GitHub-Link nach Discord. Reine Prosa, 12–700 Zeichen, keine Links, Pings oder internen Details.
+      placeholder: Was hat sich verändert, warum ist das für die Community interessant und was kommt als Nächstes?
+    validations:
+      required: true
+  - type: textarea
+    id: verbesserungen
+    attributes:
+      label: Abgeschlossene Verbesserungen
+      description: Erzählt, was nachweislich fertig und getestet ist, mit dem Nutzen für Spieler und Spielleitung. Live und noch nicht veröffentlicht klar unterscheiden.
+      placeholder: Was ist in dieser Woche tatsächlich entstanden?
+    validations:
+      required: true
+  - type: textarea
+    id: fehlerbehebungen
+    attributes:
+      label: Fehlerbehebungen
+      description: Optional. Beschreibt Fehler ohne interne Kennungen oder technische Einzelheiten.
+      placeholder: Welche Probleme wurden behoben?
+    validations:
+      required: false
+  - type: textarea
+    id: in_arbeit
+    attributes:
+      label: Woran wir gerade arbeiten
+      description: Planung, nächste Schritte und spoilerfreie Storyentwicklung. Bei ruhigen Wochen ausdrücklich sagen, wenn keine Änderungen abgeschlossen wurden; keine Termin-Versprechen.
+      placeholder: Welche Ideen und Arbeiten beschäftigen uns aktuell?
+    validations:
+      required: true
+  - type: textarea
+    id: meinung
+    attributes:
+      label: Eure Meinung zählt
+      description: Ladet zur Diskussion ein; ehrliche Rückfragen sind willkommen.
+      placeholder: Worüber würdet ihr gerne mehr erfahren?
+    validations:
+      required: false
+  - type: checkboxes
+    id: publikations_check
+    attributes:
+      label: Sicherheit und Freigabe
+      description: Alle drei Punkte vor dem Veröffentlichen des GitHub-Beitrags bestätigen.
+      options:
+        - label: Keine internen Details, Kennungen, Zugangsdaten oder Konfigurationsnamen im Beitrag.
+          required: true
+        - label: Keine Spoiler, Geheimnisse der Spielleitung oder Spielernamen im Beitrag.
+          required: true
+        - label: Keine festen Termin-Versprechen oder ungeprüften Veröffentlichungsaussagen.
+          required: true
