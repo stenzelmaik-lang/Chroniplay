@@ -20,3 +20,13 @@ Noch kein echter Beitritt mit RealtimeKit getestet (braucht einen laufenden Spie
 
 ## Rücknahme
 `CVK_VOICE_CAMPAIGNS` leeren (neue Version, gleicher Code) oder Vorversion `ac65cf45-…` wieder auf 100 % setzen.
+
+## Folge-Release 23.11.2026, 23:13 MEZ: Voice in der oberen Leiste
+| | |
+|---|---|
+| Live-Codecommit | `dfc1d07` auf `main` (Merge PR #99) |
+| Worker-Version | `3273d466-395f-4bd7-9940-ed1eba322a9d`, Tag `dfc1d07-Voice-Topbar`, 100 % Verkehr; Vorversion `3da188b6-…` |
+| Migration | keine |
+| Konfiguration | unverändert (inklusive `CVK_VOICE_CAMPAIGNS=chronik-von-kleve` und `CF_REALTIME_*`), Bindungen in der Version geprüft |
+| Rauchtest | `/` 200, `/datenschutz` 200, `/api/live-voice` ohne Anmeldung 401 |
+| Rücknahme | Vorversion `3da188b6-…` auf 100 % |
