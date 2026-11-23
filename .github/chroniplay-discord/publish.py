@@ -18,6 +18,9 @@ COLOR = 0x9B5CF6
 MARKER = "<!-- chroniplay-discord:sent:v1 -->"
 CLAIM = "<!-- chroniplay-discord:claimed:v1 -->"
 GITHUB_GRAPHQL = "https://api.github.com/graphql"
+DISCUSSION_URL = re.compile(
+    r"https://github\.com/stenzelmaik-lang/chronik-von-kleve/discussions/(\d+)"
+)
 
 
 class SafetyError(ValueError):
@@ -86,7 +89,7 @@ def extract_summary(body):
 def already_posted(comments):
     return any(
         any(m in (c.get("body") or "") for m in (MARKER, CLAIM))
-        and (c.get("author") or {}).get("login") in (OWNER, "github-actions[bot]")
+        and (c.get("author") or {}).get("login") in (OWNER, "github-actions", "github-actions[bot]")
         for c in comments
     )
 
@@ -100,11 +103,28 @@ def validate_webhook_metadata(details, expected_channel_id):
         raise SafetyError("Webhook gehört nicht zum freigegebenen Kanal oder Branding")
 
 
-def build_embed(title, summary):
+def validate_discussion_url(value, number):
+    """Only accept the URL GitHub reports for this exact Discussion."""
+    if not isinstance(value, str) or type(number) is not int or number < 1:
+        raise SafetyError("Discussion-Link fehlt oder ist ungültig")
+    match = DISCUSSION_URL.fullmatch(value)
+    if not match or int(match.group(1)) != number:
+        raise SafetyError("Discussion-Link stimmt nicht mit der Freigabe überein")
+    return value
+
+
+def build_embed(title, summary, discussion_url, number):
+    trusted_url = validate_discussion_url(discussion_url, number)
     return {
         "username": WEBHOOK_NAME,
         "allowed_mentions": {"parse": [], "users": [], "roles": []},
-        "embeds": [{"title": title, "description": summary, "color": COLOR}],
+        "embeds": [{
+            "title": title,
+            "url": trusted_url,
+            "description": summary,
+            "color": COLOR,
+            "footer": {"text": "ChroniPlay – Verschiedene Welten. Eine Zeitlinie."},
+        }],
     }
 
 
@@ -136,7 +156,7 @@ DISCUSSION_QUERY = """
 query($owner: String!, $repo: String!, $number: Int!, $cursor: String) {
   repository(owner: $owner, name: $repo) {
     discussion(number: $number) {
-      id title body
+      id title url body
       author { login }
       category { name }
       labels(first: 100) { nodes { name } }
@@ -203,6 +223,7 @@ def run():
         return
     title = validate_public_text(discussion["title"], max_length=180, is_title=True)
     summary = extract_summary(discussion["body"])
+    payload = build_embed(title, summary, discussion["url"], event["discussion"]["number"])
     if os.environ.get("CHRONIPLAY_SEND_ENABLED") != "true":
         print("Trockenlauf erfolgreich: geprüfte Freigabe, Inhalte und Doppelpostsperre. Nichts gesendet.")
         return
@@ -215,7 +236,7 @@ def run():
     # To retry after a failure, the owner must manually remove the claim comment.
     graphql(token, ADD_COMMENT, {"id": discussion["id"], "body": CLAIM})
     result = request_json(url + "?wait=true", method="POST",
-                          data=build_embed(title, summary))
+                          data=payload)
     if not result.get("id") or str(result.get("channel_id")) != os.environ["CHRONIPLAY_UPDATES_CHANNEL_ID"]:
         raise SafetyError("Discord-Sende-Bestätigung ist nicht sicher")
     graphql(token, ADD_COMMENT, {"id": discussion["id"], "body": MARKER})
