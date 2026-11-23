@@ -44,7 +44,7 @@ jobs:
             tests/ge-01c-check-lifecycle.test.mjs tests/ge-02-check-desk.test.mjs tests/ge-02-release.test.mjs
             tests/ge-02-rollback.test.mjs scripts/ge02-rollback-scene-checks.mjs
             domain/live-voice.ts server/live-voice.ts app/api/live-voice/route.ts
-            app/spielbereich/modules/spieltisch/voice-bar.tsx tests/live-voice.test.mjs tests/live-voice-integration.mjs
+            app/spielbereich/modules/spieltisch/use-voice.ts app/spielbereich/modules/spieltisch/voice-control.tsx tests/live-voice.test.mjs tests/live-voice-integration.mjs
           )
           if [[ -f domain/w10-c1-ordinary.ts ]]; then files+=(domain/w10-c1-ordinary.ts); fi
           if [[ -f tests/w10-c1-ordinary.test.mjs ]]; then files+=(tests/w10-c1-ordinary.test.mjs); fi

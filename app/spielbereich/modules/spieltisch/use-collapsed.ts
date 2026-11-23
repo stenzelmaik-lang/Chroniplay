@@ -2,7 +2,7 @@
 import {useCallback,useState} from 'react';
 
 /** Table HUD parts that each viewer may fold away on this device. */
-export type CollapsibleHud='pressure'|'body'|'roster'|'voice';
+export type CollapsibleHud='pressure'|'body'|'roster';
 const prefix='chroniplay:spieltisch:eingeklappt:';
 
 export function readCollapsed(id:CollapsibleHud):boolean{
