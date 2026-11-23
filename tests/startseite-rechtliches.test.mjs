@@ -85,6 +85,11 @@ test('SEO: Metadaten mit absoluter Adresse, Vorschaubild 1200×630, robots und S
   for (const pfad of ['/api/', '/spielbereich', '/sl', '/profil']) assert.ok(robots.includes(`Disallow: ${pfad}`), pfad);
   assert.match(robots, /Sitemap: https:\/\/chroniplay\.cc\/sitemap\.xml/);
   const sitemap = lies('public/sitemap.xml');
-  for (const url of ['https://chroniplay.cc/', 'https://chroniplay.cc/impressum', 'https://chroniplay.cc/datenschutz']) assert.ok(sitemap.includes(`<loc>${url}</loc>`), url);
+  assert.ok(sitemap.includes('<loc>https://chroniplay.cc/</loc>'));
+  for (const pfad of ['/impressum', '/datenschutz']) {
+    assert.ok(!sitemap.includes(`<loc>https://chroniplay.cc${pfad}</loc>`), `${pfad} wird nicht zur Indexierung eingereicht`);
+    assert.ok(!robots.includes(`Disallow: ${pfad}`), `${pfad} muss zum Lesen von noindex crawlbar bleiben`);
+    assert.match(lies(`app${pfad}/page.tsx`), /robots: \{ index: false, follow: true, nosnippet: true \}/);
+  }
   assert.ok(!/spielbereich|\/sl|profil/.test(sitemap));
 });

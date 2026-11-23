@@ -4,7 +4,7 @@ import { Hinweis, LegalSection, LegalShell, legalStyles as s } from '../rechtlic
 import { legalContact } from '@/server/legal-config';
 
 export const dynamic = 'force-dynamic';
-export const metadata: Metadata = { title: 'Datenschutzerklärung', description: 'Datenschutz bei ChroniPlay: kein Tracking, keine Werbung, nur ein Anmelde-Cookie. Welche Daten wir verarbeiten und welche Rechte du hast.', alternates: { canonical: '/datenschutz' }, openGraph: { url: '/datenschutz', title: 'Datenschutzerklärung · ChroniPlay' } };
+export const metadata: Metadata = { title: 'Datenschutzerklärung', description: 'Datenschutz bei ChroniPlay: kein Tracking, keine Werbung, nur ein Anmelde-Cookie. Welche Daten wir verarbeiten und welche Rechte du hast.', robots: { index: false, follow: true, nosnippet: true }, alternates: { canonical: '/datenschutz' }, openGraph: { url: '/datenschutz', title: 'Datenschutzerklärung · ChroniPlay' } };
 
 const toc = [
   { id: 'ueberblick', label: 'Das Wichtigste in Kürze' },
