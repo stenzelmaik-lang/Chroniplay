@@ -99,19 +99,19 @@ export function Spielpause({open, onMenuClose, personalKey, blocked, pickerHost,
 }
 
 /** Sends the latest cube state while somebody is invited: at most one request in flight, the newest state wins. */
-function useCubeBroadcast(watch:ReturnType<typeof useWatch>, sessionId?:string, runId?:string) {
+function useCubeBroadcast(watch:ReturnType<typeof useWatch>|undefined, sessionId?:string, runId?:string) {
   const latest = useRef<CubeFeed|null>(null),busy=useRef(false),pending=useRef(false),last=useRef(0),timer=useRef(0);
-  const live = (watch.status?.viewers.length||0)>0 && watch.enabled;
+  const live = (watch?.status?.viewers.length||0)>0 && !!watch?.enabled;
   const liveRef = useRef(live);
   useEffect(()=>{liveRef.current=live;},[live]);
-  const setStatus = watch.setStatus;
+  const setStatus = watch?.setStatus;
   const flush = useCallback(async function send():Promise<void>{
     if(!liveRef.current||!latest.current||!sessionId||!runId)return;
     if(busy.current){pending.current=true;return;}
     const wait=350-(Date.now()-last.current);
     if(wait>0){if(!timer.current)timer.current=window.setTimeout(()=>{timer.current=0;void send();},wait);return;}
     busy.current=true;pending.current=false;last.current=Date.now();
-    try{const r=await post({action:'publish',sessionId,runId,feed:latest.current});if(r.ok)setStatus(await r.json() as WatchStatus);}catch{/* the cube keeps working */}
+    try{const r=await post({action:'publish',sessionId,runId,feed:latest.current});if(r.ok)setStatus?.(await r.json() as WatchStatus);}catch{/* the cube keeps working */}
     finally{busy.current=false;if(pending.current)void send();}
   },[sessionId,runId,setStatus]);
   useEffect(()=>{liveRef.current=live;if(live)void flush();},[live,flush]);
@@ -119,21 +119,24 @@ function useCubeBroadcast(watch:ReturnType<typeof useWatch>, sessionId?:string, 
   return useCallback((feed:CubeFeed)=>{latest.current=feed;void flush();},[flush]);
 }
 
-function ToyTable({toy,keyboardFocus,personalKey,blocked,watch,sessionId,runId,onClose}:{toy:Toy;keyboardFocus:boolean;personalKey:string;blocked:boolean;watch:ReturnType<typeof useWatch>;sessionId?:string;runId?:string;onClose:()=>void}) {
+type ResultService = {loadResults?:()=>Promise<Result[]>; saveResult?:(result:{game:string;timeMs:number;moves:number})=>Promise<Result[]>};
+
+/** Also used by the public Spielbox (`app/spielbox`), which passes browser-only `services` and no `watch` (no live table, no watching). */
+export function ToyTable({toy,keyboardFocus,personalKey,blocked,watch,sessionId,runId,onClose,services=resultService}:{toy:Toy;keyboardFocus:boolean;personalKey:string;blocked:boolean;watch?:ReturnType<typeof useWatch>;sessionId?:string;runId?:string;onClose:()=>void;services?:ResultService}) {
   const root = useRef<HTMLDivElement>(null);
   const [watchOpen,setWatchOpen] = useState(false);
   const broadcast = useCubeBroadcast(watch,sessionId,runId);
   const broadcastRef = useRef(broadcast);
   useEffect(()=>{broadcastRef.current=broadcast;},[broadcast]);
-  const viewers = watch.status?.viewers||[], candidates = watch.status?.candidates||[];
+  const viewers = watch?.status?.viewers||[], candidates = watch?.status?.candidates||[];
   useEffect(()=>{
     const node=root.current;
     if(!node)return;
     node.dataset.input=keyboardFocus?'keyboard':'pointer';
-    const dispose=mountToys(node,toy,personalKey,{...resultService,onCubeChange:(feed:CubeFeed)=>broadcastRef.current(feed)});
+    const dispose=mountToys(node,toy,personalKey,{...services,onCubeChange:(feed:CubeFeed)=>broadcastRef.current(feed)});
     node.querySelector<HTMLCanvasElement>(`[data-toy-motion="${toy}"] canvas`)?.focus({preventScroll:true});
     return dispose;
-  },[toy,personalKey,keyboardFocus]);
+  },[toy,personalKey,keyboardFocus,services]);
   return <div ref={root} className={styles.table} data-spielpause={toy} data-blocked={blocked} onKeyDown={e=>{
     if(e.key==='Escape' && !e.defaultPrevented){e.preventDefault();e.stopPropagation();onClose();}
   }}>
@@ -155,7 +158,7 @@ function ToyTable({toy,keyboardFocus,personalKey,blocked,watch,sessionId,runId,o
         <span className={styles.hudState} data-toy-id="cube-state" role="status">Gelöst</span>
         <button data-toy-id="cube-mix" className={`${styles.hudButton} ${styles.hudPrimary}`}>Neue Runde</button>
         <button data-toy-id="cube-ranking-toggle" className={styles.hudButton} aria-expanded={false} aria-controls="spielpause-cube-ranking">Bestenliste</button>
-        {watch.enabled && <button data-toy-id="cube-watch-toggle" className={styles.hudButton} aria-expanded={watchOpen} aria-controls="spielpause-cube-watch" onClick={()=>setWatchOpen(v=>!v)}>Zuschauen{viewers.length?' · '+viewers.length:''}</button>}
+        {watch?.enabled && <button data-toy-id="cube-watch-toggle" className={styles.hudButton} aria-expanded={watchOpen} aria-controls="spielpause-cube-watch" onClick={()=>setWatchOpen(v=>!v)}>Zuschauen{viewers.length?' · '+viewers.length:''}</button>}
         <button data-toy-id="cube-menu-toggle" className={styles.hudButton} aria-expanded={false} aria-controls="spielpause-cube-menu">Menü</button>
         <button className={`${styles.hudClose} ${styles.hudCloseWide}`} onClick={onClose} aria-label="Spielzeug wegräumen">×</button>
       </div>
@@ -164,14 +167,14 @@ function ToyTable({toy,keyboardFocus,personalKey,blocked,watch,sessionId,runId,o
         <ol data-toy-id="cube-ranking-list"/>
         <p data-toy-id="cube-ranking-note"/>
       </aside>
-      {watch.enabled && watchOpen && <aside className={styles.watchPanel} id="spielpause-cube-watch" data-toy-id="cube-watch" aria-label="Zum Zuschauen einladen">
+      {watch?.enabled && watchOpen && <aside className={styles.watchPanel} id="spielpause-cube-watch" data-toy-id="cube-watch" aria-label="Zum Zuschauen einladen">
         <header><strong>Zuschauen</strong><button onClick={()=>setWatchOpen(false)} aria-label="Zuschauen schließen">×</button></header>
         <p>Eingeladene sehen deinen Würfel, die Zeit und die Züge. Deine Bestenliste bleibt privat. Du kannst jederzeit zurücknehmen.</p>
         {candidates.length ? <ul>{candidates.map(p=>{const invited=viewers.some(v=>v.id===p.id);return <li key={p.id} data-watch-candidate={p.id}>
           <span>{p.name}{invited&&<small> · schaut zu</small>}</span>
-          <button aria-pressed={invited} onClick={()=>void watch.change(invited?'withdraw':'invite',p.id)}>{invited?'Zurücknehmen':'Einladen'}</button>
+          <button aria-pressed={invited} onClick={()=>void watch?.change(invited?'withdraw':'invite',p.id)}>{invited?'Zurücknehmen':'Einladen'}</button>
         </li>;})}</ul> : <p>Gerade sitzt niemand sonst am Tisch.</p>}
-        {watch.error && <p role="alert">{watch.error}</p>}
+        {watch?.error && <p role="alert">{watch.error}</p>}
       </aside>}
       {/* Mouse play needs no panel: the menu starts hidden and opens from the round display. */}
       <fieldset className={`${styles.controls} ${styles.cubeControls}`} data-toy-controls="cube" data-toy-id="cube-menu" id="spielpause-cube-menu" hidden>

@@ -1,0 +1,42 @@
+/* Spielbox: public mini-game page in the style of the landing page. */
+.page{--ink:#061018;--line:#29424e;--gold:#e9b96e;--bone:#f5f0e7;--muted:#b6c0c4;min-height:100vh;background:var(--ink);color:var(--bone);font-family:Arial,Helvetica,sans-serif}
+.page :where(a,button):focus-visible{outline:2px solid var(--gold);outline-offset:3px}
+.header{display:flex;align-items:center;justify-content:space-between;gap:16px;min-height:72px;padding:0 clamp(16px,4vw,54px);border-bottom:1px solid #ffffff1c;background:#061018e8}
+.brand img{display:block;width:160px;height:42px;object-fit:contain;object-position:left center}
+.back{display:inline-flex;align-items:center;gap:7px;color:var(--muted);text-decoration:none;font-size:14px}.back:hover{color:var(--gold)}
+.main{max-width:1180px;margin:0 auto;padding:clamp(32px,6vw,72px) 16px clamp(48px,7vw,90px)}
+.intro{max-width:680px}
+.kicker{margin:0 0 10px;color:var(--gold);font-size:12px;font-weight:700;letter-spacing:.18em;text-transform:uppercase}
+.intro h1{margin:0;font:400 clamp(32px,4.4vw,56px)/1.05 Georgia,serif}
+.intro p:not(.kicker){margin:18px 0 0;color:var(--muted);font-size:17px;line-height:1.6}
+.box{margin-top:clamp(28px,4vw,44px);display:grid;gap:20px}
+.grid{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
+.card{display:flex;flex-direction:column;gap:10px;padding:20px;border:1px solid var(--line);border-radius:10px;background:#0a1b25cc}
+.card[data-stand=spielbar]{border-color:#e9b96e77;background:linear-gradient(160deg,#e9b96e1a,#0a1b25cc 60%)}
+.card h2{margin:0;font:400 22px/1.2 Georgia,serif}
+.card p{flex:1;margin:0;color:var(--muted);font-size:14px;line-height:1.5}
+.badge{align-self:flex-start;padding:3px 9px;border:1px solid var(--line);border-radius:999px;color:var(--muted);font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
+.card[data-stand=spielbar] .badge{border-color:#e9b96e88;color:var(--gold)}
+.play{min-height:44px;border:1px solid var(--gold);border-radius:7px;background:var(--gold);color:#061018;font-weight:700;font-size:15px;cursor:pointer}
+.play:hover:not(:disabled){filter:brightness(1.08)}
+.play:disabled{border-color:var(--line);background:transparent;color:var(--muted);cursor:not-allowed}
+.play[aria-pressed=true]{background:transparent;color:var(--gold)}
+/* The Spielpause toy table is absolutely positioned and fills this stage. */
+.stage{position:relative;height:clamp(560px,78vh,760px);overflow:hidden;border:1px solid var(--line);border-radius:12px;background:radial-gradient(ellipse at 50% 42%,#1b3138 0%,#0b1a20 55%,#061018 100%);scroll-margin-top:16px}
+.stage button{font:inherit}
+/* At the game table the toy makes room for the table's own HUD. Here nothing else is on stage,
+ * so round bar, leaderboard and menu move to the edges. Attribute selectors: the toy's classes are hashed. */
+.stage.stage [aria-label="Runde"]{top:14px}
+.stage.stage [data-toy-id="cube-ranking"]{top:72px}
+.stage.stage [data-toy-controls="cube"]{bottom:16px}
+@media (max-width:700px){
+  .stage.stage [aria-label="Runde"]{top:8px}
+  .stage.stage [data-toy-id="cube-ranking"]{top:104px}
+  .stage.stage [data-spielpause=cube] [data-toy-motion=cube]{top:104px}
+  .stage.stage [data-toy-controls="cube"]{bottom:8px}
+}
+.local{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;padding:14px 18px;border:1px dashed var(--line);border-radius:10px;color:var(--muted);font-size:14px;line-height:1.5}
+.local p{margin:0;max-width:760px}.local strong{color:var(--bone)}
+.clear{min-height:40px;padding:0 16px;border:1px solid var(--line);border-radius:7px;background:transparent;color:var(--bone);cursor:pointer}.clear:hover{border-color:var(--gold);color:var(--gold)}
+@media (max-width:1000px){.grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:560px){.grid{grid-template-columns:1fr}.stage{height:clamp(600px,86vh,720px)}.brand img{width:130px}}
