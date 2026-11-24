@@ -15,8 +15,10 @@ export const activeBloodRoundSql=`SELECT 1 FROM records room
  WHERE room.campaign_id=? AND room.kind='notizen' AND json_valid(room.body)
  AND json_extract(room.body,'$.context')='live-table' AND json_extract(room.body,'$.open')=1
  AND json_extract(room.body,'$.started')=1 AND json_extract(room.body,'$.bloodRound.id') IS NOT NULL`;
+/** Record id of a live-table room. */
+export const liveRoomKey=(a:Actor,sessionId:string)=>`live-table:${a.campaignId}:${sessionId}`;
 export async function readLiveRoom(a:Actor,sessionId:string){
-  const row=await database().prepare("SELECT * FROM records WHERE id=? AND campaign_id=? AND kind='notizen' AND json_valid(body) AND json_extract(body,'$.context')='live-table'").bind(`live-table:${a.campaignId}:${sessionId}`,a.campaignId).first<LegacyRecordRow>();
+  const row=await database().prepare("SELECT * FROM records WHERE id=? AND campaign_id=? AND kind='notizen' AND json_valid(body) AND json_extract(body,'$.context')='live-table'").bind(liveRoomKey(a,sessionId),a.campaignId).first<LegacyRecordRow>();
   if(!row)throw new HttpError(404,'Spielabend nicht verfügbar.');
   const room=JSON.parse(row.body) as LiveRoom;
   if(!roomAllowed(a,room))throw new HttpError(404,'Spielabend nicht verfügbar.');

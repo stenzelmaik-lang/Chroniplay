@@ -1,13 +1,12 @@
-/** Voice and video at the live table (VV-01, prototype). Pure rules; the server owns the Cloudflare RealtimeKit calls.
+/** Voice at the live table (VV-01). Pure rules; the server owns the Cloudflare RealtimeKit calls.
  * - Release gate: only campaigns named explicitly in CVK_VOICE_CAMPAIGNS (comma list, no wildcard). Without the variable
  *   the feature is off and every voice route answers 404.
  * - Isolated local test instance (CVK_VOICE=local-only and AUTH_ACCESS_ENVIRONMENT=local-test): available everywhere and,
  *   without RealtimeKit secrets, served by a dummy that never contacts Cloudflare.
- * - No recording, no transcription: the server only creates meetings and participant tokens. */
-export type VoiceGateEnv={CVK_VOICE?:string;CVK_VOICE_CAMPAIGNS?:string;CVK_VOICE_VIDEO?:string;AUTH_ACCESS_ENVIRONMENT?:string};
-/** Owner decision 23.11.2026: start with voice only. The camera appears only with CVK_VOICE_VIDEO=1.
- * For a hard limit (and audio-only pricing) the RealtimeKit presets should use the meeting type "Voice". */
-export const voiceVideo=(env:VoiceGateEnv)=>env.CVK_VOICE_VIDEO==='1';
+ * - Voice only (owner decision 23.11.2026): the client never switches a camera on; the RealtimeKit presets use the
+ *   meeting type "Voice". No recording, no transcription: the server only creates meetings and participant tokens. */
+import {campaignAllowed} from './campaign-allowlist.ts';
+export type VoiceGateEnv={CVK_VOICE?:string;CVK_VOICE_CAMPAIGNS?:string;AUTH_ACCESS_ENVIRONMENT?:string};
 export type VoiceSecretsEnv={CF_REALTIME_ACCOUNT_ID?:string;CF_REALTIME_APP_ID?:string;CF_REALTIME_API_TOKEN?:string;CF_REALTIME_PRESET_HOST?:string;CF_REALTIME_PRESET_PARTICIPANT?:string};
 export type VoiceConfig={accountId:string;appId:string;apiToken:string;hostPreset:string;participantPreset:string};
 
@@ -17,8 +16,7 @@ export const DEFAULT_PARTICIPANT_PRESET='group_call_participant';
 
 export const voiceLocal=(env:VoiceGateEnv)=>env.CVK_VOICE==='local-only'&&env.AUTH_ACCESS_ENVIRONMENT==='local-test';
 export function voiceAvailable(env:VoiceGateEnv,campaignId:string){
- if(voiceLocal(env))return true;
- return !!campaignId&&(env.CVK_VOICE_CAMPAIGNS||'').split(',').map(s=>s.trim()).filter(s=>s&&s!=='*').includes(campaignId);
+ return voiceLocal(env)||campaignAllowed(env.CVK_VOICE_CAMPAIGNS,campaignId);
 }
 const id=(value:string|undefined)=>(value||'').trim();
 /** All three secrets or nothing: a half configuration counts as not configured. */
