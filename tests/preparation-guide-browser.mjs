@@ -28,7 +28,9 @@ try{
  const owned=(await (await identityContext.request.get(base+'/api/records?kind=charaktere')).json()).records.find(character=>!character.body.archived&&!character.body.recoveryOnly);
  assert.ok(owned);assert.equal((await identityContext.request.patch(base+'/api/character-selection',{headers:{Origin:base},data:{characterId:owned.id}})).status(),200);await identityContext.close();
  const preparedRecipients=(await api('/api/messages?recipients=1&context=preparation')).body.recipients;assert.equal(preparedRecipients.find(player=>player.id==='command-a').character.id,owned.id);
- await page.goto(base+'/sl/command-center?bereich=sitzung');
+ // Classic preparation view (the storyboard is the default since 15.11.2026); a reload keeps that choice in the URL.
+ const reloadClassic=async()=>{const u=new URL(page.url());u.searchParams.set('ansicht','klassisch');await page.goto(u.toString());};
+ await page.goto(base+'/sl/command-center?bereich=sitzung&ansicht=klassisch');
  await page.getByRole('button',{name:'+ Spielabend anlegen',exact:true}).click();
  await snav().waitFor();
  assert.equal(await page.getByLabel('Geplanter Termin',{exact:false}).count(),0);assert.equal(await page.getByText('Organisation',{exact:true}).count(),0);
@@ -88,7 +90,7 @@ try{
  const blocks=[{id:crypto.randomUUID(),kind:'handout',title:'Brief an die Gruppe',text:'cvk-html-v1:<h2>Der Brief</h2><p>PRIVATE_PREPARED_HANDOUT</p>',referenceId:'',fileId:''},{id:crypto.randomUUID(),kind:'image',title:'Szenenfoto',text:'',referenceId:'',fileId:imageId}];
  // Keep this journey as a legacy-message compatibility check; the dedicated whispers journey covers new entries.
  assert.equal((await api('/api/command-center/scenes',{action:'save',id:sceneId,version:stored.version,document:{...stored.document,elements:[...stored.document.elements,...blocks],visions:'cvk-html-v1:<p>PRIVATE_VISION_FOR_LATER</p>'}})).status,200);
- await page.reload();await assertStep('interactions','section');await page.getByRole('heading',{name:'Einsatzplan der Szene',exact:true}).waitFor();
+ await reloadClassic();await assertStep('interactions','section');await page.getByRole('heading',{name:'Einsatzplan der Szene',exact:true}).waitFor();
  for(const width of [1920,1440]){await page.setViewportSize({width,height:1000});assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));}
  await page.evaluate(()=>document.documentElement.style.zoom='125%');assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));await page.evaluate(()=>document.documentElement.style.zoom='');
  await page.screenshot({path:output+'/einsatzplan-desktop.png',fullPage:true});
@@ -145,8 +147,8 @@ try{
  await page.screenshot({path:output+'/abend-vorbereitet.png',fullPage:true});
  phase='reload and deep-link step restore';
  await page.getByRole('button',{name:'Szene bearbeiten: SYNTHETISCH – Geführte Kaserne',exact:true}).click();
- await page.goto(base+'/sl/command-center?bereich=sitzung&scene='+sceneId+'&section=secrets&fromSession='+sessionId+'&returnGuide=1');await assertStep('secrets','section');
- await page.reload();await cnav().getByRole('heading',{name:'Geheimnisse',exact:true}).waitFor();
+ await page.goto(base+'/sl/command-center?bereich=sitzung&ansicht=klassisch&scene='+sceneId+'&section=secrets&fromSession='+sessionId+'&returnGuide=1');await assertStep('secrets','section');
+ await reloadClassic();await cnav().getByRole('heading',{name:'Geheimnisse',exact:true}).waitFor();
  phase='text limit blocks navigation and preserves invalid source';
  await source('Geheimnisse','<p>'+'X'.repeat(20000)+'</p>');await page.getByRole('button',{name:'Jetzt speichern',exact:true}).click();await page.getByText(/^Gespeichert ·/).waitFor();const full=(await api('/api/command-center/scenes?id='+sceneId)).body.scene;assert.ok(full.document.secrets.includes('X'.repeat(20000)));
  const oversized='<p>'+'X'.repeat(20001)+'</p>';

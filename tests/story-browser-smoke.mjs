@@ -98,6 +98,15 @@ try {
   assert.equal(login.status, 200, "Synthetic GM login must work");
 
   // Seed the existing accepted location fixture in this isolated local database.
+  // Since the storyboard release (15.11.2026) the command center opens with "Bücher und Kampagnen"; this journey
+  // drives the classic preparation view, which the app reads once from ?ansicht=klassisch after mount.
+  async function openClassicPreparation(){
+    const url=new URL(page.url());
+    if(url.searchParams.get("ansicht")==="klassisch")return;
+    url.searchParams.set("ansicht","klassisch");
+    await page.goto(url.toString(),{waitUntil:"domcontentloaded"});
+  }
+
   phase = "prepare Taberna fixture";
   const tabernaSeed = await api("/api/locations/migrate", "POST", {placeId:"place.electric-taberna"});
   assert.equal(tabernaSeed.status, 200, JSON.stringify(tabernaSeed.body));
@@ -111,7 +120,7 @@ try {
 
   phase = "create Spielabend from SL UI";
   await page.goto(base + "/sl/command-center", { waitUntil: "domcontentloaded" });
-  await page.getByRole("heading", { name: "Spielabend & Story" }).waitFor();
+  await openClassicPreparation();
   const management=page.getByRole("navigation",{name:"Verwaltungsbereiche"});
   assert.ok(await management.getByRole("button",{name:/Spieler & Charaktere/}).isVisible());
   await management.getByRole("button",{name:/Orte/}).click();
@@ -147,7 +156,7 @@ try {
   phase = "reload and navigate between locations";
   await chooseSession();
   await page.reload({ waitUntil: "domcontentloaded" });
-  await page.getByRole("heading", { name: "Spielabend & Story" }).waitFor();
+  await openClassicPreparation();
   await page.getByRole("region", {name:"Spielabendübersicht"}).getByText("SYNTHETISCH – Kaserne Schwarzholz").waitFor();
   await page.getByRole("region", {name:"Spielabendübersicht"}).getByText("Electric Taberna", { exact: true }).waitFor();
   const session = await api("/api/command-center/preparation?id=" + encodeURIComponent(sessionId));
@@ -157,7 +166,7 @@ try {
   await screenshot("spielabend-desktop-1920");
 
   await page.getByRole("button",{name:"Szene bearbeiten: Kaserne – Ankunft",exact:true}).click();
-  await page.getByRole("heading", { name: "Spielabend & Story" }).waitFor();
+  await openClassicPreparation();
   const first = await api("/api/command-center/scenes?id=" + encodeURIComponent(kaserneId));
   assert.ok(first.body.scene.document.narration.includes("Versiegelte Order"));
   await page.getByText("Wechseln",{exact:true}).click();
@@ -178,6 +187,7 @@ try {
   await overview.getByRole("button",{name:"Kaserne – Ankunft nach unten",exact:true}).press("Enter");
   await waitForStored("session",sessionId,s=>s.document.sceneIds[0]===tabernaId);
   await page.reload({waitUntil:"domcontentloaded"});
+  await openClassicPreparation();
   await overview.waitFor();
   assert.ok((await overview.locator("ol > li h4").first().innerText()).includes("Electric Taberna"));
   await overview.getByRole("button",{name:"Szene bearbeiten: Kaserne – Ankunft",exact:true}).click();
@@ -192,13 +202,16 @@ try {
   assert.equal(alternate.status,201,JSON.stringify(alternate.body));
   const alternateId=alternate.body.session.id;
   await page.goto(base+"/sl/command-center?bereich=sitzung&session="+encodeURIComponent(alternateId));
+  await openClassicPreparation();
   await overview.getByRole("button",{name:"Szene bearbeiten: Kaserne – Ankunft",exact:true}).click();
   await page.getByRole("button",{name:"Zurück zum Spielabend",exact:true}).waitFor();
   await page.reload({waitUntil:"domcontentloaded"});
+  await openClassicPreparation();
   await page.getByRole("button",{name:"Zurück zum Spielabend",exact:true}).click();
   await overview.getByRole("heading",{name:"SYNTHETISCH – Zweiter Abend",exact:true}).waitFor();
   assert.equal(new URL(page.url()).searchParams.get("session"),alternateId);
   await page.goto(base+"/sl/command-center?bereich=sitzung&session="+encodeURIComponent(sessionId));
+  await openClassicPreparation();
   phase = "unlink scene from both existing references";
   await chooseSession();
   await page.getByRole("button",{name:"Spielabend bearbeiten",exact:true}).click();
@@ -211,6 +224,7 @@ try {
   assert.ok(!unlinkedScene.body.scene.document.sessionIds.includes(sessionId), "Unlink clears the scene-side reference too");
   assert.ok(unlinkedScene.body.scene.document.narration.includes("Avis Bar"), "Unlink preserves scene content");
   await page.reload({ waitUntil: "domcontentloaded" });
+  await openClassicPreparation();
   await page.getByRole("button", { name: "Zur Spielabendübersicht" }).click();
   await page.getByRole("region", { name: "Spielabendübersicht" }).waitFor();
   assert.equal(await page.getByRole("region",{name:"Spielabendübersicht"}).getByRole("button", { name: "Szene bearbeiten: Electric Taberna – Besuch",exact:true }).count(), 0);
@@ -230,6 +244,7 @@ try {
   });
   assert.equal(oneSided.status, 201);
   await page.reload({ waitUntil: "domcontentloaded" });
+  await openClassicPreparation();
   await page.getByRole("button", { name: "+ Szene für diesen Spielabend" }).waitFor();
   await page.getByRole("button",{name:"Spielabend bearbeiten",exact:true}).click();
   await page.getByRole("navigation",{name:"Spielabend planen Schritte"}).getByRole("button",{name:"Szenen planen",exact:true}).click();
@@ -282,6 +297,7 @@ try {
   phase = "delete confirmation and cancel";
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto(base + "/sl/command-center", { waitUntil: "domcontentloaded" });
+  await openClassicPreparation();
   await page.getByRole("button", { name: "+ Spielabend anlegen" }).click();
   await page.waitForFunction(() => new URLSearchParams(location.search).has("session"));
   const disposableId = new URL(page.url()).searchParams.get("session");
