@@ -38,12 +38,12 @@ Ein Windows-Rechner, nur wenn Würfel-Dateien geändert wurden (`prototypes/spie
 - Die verwendeten GitHub-Actions laufen auf Node 24: `checkout@v5`, `setup-node@v5`, `pnpm/action-setup@v5`, `upload-artifact@v6`. Die Warnung „Node.js 20 is deprecated“ entfällt damit.
 
 ## Was nicht von uns ist
-**Workers Builds: chronik-von-kleve** (rot) kommt aus der Git-Anbindung von Cloudflare, nicht aus dieser Datei. Cloudflare versucht, selbst zu bauen und zu veröffentlichen, und scheitert dabei. Würde das gelingen, ginge jeder Merge ohne Freigabe live. Empfehlung: im Cloudflare-Dashboard trennen (Workers & Pages → chronik-von-kleve → Settings → Build → Disconnect).
+**Workers Builds: chronik-von-kleve** ist **seit 24.11.2026 getrennt**. Bis dahin war der Worker mit `main` verbunden, und Cloudflare hat bei jedem Push versucht, selbst zu bauen und zu veröffentlichen. Das ist jedes Mal gescheitert und hat das rote Häkchen erzeugt. Wäre es gelungen, wäre jeder Merge ohne Freigabe live gegangen. Getrennt wurde mit Freigabe des Eigentümers unter Workers & Pages → chronik-von-kleve → Settings → Builds → Disconnect. Veröffentlicht wird nur noch von Hand nach Freigabe (siehe `docs/VERSIONIERUNG.md`). **Nicht wieder verbinden**, ohne vorher Produktionszweig und Freigabe zu klären.
 
 **Entwicklertagebuch → Discord** (`.github/workflows/chroniplay-discussion-discord.yml`) ist keine Prüfung. Der Workflow sendet freigegebene Tagebuch-Beiträge an Discord.
 
 ## Regeln
-- Vor dem Merge müssen die angezeigten Prüfungen grün sein. „Workers Builds“ zählt nicht.
+- Vor dem Merge müssen die angezeigten Prüfungen grün sein.
 - Bei Rot wird zuerst die Ursache geklärt und im PR behoben, nie der Test abgeschaltet.
 - Neue Dateien in einem gelinteten Bereich kommen in die ESLint-Liste in `ci.yml`.
 - Neuer Ordner mit eigener Logik: in der Bereichserkennung von `ci.yml` (Schritt „Geänderte Bereiche erkennen“) einem Bereich zuordnen.
