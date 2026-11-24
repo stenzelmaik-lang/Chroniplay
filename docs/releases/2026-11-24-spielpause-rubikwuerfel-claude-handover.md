@@ -38,5 +38,5 @@ Stand: 24.11.2026. Branch `claude/spielpause-wuerfel`, Basis `origin/main` bei `
 
 ## Offen
 
-- „Zum Zuschauen einladen“: ein anderer Spieler darf live mitschauen. Braucht eine Freigabe-/Einladungslogik und Live-Übertragung des Würfelzustands; nicht Teil dieses Stands.
+- „Zum Zuschauen einladen“: inzwischen gebaut, siehe `2026-11-24-spielpause-zuschauen-claude-handover.md` (uncommittet auf demselben Branch).
 - Spielbox auf der Startseite mit freiem Zugang und weiteren Minispielen (Mau-Mau, Vier gewinnt, Schiffe versenken): eigener Auftrag, betrifft `chronik-von-kleve-startseite`.

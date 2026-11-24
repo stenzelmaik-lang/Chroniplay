@@ -1,5 +1,6 @@
 /* Standalone interaction layer. Nothing here calls a server or changes character values.
- * Saving a solve time goes through the optional `services.saveResult` callback of the caller. */
+ * Saving a solve time goes through the optional `services.saveResult` callback of the caller; the cube state for invited
+ * viewers is only handed to `services.onCubeChange` (the caller decides whether it leaves the browser). */
 import * as Toys from './toys-core.js';
 import * as Moves from './cube-moves.js';
 import {createConfetti} from './confetti.js';
@@ -99,6 +100,19 @@ export function mountToys(root, activeToy, personalKey, services = {}) {
   let cubeRendered = null;
   let userMoves = 0;
   let mixing = false;
+  /* Live feed for invited viewers: every finished turn of this round from the solved start, scramble included.
+   * The caller decides whether anything leaves the browser (only while somebody is invited). Never the leaderboard. */
+  const newRound = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
+  let feedRound = newRound(), feedMoves = [], feedOverflow = false;
+  function emitFeed() {
+    if (!services.onCubeChange || disposed) return;
+    services.onCubeChange({
+      round: feedRound, moves: feedOverflow ? '' : feedMoves.join(' '), overflow: feedOverflow,
+      timerState: timer.state, timeMs: Math.round(timer.elapsed(performance.now())),
+      userMoves, solved: cube.isSolved() && !mixing
+    });
+  }
+  function restartFeed() { feedRound = newRound(); feedMoves = []; feedOverflow = false; }
   let dollPointer = null;
   let spinnerPointer = null;
   let spinnerAsset = null;
@@ -203,6 +217,7 @@ export function mountToys(root, activeToy, personalKey, services = {}) {
     timer.cancel(); timer.reset();
     // Every round scrambles a solved cube, so the shown scramble fully describes the start position.
     cube.reset(); cubeDirty = true;
+    restartFeed();
     mixing = true;
     queueScramble();
     updateCubeLabels('Wird gemischt …'); requestFrame();
@@ -227,6 +242,8 @@ export function mountToys(root, activeToy, personalKey, services = {}) {
     let result = null;
     if (turn.move.quarter !== 0) {
       cube.apply(turn.move);
+      if (feedMoves.length < 4000) { const name = Moves.formatMove(turn.move); if (name) feedMoves.push(name); }
+      else feedOverflow = true;
       if (turn.kind !== 'undo') history.push({ move: { ...turn.move }, kind: turn.kind });
       const now = performance.now();
       if (turn.kind === 'user') { userMoves++; timer.countMove(now); }
@@ -244,6 +261,7 @@ export function mountToys(root, activeToy, personalKey, services = {}) {
     if (result) celebrate(result);
     updateCubeLabels(mixing ? 'Wird gemischt …' : '');
     cubeDirty = true;
+    emitFeed();
   }
 
   function advanceCube(dt) {
@@ -290,6 +308,7 @@ export function mountToys(root, activeToy, personalKey, services = {}) {
     queue.length = history.length = 0;
     activeTurn = cubeDrag = cubePointer = null;
     mixing = false; userMoves = 0; cube.reset(); timer.cancel(); hideCelebration();
+    restartFeed(); emitFeed();
     view.yaw = -0.59; view.pitch = 0.44;
     root.dataset.phase = 'ready';
     cubeDirty = true; updateCubeLabels(); requestFrame();
@@ -674,7 +693,7 @@ export function mountToys(root, activeToy, personalKey, services = {}) {
   if (activeToy === 'spinner') spinnerImage.src = '/spielpause/vampir-spinner.webp';
   element('doll-quote').textContent = activeToy==='doll'&&!dollRenderer?unavailableQuote:initialQuote;
   updateCubeLabels(); updateDollLabels(); updateSpinnerLabels();
-  if (activeToy === 'cube') loadLeaderboard();
+  if (activeToy === 'cube') { loadLeaderboard(); emitFeed(); }
   for (const surface of surfaces) surface.resize();
   requestFrame();
   return () => {
