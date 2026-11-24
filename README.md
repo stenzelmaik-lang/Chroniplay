@@ -2,11 +2,16 @@
 
 ChroniPlay verbindet Spieltisch, Live-Regie und Vorbereitung für Pen-&-Paper-Runden. Die geschlossene Alpha läuft mit der bestehenden Spielrunde von „Chronik von Kleve“. [ChroniPlay öffnen](https://chroniplay.cc/)
 
-## Live-Stand und Weiterentwicklung
+## Stand
 
-Der am **7. November 2026** abgeglichene Live-Stand ist als Quellcode auf GitHub gesichert. Neue Releases bauen auf diesem Stand auf. [Live-Quellbranch](https://github.com/stenzelmaik-lang/Chroniplay/tree/codex/live-source-2026-11-07) · [Geprüfter Quellcommit `5e6ae31`](https://github.com/stenzelmaik-lang/Chroniplay/commit/5e6ae3164e701538d8240671ae92bc549eeace9b)
-
-Das **Abenteuerjournal (AJ-01)** liegt auf einem eigenen Entwicklungsbranch. Vor der Veröffentlichung wird es mit dem Live-Quellstand zusammengeführt und gemeinsam mit den bestehenden Figurenprofilen und Tischfunktionen geprüft. [Journal-Branch](https://github.com/stenzelmaik-lang/Chroniplay/tree/claude/chroniplay-abenteuerjournal-23ec22)
+| | |
+|---|---|
+| **Version live** | **2.5.0**, seit 24.11.2026, Tag [`v2.5.0`](https://github.com/stenzelmaik-lang/Chroniplay/releases/tag/v2.5.0) |
+| **Meilenstein** | Alpha 2.5, sauber weiterarbeiten (siehe [`docs/ALPHA-2.5-SCHNITT.md`](docs/ALPHA-2.5-SCHNITT.md)) |
+| **Was sich geändert hat** | [`CHANGELOG.md`](CHANGELOG.md) |
+| **Versionen und Branches** | [`docs/VERSIONIERUNG.md`](docs/VERSIONIERUNG.md): `A.M.N` = Alpha-Generation . Meilenstein . Live-Gang |
+| **Automatische Prüfungen** | [`docs/CI.md`](docs/CI.md) |
+| **Release-Nachweise** | [`docs/releases/`](docs/releases/) |
 
 ## Funktionen der Alpha
 
