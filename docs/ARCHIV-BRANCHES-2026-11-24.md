@@ -1,0 +1,93 @@
+# Archiv der zusammengeführten Branches (Stand 24.11.2026)
+
+Vorbereitung des Schnitts für **Alpha 2.5**. Diese 83 Branches waren vollständig in `main` enthalten und wurden am 24.11.2026 auf GitHub gelöscht (Freigabe des Eigentümers). Ihr Inhalt ist nicht verloren: Jeder Stand steckt in `main`, und mit dem Tip-Commit lässt sich ein Branch jederzeit wiederherstellen, zum Beispiel mit `git push origin <tip>:refs/heads/<name>`.
+
+Spalten: letzter Commit, Tip, Merge in `main`, PR, und was der Branch gemacht hat (Commit-Betreffe, höchstens fünf).
+
+| Branch | Datum | Tip | Merge | PR | Inhalt |
+|---|---|---|---|---|---|
+| `codex/pre-alpha-v0.1.037-phase-b` | 2026-09-25 | `d8e1471286` | `07640d6513` | – | fix: close phase B role review gaps<br>feat: add campaign role membership foundation |
+| `codex/chroniplay-live-release-2026-09-26` | 2026-09-27 | `28ff406521` | `fc1bbecbc4` | #13 | Require an approved group snapshot before reversible dossier block/reactivation |
+| `codex/pre-alpha-v0.1.037-phase-c` | 2026-09-27 | `0445efb217` | `b5f3f287e7` | – | fix: secure first alpha account provisioning and remote test login<br>feat: integrate ChroniPlay visitor shell into release candidate<br>feat: prepare closed alpha location CMS release candidate<br>feat: implement phase C location CMS and release projections |
+| `codex/ce2-b0-clan-foundation` | 2026-09-28 | `896bd806fa` | direkt | – | feat(character): add campaign clan foundation |
+| `codex/live-experience-release-2026-10-01` | 2026-10-01 | `891736415a` | `1ec090ef06` | – | feat(character): streamline local live experience and SL workflows<br>docs: record local character and message acceptance evidence<br>feat(character): connect V20 progression and private SL messages<br>refactor(session): focus SL stage and share safe player presentation<br>refactor(session): compact SL tools and automate local saving<br>… (+18) |
+| `codex/closed-alpha-access-2026-10-01` | 2026-10-02 | `4df7597323` | `308ef929cd` | – | fix(release): harden closed-alpha dependencies and bundled map worker<br>chore(release): preserve closed-alpha rollout security checkpoint<br>feat(auth): add local profiles and closed-alpha access |
+| `codex/inventory-live-release-2026-10-02` | 2026-10-02 | `ebdec83d60` | `053d85c3ba` | – | docs(release): record verified Inventory 2.0 production candidate<br>docs(command-center): add audited architecture and interactive SL workspace concept<br>feat(inventory): add local Inventory 2.0 loadout and secure transactions |
+| `codex/sl-command-center-2-implementation` | 2026-10-02 | `b4742226a3` | `3fc93073cd` | #17 | feat(command-center): implement private multi-window SL workspace |
+| `codex/story-scene-manager-foundation` | 2026-10-02 | `d140a93c5f` | `f3e9091557` | #18 | fix(character): grant audited SL creation exceptions and ratings<br>fix(character): allow authorized campaign SL to manage player sheets<br>fix(command-center): keep expanded panel return controls below navigation<br>feat(story): add persistent scene direction and character knowledge |
+| `codex/archive-sl-live-release` | 2026-10-03 | `eb8ca947d3` | `c8c16483a8` | #20 | fix: add recoverable story archive and audited GM character corrections |
+| `codex/phase2a-production-release` | 2026-10-03 | `347596bea6` | `4618bd8c43` | #19 | feat(command-center): add persistent private story workspace<br>feat(command-center): separate personal play and SL preparation workspace |
+| `codex/m1-kernmodell` | 2026-10-26 | `d33f4162a7` | `ff930003de` | – | Merge full-width location dossier chapters |
+| `codex/spielerzentrale-portrait-fix` | 2026-10-28 | `e216d09402` | `0fcb8b3664` | #35 | fix: hang clan banner from character card |
+| `codex/spieltisch-2-1a` | 2026-10-28 | `e4892956f7` | `a95bc70015` | – | docs: record Spieltisch 2.1a alpha release and verification limits |
+| `codex/spieltisch-2-1b` | 2026-10-28 | `612ddb18d8` | `c974b7d086` | – | docs: record player hub alpha release and data verification |
+| `codex/spieltisch-2-1b-ux` | 2026-10-28 | `6ee8fbc384` | `02ef270f27` | #33 | fix(header): remove redundant additional navigation |
+| `codex/spieltisch-2-prototyp` | 2026-10-28 | `98c32603c4` | `70a0368f33` | – | docs(release): record verified Spieltisch 2 live deployment |
+| `design/dashboard-svg-visual-v01-20261028` | 2026-10-28 | `1841d5ad6e` | `fce5f09ef8` | #34 | fix: adapt dashboard graphics and bind clan emblems<br>Design: modulare SVG-Grafiken für Spielerzentrale integrieren |
+| `ux/sl-story-session-first-20261028` | 2026-10-28 | `9a143c1320` | `f4222d42dd` | #36 | fix: unlink prepared scenes consistently<br>test: Taberna-Testort lokal vorbereiten<br>fix: Save-Wartefenster ohne impure Render-Aufrufe<br>fix: Szenenwechsel während Autosave zuverlässig ausführen<br>test: Rich-Text-Speicherformat korrekt prüfen und Browsertest parallel starten<br>… (+14) |
+| `codex/cloudflare-build-fix` | 2026-10-29 | `88edede9f7` | `bf8a80ca13` | – | fix: pin pnpm and define root workspace for Cloudflare builds |
+| `codex/sl-cms-delete` | 2026-10-29 | `9d29b4cd01` | `a7d383ce9e` | – | feat: Spielabende, Szenen und Handlungsstränge sicher löschen |
+| `claude/erzaehlung-ux` | 2026-10-30 | `b36fd7d4d7` | direkt | – | docs(spieltisch): record narration UX production release |
+| `claude/release-charakter-postfach` | 2026-10-30 | `6c509693b4` | `0708960234` | #45 | docs: record character, mailbox and condition values production release<br>feat(character): official V20 costs for Paths and Caitiff<br>feat(postfach): archive, trash, attachments and keeping letters in own notes<br>feat(spieltisch): character condition values on the table (V20 blood, willpower, health, group stress, masquerade)<br>feat(character): price new Disciplines with the V20 standard<br>… (+8) |
+| `claude/spieltisch-2-0-local` | 2026-10-30 | `86ac024c8e` | `8200e9a52a` | #40 | feat(spieltisch): evening-scoped live direction with private Regie drawer |
+| `claude/spieltisch-medien` | 2026-10-30 | `6d0aba8d7e` | direkt | – | docs(spieltisch): record scene start and backdrop production release |
+| `codex/sl-cms-3` | 2026-10-30 | `156256e523` | `e3cce1280e` | #39 | fix(command-center): preserve focus when switching preparation panels<br>fix(command-center): stabilize preparation panels and show active recipient characters<br>feat(command-center): compact preparation and deliver private player messages<br>feat(command-center): refine guided preparation after UX review<br>feat: guide session planning and seven scene preparation areas<br>… (+5) |
+| `codex/spieltisch-2-live-regie-release-20261030` | 2026-10-30 | `b508ae294f` | `5ff8571a63` | #41 | docs(spieltisch): record Etappe 1 production release and verification |
+| `codex/spieltisch-regie-ux` | 2026-10-30 | `4d003e8287` | `0b5c427793` | #42 | fix(spieltisch): dismiss shared narration and resize private drawers |
+| `codex/spieltisch-regie-ux-release` | 2026-10-30 | `56f1772492` | `989f26ef75` | #43 | docs(spieltisch): record UX fix release and preservation checks |
+| `claude/galerie-material-2` | 2026-10-31 | `9b1e69935e` | `02af145013` | #50 | docs(galerie): record gallery and material 2 production release<br>feat(galerie): usable delete with usage check, reworked gallery, material editor and player archive |
+| `claude/material-3-release-doc` | 2026-10-31 | `4dd2841f4f` | `8656391bb1` | #58 | docs(material): record Spielmaterial 3.0 production release |
+| `claude/material-system-3` | 2026-10-31 | `fd68afb2b3` | `3fa5e6e6d8` | #56 | fix(material): centred viewer, phone-width stack, asset status after load; browser test and docs<br>feat(material): universal game material, display assets and effects (Spielmaterial 3.0) |
+| `claude/pager-fixes-release-doc` | 2026-10-31 | `f03003f05a` | `34161c0d7a` | #57 | docs(pager): record ULTIO pager fixes production release |
+| `claude/regie-nachbesserung` | 2026-10-31 | `efa63aef51` | `69951209be` | #47 | docs(spieltisch): record ambience player and pager fix production release<br>fix(pager): housing in the GM mirror, draggable pager, sounds after first interaction<br>feat(spieltisch): ambience player drawer with scene playlists and Regie control<br>docs(spieltisch): record Regie follow-up and round conditions production release<br>feat(zustandswerte): round overview, own controls and Regie conditions<br>… (+9) |
+| `claude/release-regie-pager` | 2026-10-31 | `0881837986` | direkt | – | docs(spieltisch): record Regie window and ULTIO pager production release |
+| `claude/spieltisch-aufraeumen` | 2026-10-31 | `20b4832cf6` | `4f3964ffde` | #51 | docs(spieltisch): record table cleanup production release<br>feat(spieltisch): play-only documents drawer, no figures, player-only conditions, freestanding pager mirror |
+| `claude/ultio-pager-fixes` | 2026-10-31 | `63c1e65332` | `c2a3b9e4aa` | #55 | fix(pager): audible tone, server-side read state, key hit areas on the caps<br>docs(pager): root causes of the three live acceptance defects |
+| `claude/w10-hybrid-phase-b` | 2026-10-31 | `8b1a48dad7` | `671b0e4a2b` | #53 | feat(w10): mark specialties and own-ability fields as hybrid preparation<br>fix(w10): keep own-ability IDs through the records route; PR #53 review<br>docs(w10): record owner acceptance of Phase B<br>docs(w10): Phase B acceptance package with readable preview demo<br>feat(w10): K1 personal stress read-only per owner decisions R1/R1b<br>… (+8) |
+| `claude/w10-phase-b-release-doc` | 2026-10-31 | `47ee0372c4` | `7a16a2d8c8` | #54 | docs(w10): record Phase B production release |
+| `codex/galerie-material-releasebericht` | 2026-10-31 | `8f9f1445db` | `0795040473` | #49 | docs(material): link current production release evidence<br>docs(release): record gallery material deployment and Claude handoff |
+| `codex/galerie-vorbereitung` | 2026-10-31 | `47c0aee276` | `5567fbf72f` | #48 | feat(material): centralize gallery and preparation with protected paged handouts |
+| `codex/visionen-botschaften` | 2026-10-31 | `f7f3475f5b` | `6ed3896a5c` | #52 | test: preserve legacy message journey alongside prepared whispers<br>test: verify centered visions and complete preparation workflow<br>fix: center vision text within the mist asset<br>refine: add letter and vision artwork with side-positioned readers<br>feat: prepare private visions and letters for the live stage |
+| `claude/ge-01c-ux` | 2026-11-01 | `e18098e4f4` | `41959295c1` | #69 | docs(w10): GE-02 release report, release-build screenshots<br>chore(release): GE-02 rollback aid and CI coverage for the check tests<br>fix(spieltisch): GE-02 live checks preview only issued checks; W10 draft route stays local<br>fix(spieltisch): GE-02 phone drawer clears the tool rail<br>feat(spieltisch): GE-02 release gate and remaining GE-01C fixes<br>… (+13) |
+| `claude/live-befund-fixes` | 2026-11-01 | `f56b25b209` | `5cc4c970d9` | #59 | fix(live): asset dialog, file previews and caching, pager self test, calmer polling, stage image from the scene |
+| `claude/live-befund-release-doc` | 2026-11-01 | `71f7746c86` | `0fbfe8d08f` | #60 | docs(live): record live check fixes production release |
+| `claude/material-tisch-inventar` | 2026-11-01 | `eee9456ff4` | `9ece33229e` | #63 | feat(material): table objects without handle bar, frameless opening, effect previews, pocketing into the inventory |
+| `claude/material-tisch-release-doc` | 2026-11-01 | `8f41ba9304` | `4a2e31356a` | #64 | docs(material): record table, viewer and inventory production release |
+| `claude/tooltip-release-doc` | 2026-11-01 | `782e96f0cc` | `c9e1d8190b` | #66 | docs(material): record tooltip text fix release |
+| `claude/tooltip-rich-text` | 2026-11-01 | `6b3f6fdd22` | `3a46961865` | #65 | fix(material): readable text in table tooltip and Regie instead of the stored rich text format |
+| `claude/whiteboard-2` | 2026-11-01 | `9963e91d4f` | `c768189f4b` | #67 | docs(spieltisch): record whiteboard 2 integration results<br>feat(spieltisch): whiteboard 2 with stable sync, own-stroke rights, lock and backdrop-aligned sketch<br>wip(whiteboard): root-cause report, stable sync and redesigned sketch tools |
+| `codex/ci-w10-frozen-lockfile` | 2026-11-01 | `eabfe02018` | `fd5c08d084` | #62 | Start isolated W10 fixture before HTTP integration<br>Run Windows-only Shared Dice regression on matching runner<br>Repair pnpm lockfile and add PR-wide W10 CI |
+| `codex/w10-hybrid-c1-e05a` | 2026-11-01 | `70a41e61a7` | `e63d801f37` | #61 | Validate C1 declarations and align applied rule metadata<br>Implement isolated V20 ordinary check preparation and Gen7 correction |
+| `claude/hotfix-chronik-cms-entfernen` | 2026-11-02 | `f37af1a1d7` | `70f4059579` | #72 | fix(command-center): remove the empty legacy Chronik-CMS tile |
+| `claude/hotfix-npc-anlegen` | 2026-11-02 | `2d13e9430e` | `70f4059579` | #72 | fix(command-center): NPC creation tile, even navigation grid, compact Orte header |
+| `claude/hotfix-spieltisch-mitglieder` | 2026-11-02 | `25ceef7ba0` | `f2b6d02378` | #71 | fix(spieltisch): active campaign players reach a running table and appear in the crew |
+| `claude/standardfiguren-1` | 2026-11-02 | `3c629c6072` | `70f4059579` | #72 | feat(spieltisch): standard figures phase 1 (30 types x 5 tiers, scene step 3, regie block) |
+| `claude/standardfiguren-2` | 2026-11-02 | `d8d9a06731` | `70f4059579` | #72 | feat(spieltisch): standard figures get pictures in step 3 and play on the table like NPCs |
+| `codex/cp2-07b-roll-snapshot` | 2026-11-02 | `5c8c3ae530` | `f2b6d02378` | #71 | fix(w10): persist original roll evaluation and rules version<br>fix: project NPC dossiers for personal player surface<br>fix(alpha-2): open session preparation from campaign entry<br>feat(alpha-2): clarify existing location creation steps<br>feat(alpha-2): orient members on existing campaign entry<br>… (+4) |
+| `claude/regie-spontan` | 2026-11-03 | `6aca76331c` | direkt | – | feat(regie): spontaneous visions and messages, folded rows, preview on the GM table |
+| `claude/regie-vorschau-loeschen` | 2026-11-03 | `acbc62d490` | `e9bf1faea7` | – | fix(regie): preview reaches the GM table reliably; delete entries<br>feat(regie): spontaneous visions and messages, folded rows, preview on the GM table<br>feat(visions): own gallery sections, arrival sounds, reading tempo<br>feat(visions): cinematic visions and personal messages with per-recipient delivery |
+| `claude/release-visionen-karte` | 2026-11-03 | `96c22b2dd3` | direkt | – | Merge codex/live-table-map-release (live since 95ddc4b) with the visions release |
+| `claude/visionen-galerie` | 2026-11-03 | `2b62ddf76e` | direkt | – | feat(visions): own gallery sections, arrival sounds, reading tempo |
+| `claude/visionen-nextgen` | 2026-11-03 | `7bd97241e8` | direkt | – | feat(visions): cinematic visions and personal messages with per-recipient delivery |
+| `codex/live-regie-layout` | 2026-11-03 | `9a0db81722` | `70f4059579` | #72 | Clarify player condition meters on the live table<br>Make live direction tiles configurable and expose the table map |
+| `codex/live-table-map-release` | 2026-11-03 | `d9cd4987fb` | `7ea0c62816` | – | Publish complete location trees and add verified map search areas |
+| `claude/journal-release` | 2026-11-07 | `5f4bf8adda` | `7ea0c62816` | – | docs(release): journal SL view live as 240e208e |
+| `codex/live-source-2026-11-07` | 2026-11-07 | `f8670e1b25` | `7ea0c62816` | – | docs: update README for the verified ChroniPlay alpha |
+| `claude/anwenden-designgrundlage` | 2026-11-09 | `a898355567` | `7ea0c62816` | – | docs(release): rollback note precise |
+| `claude/navigation` | 2026-11-09 | `f3c5b528e8` | `ae6d5c7add` | – | docs(release): chronik timeline live as 55f051ca |
+| `claude/alpha2-ep-basis` | 2026-11-10 | `bfcb3811c0` | direkt | – | feat(xp): source-bound rewards, session settlement and receipt (Alpha 2.0 phase 1) |
+| `chatgpt/alpha2-engagement-rules` | 2026-11-11 | `b9ceedc746` | direkt | – | fix(xp): apply portable receipt SQL binding prerequisite for engagement CI |
+| `chatgpt/alpha2-xp-session-list` | 2026-11-11 | `8403d54f8a` | `ae6d5c7add` | – | fix(mvp): reject multi-recipient MVP settlement before any writes<br>fix(mvp): enforce one reserved winner per played evening across all character ledgers<br>test(mvp): include cross-character global uniqueness regression<br>test(mvp): reproduce multiple winner booking across characters and API paths<br>test(mvp): provide existing settings ledger in isolated reward fixture<br>… (+43) |
+| `codex/alpha2-engagement-activity` | 2026-11-11 | `a67d694d0d` | direkt | – | feat(engagement): connect player tracking and confirmed game dates |
+| `codex/alpha2-engagement-awards` | 2026-11-11 | `42b77b991b` | `0c4ce18573` | – | feat(engagement): qualify notebook activity and award XP through the ledger<br>feat(engagement): connect player tracking and confirmed game dates<br>feat(engagement): verify and deduplicate active time on the server<br>fix(xp): apply portable receipt SQL binding prerequisite for engagement CI<br>test(engagement): add exponential policy tests to pnpm test<br>… (+2) |
+| `codex/alpha2-player-navigation-profile` | 2026-11-11 | `b528dda3bf` | `c4418db687` | #86 | Verify standalone mailbox in the preparation browser check |
+| `codex/alpha2-progress-card` | 2026-11-11 | `34616e789e` | `c4418db687` | #86 | Preserve the progress card and dashboard row dimensions |
+| `codex/alpha2-release` | 2026-11-11 | `b662298a95` | `c4418db687` | #86 | feat(alpha2): add favor obligations and prepare integrated release |
+| `codex/p1-09-release` | 2026-11-12 | `97b4cc0117` | `c4418db687` | #86 | test: verify released audio persists until the GM withdraws it<br>feat: add verified offline media backup and restore<br>fix: keep mobile narration clear of the round controls<br>test: verify current Regie journeys and live character values<br>fix: synchronize live vitals and support shared dice journal resets<br>… (+1) |
+| `codex/spielpause` | 2026-11-18 | `86f3122a04` | direkt | – | fix: give Graf Knautsch real volume and remove toy click frames |
+| `claude/storyboard-kommandozentrum-323cfc` | 2026-11-21 | `077a167dc2` | `a86fa9ce56` | #88 | docs: release record for collapsible table HUD |
+| `claude/release-faq-recht-seo` | 2026-11-23 | `9d802d4dc6` | `4ee1a510b3` | #93 | chore: Google Search Console verification file and release record (Worker 85724d6f) |
+| `claude/release-voice` | 2026-11-23 | `63018a72da` | `4f50c5f498` | #98 | docs(datenschutz): Abschnitt Sprachchat am Spieltisch (VV-01) |
+| `codex/legal-address-privacy` | 2026-11-23 | `273f4bf0d9` | `a199d22cca` | #94 | docs: record approval to publish legal page metadata<br>fix: discourage indexing of public legal contact pages |
+
+Nach Herkunft: codex 40, design 1, ux 1, claude 39, chatgpt 2.
