@@ -62,7 +62,7 @@ try{
  const table=async(c,name)=>{const p=await c.newPage();p.on('pageerror',e=>errors.push(name+': '+e.message));await p.goto(base+'/spielbereich?bereich=sitzung');await p.locator('[data-layer="stage_objects"]').waitFor({timeout:30000});return p;};
  const a=await table(ac,'A'),b=await table(bc,'B');
  const visionOn=p=>p.getByRole('dialog',{name:'Eine Vision'});
- const finish=async p=>{await p.getByRole('button',{name:'Text vollständig anzeigen'}).click();await p.getByRole('button',{name:'Ich habe alles gesehen'}).click();await visionOn(p).waitFor({state:'detached',timeout:8000});};
+ const finish=async p=>{await p.getByRole('button',{name:'Vision überspringen'}).click();await p.getByRole('button',{name:'Ich habe alles gesehen'}).click();await visionOn(p).waitFor({state:'detached',timeout:8000});};
 
  step='GM preview never delivers';
  assert.ok(await folded('Klassisch')&&await folded('Fax intern'),'entries start folded');ok('entries start folded to one line');
@@ -71,7 +71,7 @@ try{
  await gm.getByText(/an deinen Spieltisch geschickt/).waitFor({timeout:8000});await gm.getByRole('button',{name:'Stattdessen hier ansehen'}).click();
  const preview=gm.getByRole('dialog',{name:'Vorschau einer Vision'});await preview.waitFor();await gm.getByText('Vorschau · nichts wird zugestellt').waitFor();
  await gm.waitForTimeout(3600);await gm.screenshot({path:out+'/preset-classic.png'});
- await gm.getByRole('button',{name:'Text vollständig anzeigen'}).click();await gm.getByRole('button',{name:'Ich habe alles gesehen'}).click();await preview.waitFor({state:'detached',timeout:8000});
+ await gm.getByRole('button',{name:'Vision überspringen'}).click();await gm.getByRole('button',{name:'Ich habe alles gesehen'}).click();await preview.waitFor({state:'detached',timeout:8000});
  assert.equal(await runsCount(),before,'preview created no delivery');assert.equal(await visionOn(a).count(),0);ok('GM preview runs locally and delivers nothing');
 
  step='single player vision';
@@ -112,7 +112,7 @@ try{
  step='remaining looks in the GM preview';
  for(const [title,file] of [['Offenbarung','preset-drama.png'],['Echo','preset-echo.png']]){
   await (await expand(title)).getByRole('button',{name:'Vorschau'}).click();await gm.getByRole('button',{name:'Stattdessen hier ansehen'}).click();const p=gm.getByRole('dialog',{name:'Vorschau einer Vision'});await p.waitFor();await gm.waitForTimeout(3600);await gm.screenshot({path:out+'/'+file});
-  await gm.getByRole('button',{name:'Text vollständig anzeigen'}).click();await gm.getByRole('button',{name:'Ich habe alles gesehen'}).click();await p.waitFor({state:'detached',timeout:8000});
+  await gm.getByRole('button',{name:'Vision überspringen'}).click();await gm.getByRole('button',{name:'Ich habe alles gesehen'}).click();await p.waitFor({state:'detached',timeout:8000});
  }
  ok('six vision looks captured for comparison');
 
@@ -157,8 +157,8 @@ try{
  assert.equal(await gm.getByRole('dialog',{name:'Vorschau einer Vision'}).count(),0,'not in the Regie');await gm.getByText(/Vorschau läuft auf deinem Spieltisch/).waitFor();
  await gmTable.waitForTimeout(3600);await gmTable.screenshot({path:out+'/preview-on-gm-table.png'});
  assert.equal(await visionOn(a).count()+await visionOn(b).count(),0,'players see nothing');
- await gmTable.getByRole('button',{name:'Text vollständig anzeigen'}).click();await gmTable.getByRole('button',{name:'Ich habe alles gesehen'}).click();await tablePreview.waitFor({state:'detached',timeout:8000});
- await item('Echo').getByRole('button',{name:'Vorschau'}).click();await tablePreview.waitFor({timeout:8000});await gmTable.getByRole('button',{name:'Text vollständig anzeigen'}).click();await gmTable.getByRole('button',{name:'Ich habe alles gesehen'}).click();await tablePreview.waitFor({state:'detached',timeout:8000});
+ await gmTable.getByRole('button',{name:'Vision überspringen'}).click();await gmTable.getByRole('button',{name:'Ich habe alles gesehen'}).click();await tablePreview.waitFor({state:'detached',timeout:8000});
+ await item('Echo').getByRole('button',{name:'Vorschau'}).click();await tablePreview.waitFor({timeout:8000});await gmTable.getByRole('button',{name:'Vision überspringen'}).click();await gmTable.getByRole('button',{name:'Ich habe alles gesehen'}).click();await tablePreview.waitFor({state:'detached',timeout:8000});
  await desk.getByRole('button',{name:'Neue Botschaft'}).click();const draft=desk.getByRole('region',{name:'Neue Botschaft'});await draft.getByLabel('Text der Botschaft').fill('Nur zur Probe');
  await draft.getByRole('button',{name:'Vorschau auf meinem Tisch'}).click();
  const tableFax=gmTable.getByRole('dialog',{name:'Vorschau einer persönlichen Botschaft'});await tableFax.waitFor({timeout:8000});await gmTable.getByText('Nur zur Probe').waitFor();
@@ -175,7 +175,7 @@ try{
  await gm.getByText(/an deinen Spieltisch geschickt/).waitFor({timeout:8000});await gm.getByRole('button',{name:'Stattdessen hier ansehen'}).waitFor();
  const relayed=otherTable.getByRole('dialog',{name:'Vorschau einer Vision'});await relayed.waitFor({timeout:10000});
  assert.equal(await visionOn(a).count()+await visionOn(b).count(),0,'players see nothing');
- await otherTable.getByRole('button',{name:'Text vollständig anzeigen'}).click();await otherTable.getByRole('button',{name:'Ich habe alles gesehen'}).click();await relayed.waitFor({state:'detached',timeout:8000});
+ await otherTable.getByRole('button',{name:'Vision überspringen'}).click();await otherTable.getByRole('button',{name:'Ich habe alles gesehen'}).click();await relayed.waitFor({state:'detached',timeout:8000});
  await otherTable.reload();await otherTable.locator('[data-layer="stage_objects"]').waitFor({timeout:30000});await otherTable.waitForTimeout(3500);
  assert.equal(await relayed.count(),0,'a preview never plays twice');assert.equal(await runsCount(),count,'no delivery');
  ok('a preview reaches the GM table in another window without the browser channel, once, and delivers nothing');
