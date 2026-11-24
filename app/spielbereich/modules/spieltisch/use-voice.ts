@@ -106,7 +106,9 @@ export function useVoice(sessionId:string,runId:string,selfId:string):Voice{
    const j=await api<Join>('/api/live-voice','POST',{action:'join',sessionId,runId});
    if(j.mode==='attrappe'){setPeers({[selfId]:{audio:false}});setPhase('joined');return;}
    const {default:Client}=await import('@cloudflare/realtimekit');
-   const m=await Client.init({authToken:j.authToken,defaults:{audio:false,video:false}});
+   // Without this module the Core SDK never plays the other members' audio (only the UI Kit does): the microphone
+   // would send, but nobody would hear it. It plays remote tracks only (no echo of oneself) and reports blocked autoplay.
+   const m=await Client.init({authToken:j.authToken,defaults:{audio:false,video:false},modules:{experimentalAudioPlayback:true}});
    meeting.current=m;
    audio.current={ctx:new AudioContext(),meters:new Map(),last:new Map(),timer:window.setInterval(measure,POLL_MS)};
    const on=(t:unknown,e:string,fn:(...a:unknown[])=>void)=>cleanup.current.push(listen(t,e,fn));

@@ -44,5 +44,5 @@ test('server keeps internal notes away from reporters and never forwards reports
  const own=s.match(/const ownView=[^\n]*/)[0];
  assert.ok(!/operator_note|severity|page|browser|reporter/.test(own.replace('ownView=(r:Row)','')),'own view: no internal fields');
  assert.ok(!/webhook|fetch\(|api\.github|discord\.com/i.test(s),'no automatic forwarding');
- assert.match(s,/gmOnly\(a\);\n const r=await database\(\)\.prepare\("SELECT f\.\*/,'only the operator lists all reports');
+ assert.match(s,/gmOnly\(a\);\r?\n const r=await database\(\)\.prepare\("SELECT f\.\*/,'only the operator lists all reports');
 });
