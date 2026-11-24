@@ -1,0 +1,192 @@
+# ChroniPlay-Prüfung (ab 2.5): zwei Prüfungen statt fünf.
+#  1. "ChroniPlay · Prüfung" – Basis immer; Server, Browser und npm-Lockfile nur, wenn ihr Bereich geändert wurde.
+#  2. "ChroniPlay · Windows" – nur, wenn Würfel-Dateien geändert wurden (eigener Windows-Rechner).
+# Push auf main und manueller Start prüfen immer alles. Reine Doku-PRs starten keine Prüfung.
+# Beschreibung und lokales Nachstellen: docs/CI.md
+name: ChroniPlay
+
+on:
+  pull_request:
+    paths-ignore:
+      - "docs/**"
+      - "**/*.md"
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  pruefung:
+    name: "ChroniPlay · Prüfung"
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    outputs:
+      windows: ${{ steps.bereiche.outputs.windows }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Geänderte Bereiche erkennen
+        id: bereiche
+        shell: bash
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE: ${{ github.event.pull_request.base.sha }}
+        run: |
+          set -euo pipefail
+          if [[ "$EVENT" != "pull_request" ]]; then
+            for b in server browser lockfile windows; do echo "$b=true" >> "$GITHUB_OUTPUT"; done
+            echo "Push auf main oder manueller Start: alle Bereiche werden geprüft."
+            exit 0
+          fi
+          git fetch --no-tags --depth=1 origin "$BASE"
+          git diff --name-only "$BASE" HEAD > "$RUNNER_TEMP/geaendert.txt"
+          echo "Geänderte Dateien:"; cat "$RUNNER_TEMP/geaendert.txt"
+          bereich(){ if grep -Eq "$2" "$RUNNER_TEMP/geaendert.txt"; then echo "$1=true" >> "$GITHUB_OUTPUT"; echo "-> $1: ja"; else echo "$1=false" >> "$GITHUB_OUTPUT"; echo "-> $1: nein"; fi; }
+          gemeinsam='^(package\.json|pnpm-lock\.yaml|scripts/test-local\.mjs|middleware\.ts|next\.config\.ts|vite\.config\.|wrangler|\.github/workflows/ci\.yml)'
+          bereich server  "$gemeinsam|^(server/|app/api/|domain/|db/|drizzle/|tests/.*integration|tests/fixtures/)"
+          bereich browser "$gemeinsam|^(app/|components/|tests/.*browser|public/)"
+          bereich lockfile '^(package\.json|package-lock\.json|\.github/workflows/ci\.yml)$'
+          bereich windows '^(prototypes/spieltisch-2/(shared-dice|dice-)|app/spielbereich/modules/spieltisch/(use-shared-dice|dice-)|\.github/workflows/ci\.yml)'
+
+      # ---------- Basis: läuft immer ----------
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.25.0
+          run_install: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22.16.0"
+          cache: pnpm
+      - name: "Basis · Abhängigkeiten (pnpm, gesperrte Versionen)"
+        run: pnpm install --frozen-lockfile
+      - name: "Basis · TypeScript"
+        run: pnpm run typecheck
+      - name: "Basis · ESLint"
+        shell: bash
+        run: |
+          files=(
+            domain/w10.ts domain/w10-core.ts domain/w10-hybrid-draft.ts
+            domain/w10-selection.ts domain/character-vitals.ts
+            domain/character-specialties.ts domain/trait-ids.ts
+            tests/w10-hybrid.test.mjs tests/w10-selection.test.mjs
+            tests/character-vitals.test.mjs
+            prototypes/spieltisch-2/w10-rules.test.mjs
+            prototypes/spieltisch-2/shared-dice.test.mjs
+            domain/live-checks.ts domain/w10-modifier-register.ts server/live-checks.ts
+            tests/ge-01c-check-lifecycle.test.mjs tests/ge-02-check-desk.test.mjs tests/ge-02-release.test.mjs
+            tests/ge-02-rollback.test.mjs scripts/ge02-rollback-scene-checks.mjs
+            domain/live-voice.ts server/live-voice.ts app/api/live-voice/route.ts
+            app/spielbereich/modules/spieltisch/use-voice.ts app/spielbereich/modules/spieltisch/voice-control.tsx tests/live-voice.test.mjs tests/live-voice-integration.mjs
+            middleware.ts tests/security-headers.test.mjs
+            app/spielbereich/modules/story-workspace.tsx app/spielbereich/modules/preparation-guide.tsx app/spielbereich/modules/preparation-materials.tsx
+            app/spielbereich/modules/preparation-npcs.tsx app/spielbereich/modules/preparation-catalog.ts app/spielbereich/modules/protected-image-gallery.tsx
+            app/spielbereich/modules/rich-text.tsx app/spielbereich/modules/session-overview.tsx app/spielbereich/modules/preparation-panel.tsx
+            app/spielbereich/modules/preparation-whispers.tsx app/spielbereich/modules/message-center.tsx app/spielbereich/modules/personal-message-body.tsx
+            app/api/messages/route.ts app/api/files/route.ts domain/personal-message.ts server/personal-message-files.ts
+            server/preparation-recipients.ts domain/preparation-guide.ts tests/story-preparation.test.mjs tests/preparation-guide-browser.mjs
+          )
+          if [[ -f domain/w10-c1-ordinary.ts ]]; then files+=(domain/w10-c1-ordinary.ts); fi
+          if [[ -f tests/w10-c1-ordinary.test.mjs ]]; then files+=(tests/w10-c1-ordinary.test.mjs); fi
+          ./node_modules/.bin/eslint "${files[@]}"
+      - name: "Basis · Tests"
+        run: pnpm test
+      - name: "Basis · W10-Kern und Charakterbogen"
+        run: node --experimental-strip-types --test tests/w10-hybrid.test.mjs tests/w10-selection.test.mjs prototypes/spieltisch-2/w10-rules.test.mjs tests/character-vitals.test.mjs
+      - name: "Basis · C1-Proben (falls vorhanden)"
+        shell: bash
+        run: |
+          if [[ -f tests/w10-c1-ordinary.test.mjs ]]; then
+            node --experimental-strip-types --test tests/w10-c1-ordinary.test.mjs
+          else
+            echo 'C1-Testdatei ist in diesem Stand nicht enthalten.'
+          fi
+      - name: "Basis · Tagebuch-Brücke nach Discord"
+        working-directory: .github/chroniplay-discord
+        run: python3 -m unittest -q
+      - name: "Basis · Build"
+        run: pnpm run build
+
+      # ---------- npm-Lockfile: nur bei geänderten Paketdateien ----------
+      - name: "Lockfile · package-lock.json passt zu package.json"
+        if: steps.bereiche.outputs.lockfile == 'true'
+        shell: bash
+        # npm ci bricht ab, wenn package-lock.json nicht zu package.json passt; in einem eigenen Ordner, damit
+        # die pnpm-Installation der Basis unberührt bleibt.
+        run: |
+          mkdir -p "$RUNNER_TEMP/npm-lock" && cp package.json package-lock.json "$RUNNER_TEMP/npm-lock/"
+          cd "$RUNNER_TEMP/npm-lock" && npm ci --ignore-scripts --include=dev --include=optional --no-audit --no-fund
+
+      # ---------- Server: nur bei Änderungen an Server, API, Datenbank, Regeln ----------
+      - name: "Server · W10-Integration"
+        if: steps.bereiche.outputs.server == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --experimental-strip-types scripts/test-local.mjs --w10-hybrid > "$RUNNER_TEMP/w10-hybrid.log" 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid" 2>/dev/null || true' EXIT
+          ready=0
+          for n in $(seq 1 150); do
+            if grep -q 'Isolated application ready:' "$RUNNER_TEMP/w10-hybrid.log"; then ready=1; break; fi
+            if ! kill -0 "$server_pid" 2>/dev/null; then cat "$RUNNER_TEMP/w10-hybrid.log"; exit 1; fi
+            sleep 2
+          done
+          if [[ "$ready" != 1 ]]; then cat "$RUNNER_TEMP/w10-hybrid.log"; echo 'W10-Testserver ist nicht bereit geworden'; exit 1; fi
+          CVK_TEST_URL=http://127.0.0.1:8878 pnpm run test:w10-hybrid-integration || { tail -n 100 "$RUNNER_TEMP/w10-hybrid.log"; exit 1; }
+      - name: "Server · Projekt-Integration"
+        if: steps.bereiche.outputs.server == 'true'
+        run: pnpm run test:integration:run
+
+      # ---------- Browser: nur bei Änderungen an der Oberfläche ----------
+      - name: "Browser · Chromium vorbereiten"
+        if: steps.bereiche.outputs.browser == 'true'
+        shell: bash
+        run: |
+          mkdir -p "$RUNNER_TEMP/pw" && cd "$RUNNER_TEMP/pw"
+          npm init -y > /dev/null
+          npm install --ignore-scripts --no-audit --no-fund playwright@1.58.2
+          ./node_modules/.bin/playwright install --with-deps chromium
+          ln -sfn "$RUNNER_TEMP/pw/node_modules/playwright" "$GITHUB_WORKSPACE/node_modules/playwright"
+          ln -sfn "$RUNNER_TEMP/pw/node_modules/playwright-core" "$GITHUB_WORKSPACE/node_modules/playwright-core"
+      - name: "Browser · Rundgang SL (Desktop, Handy, Vorbereitungsführung)"
+        if: steps.bereiche.outputs.browser == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --experimental-strip-types scripts/test-local.mjs --spieltisch-release > "$RUNNER_TEMP/browser.log" 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid" 2>/dev/null || true' EXIT
+          ready=0
+          for n in $(seq 1 150); do
+            if [ "$(curl --silent --output /dev/null --write-out '%{http_code}' http://127.0.0.1:8820/api/members || true)" = "401" ]; then ready=1; break; fi
+            if ! kill -0 "$server_pid" 2>/dev/null; then cat "$RUNNER_TEMP/browser.log"; exit 1; fi
+            sleep 2
+          done
+          if [ "$ready" != "1" ]; then cat "$RUNNER_TEMP/browser.log"; echo "Browser-Testserver ist nicht bereit geworden"; exit 1; fi
+          CVK_TEST_URL=http://127.0.0.1:8820 node tests/story-browser-smoke.mjs || { tail -n 100 "$RUNNER_TEMP/browser.log"; exit 1; }
+          CVK_TEST_URL=http://127.0.0.1:8820 node --experimental-strip-types tests/preparation-guide-browser.mjs || { tail -n 100 "$RUNNER_TEMP/browser.log"; exit 1; }
+      - name: "Browser · Bildschirmfotos sichern"
+        if: always() && steps.bereiche.outputs.browser == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-bildschirmfotos
+          path: |
+            artifacts/story-browser-smoke/*.png
+            artifacts/preparation-guide/*.png
+          if-no-files-found: ignore
+
+  windows:
+    name: "ChroniPlay · Windows"
+    needs: pruefung
+    if: needs.pruefung.outputs.windows == 'true'
+    runs-on: windows-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22.16.0"
+      - name: "Würfel · Windows-Pfade"
+        run: node --experimental-strip-types --test prototypes/spieltisch-2/shared-dice.test.mjs

@@ -3,7 +3,7 @@
 Was sich auf chroniplay.cc geändert hat, die neueste Version zuerst. Versionsschema `A.M.N` (siehe `docs/VERSIONIERUNG.md`). Technische Nachweise stehen in `docs/releases/`.
 
 ## [Unveröffentlicht]
-- CI-Prüfungen auf Deutsch umbenannt und doppelte Läufe entfernt (`docs/CI.md`).
+- CI auf zwei Prüfungen zusammengelegt („ChroniPlay · Prüfung“, „ChroniPlay · Windows“). Server-, Browser- und Lockfile-Teile laufen nur bei betroffenen Dateien, Doku-PRs ohne Prüfung (`docs/CI.md`).
 - Statusblock im README, dieses Changelog.
 
 ## [2.5.0] – 24.11.2026: Schnitt für Alpha 2.5
