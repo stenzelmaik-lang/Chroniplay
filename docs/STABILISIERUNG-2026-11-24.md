@@ -22,7 +22,7 @@ Branch `claude/stabilisieren`, Basis `main` @ `dfc1d07`. Live geprüft wurde Wor
 - **„Workers Builds“ ist bei jedem PR rot:** Die Git-Anbindung von Cloudflare baut jeden Push. Würde sie gelingen, würde jeder Merge auf `main` ohne Freigabe live gehen, was gegen die Regel verstößt. Empfehlung: im Cloudflare-Dashboard abschalten oder auf Vorschau-Builds ohne Deploy beschränken.
 - **Lokale Testports teilen sich mehrere Agenten:** `scripts/test-local.mjs` nutzt standardmäßig Port 8793. Laufen Codex und Claude gleichzeitig, kollidieren sie (`EADDRINUSE` oder ein zufälliges `fetch failed`). Empfehlung: Jeder Agent setzt `CVK_TEST_PORT`.
 - **GitHub-Aufräumliste:**
-  - 84 von 91 Branches sind vollständig in `main` und könnten gelöscht werden. Das geschieht nur nach Freigabe.
+  - **Erledigt am 24.11.2026 mit Freigabe:** Die 83 vollständig in `main` enthaltenen Branches sind gelöscht. Das Archiv mit den Tip-Commits steht in `docs/ARCHIV-BRANCHES-2026-11-24.md`.
   - Die Entwurfs-PRs #79 bis #82 sind inhaltlich schon in `main` und könnten geschlossen werden.
   - Offen mit eigenem Inhalt: #78 (`chatgpt/alpha2-ep-abrechnung-ui`, 22 Commits, vermutlich durch #79 überholt), #70 und #46, Release-Nachweise in `claude/release-google-verifizierung`, `claude/release-record-voice` und `claude/ge02-release-nachweis`, `claude/chroniplay-abenteuerjournal-23ec22` (Journal wurde entfernt) und `codex/privacy-hide-residential-address-20261123` (vermutlich durch #95 erledigt).
 - **Lint:** 12 Fehler im Prototyp `prototypes/spieltisch-2`, nicht live. Die Fehler in den App-Modulen sind im Branch `claude/aufraeumen` behoben.
