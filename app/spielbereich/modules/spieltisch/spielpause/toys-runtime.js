@@ -1,10 +1,14 @@
-/* Standalone interaction layer. Nothing here calls a server or changes character values. */
+/* Standalone interaction layer. Nothing here calls a server or changes character values.
+ * Saving a solve time goes through the optional `services.saveResult` callback of the caller; the cube state for invited
+ * viewers is only handed to `services.onCubeChange` (the caller decides whether it leaves the browser). */
 import * as Toys from './toys-core.js';
+import * as Moves from './cube-moves.js';
+import {createConfetti} from './confetti.js';
 import {createDollRenderer} from './doll-3d.js';
 import {DOLL_ENTRANCE_SECONDS} from './doll-pose.js';
 
 // Adapted from the standalone playground; all events belong to this mount.
-export function mountToys(root, activeToy, personalKey) {
+export function mountToys(root, activeToy, personalKey, services = {}) {
   const lifetime = new AbortController();
   let disposed = false, suspended = false;
   const listen = (target, event, callback) => target.addEventListener(event, callback, {signal:lifetime.signal});
@@ -23,12 +27,17 @@ export function mountToys(root, activeToy, personalKey) {
       } catch { return {}; }
     },
     write() {
-      try { localStorage.setItem(storageKey, JSON.stringify({ count: doll.count })); }
+      try { localStorage.setItem(storageKey, JSON.stringify({ count: doll.count, cubeMode, cubeKeys, cubeMenu })); }
       catch { /* The toys also work when local storage is unavailable. */ }
     }
   };
   const saved = storage.read();
   const initialCount = Number.isSafeInteger(saved.count) && saved.count >= 0 ? saved.count : 0;
+  /** 'ebenen': dragging a sticker turns its layer. 'ansicht': dragging only turns the view; turns come from buttons/keys. */
+  let cubeMode = saved.cubeMode === 'ansicht' ? 'ansicht' : 'ebenen';
+  /** Keyboard turns are optional and off by default, so stray key presses never turn the cube. */
+  let cubeKeys = saved.cubeKeys === true;
+  let cubeMenu = saved.cubeMenu === true;
 
   let frameRequest = 0;
   let lastFrame = null;
@@ -82,13 +91,28 @@ export function mountToys(root, activeToy, personalKey) {
   const capturedPointers = new Set();
   const history = [];
   const queue = [];
-  let selectedFace = 'F';
+  const timer = new Moves.SolveTimer();
+  const confetti = createConfetti(element('cube-confetti'));
+  let timerInterval = 0;
   let activeTurn = null;
   let cubePointer = null;
   let cubeDrag = null;
   let cubeRendered = null;
   let userMoves = 0;
   let mixing = false;
+  /* Live feed for invited viewers: every finished turn of this round from the solved start, scramble included.
+   * The caller decides whether anything leaves the browser (only while somebody is invited). Never the leaderboard. */
+  const newRound = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
+  let feedRound = newRound(), feedMoves = [], feedOverflow = false;
+  function emitFeed() {
+    if (!services.onCubeChange || disposed) return;
+    services.onCubeChange({
+      round: feedRound, moves: feedOverflow ? '' : feedMoves.join(' '), overflow: feedOverflow,
+      timerState: timer.state, timeMs: Math.round(timer.elapsed(performance.now())),
+      userMoves, solved: cube.isSolved() && !mixing
+    });
+  }
+  function restartFeed() { feedRound = newRound(); feedMoves = []; feedOverflow = false; }
   let dollPointer = null;
   let spinnerPointer = null;
   let spinnerAsset = null;
@@ -101,27 +125,108 @@ export function mountToys(root, activeToy, personalKey) {
     'Auch Grafen brauchen eine Pause.'
   ];
 
+  function updateTimerLabel() {
+    element('cube-time').textContent = Moves.formatTime(timer.elapsed(performance.now()));
+    element('cube-time').dataset.state = timer.state;
+  }
+  function syncTimerTicker() {
+    if (timer.state === 'running' && !timerInterval) timerInterval = setInterval(updateTimerLabel, 50);
+    if (timer.state !== 'running' && timerInterval) { clearInterval(timerInterval); timerInterval = 0; }
+    updateTimerLabel();
+  }
+
   function updateCubeLabels(message) {
     element('cube-count').textContent = formatNumber.format(userMoves);
     const solved = cube.isSolved();
-    element('cube-state').textContent = message || (solved ? 'Gelöst' : 'Noch ein Dreh');
+    const waiting = timer.state === 'armed' ? 'Bereit' : 'Noch ein Dreh';
+    element('cube-time').title = timer.state === 'armed' ? 'Die Zeit läuft ab deinem ersten Zug' : '';
+    element('cube-state').textContent = message || (solved ? 'Gelöst' : waiting);
     element('cube-state').classList.toggle('is-solved', solved && !mixing);
     const locked = mixing || !!activeTurn || !!cubePointer || queue.length > 0;
     element('cube-mix').disabled = locked;
     element('cube-undo').disabled = locked || history.length === 0;
-    element('cube-cw').disabled = mixing;
-    element('cube-ccw').disabled = mixing;
-    element('cube-history').textContent = history.slice(-7).map(entry => Toys.moveLabel(entry.move)).join('  ') || '–';
+    for (const button of root.querySelectorAll('[data-move]')) button.disabled = mixing;
+    element('cube-history').textContent = history.slice(-7).map(entry => Moves.formatMove(entry.move)).join('  ') || '–';
+    element('cube-mode').setAttribute('aria-pressed', String(cubeMode === 'ansicht'));
+    element('cube-mode').textContent = cubeMode === 'ansicht' ? 'Ziehen: Ansicht' : 'Ziehen: Ebene drehen';
+    root.dataset.cubeMode = cubeMode;
+    element('cube-keys').setAttribute('aria-pressed', String(cubeKeys));
+    element('cube-keys').textContent = cubeKeys ? 'Tastatur: an' : 'Tastatur: aus';
+    element('cube-help').textContent = (cubeMode === 'ansicht' ? 'Ziehen: Ansicht drehen · Drehen über die Knöpfe' : 'Fläche ziehen: Ebene drehen · Daneben ziehen: Ansicht') +
+      (cubeKeys ? ' · Tastatur: W oben, S unten, A links, D rechts, Q vorne, E hinten · Umschalt: rückwärts · Strg + A/D/S/E: Mitte · Strg + Z: rückgängig · Pfeile: Ansicht' : '');
+    syncTimerTicker();
   }
 
-  function selectFace(face) {
-    selectedFace = face;
-    for (const button of root.querySelectorAll('[data-face]')) {
-      button.setAttribute('aria-pressed', String(button.dataset.face === face));
-    }
-    const label = root.querySelector('[data-face="' + face + '"]').textContent.trim();
-    element('cube-cw').setAttribute('aria-label', label + ' im Uhrzeigersinn drehen');
-    element('cube-ccw').setAttribute('aria-label', label + ' gegen den Uhrzeigersinn drehen');
+  /* ----- Personal leaderboard: the caller decides where results live (ChroniPlay server). ----- */
+  let leaderboard = [];
+  function renderLeaderboard(note) {
+    const list = element('cube-ranking-list');
+    list.replaceChildren(...leaderboard.slice(0, 10).map((entry, index) => {
+      const item = document.createElement('li');
+      item.dataset.fresh = String(!!entry.fresh);
+      const date = entry.createdAt ? new Date(entry.createdAt).toLocaleDateString('de-DE', {day:'2-digit', month:'2-digit'}) : '';
+      item.innerHTML = '<b></b><span></span><small></small>';
+      item.children[0].textContent = (index + 1) + '. ' + Moves.formatTime(entry.timeMs);
+      item.children[1].textContent = entry.moves + ' Züge';
+      item.children[2].textContent = date;
+      return item;
+    }));
+    element('cube-ranking-note').textContent = note || (leaderboard.length ? 'Nur du siehst deine Bestenliste.' : 'Noch keine gelöste Runde. Mische und leg los!');
+  }
+  async function loadLeaderboard() {
+    if (!services.loadResults) { renderLeaderboard('Bestenliste ist hier nicht verfügbar.'); return; }
+    try { leaderboard = (await services.loadResults()).slice().sort(Moves.compareResults); renderLeaderboard(); }
+    catch { if (!disposed) renderLeaderboard('Bestenliste gerade nicht erreichbar.'); }
+  }
+  async function saveResult(result) {
+    const best = leaderboard.length === 0 || Moves.compareResults(result, leaderboard[0]) < 0;
+    const local = {...result, createdAt: new Date().toISOString(), fresh: true};
+    leaderboard = [...leaderboard.map(entry => ({...entry, fresh: false})), local].sort(Moves.compareResults);
+    renderLeaderboard();
+    if (!services.saveResult) return best;
+    try {
+      const saved = await services.saveResult({game: 'rubik', ...result});
+      if (!disposed && Array.isArray(saved)) {
+        leaderboard = saved.map(entry => ({...entry, fresh: entry.timeMs === result.timeMs && entry.moves === result.moves})).sort(Moves.compareResults);
+        renderLeaderboard();
+      }
+    } catch { if (!disposed) renderLeaderboard('Zeit konnte nicht gespeichert werden. Sie steht nur hier.'); }
+    return best;
+  }
+
+  function celebrate(result) {
+    const best = leaderboard.length === 0 || Moves.compareResults(result, leaderboard[0]) < 0;
+    element('cube-win-time').textContent = Moves.formatTime(result.timeMs);
+    element('cube-win-moves').textContent = formatNumber.format(result.moves) + ' Züge';
+    element('cube-win-best').hidden = !best;
+    element('cube-win').hidden = false;
+    root.dataset.cubeSolved = 'true';
+    if (!reduced()) confetti.burst();
+    saveResult(result);
+  }
+  function hideCelebration() {
+    element('cube-win').hidden = true;
+    delete root.dataset.cubeSolved;
+    confetti.stop();
+  }
+
+  function startRound() {
+    if (entrance || activeTurn || cubePointer || queue.length) return;
+    hideCelebration();
+    userMoves = 0; history.length = 0;
+    timer.cancel(); timer.reset();
+    // Every round scrambles a solved cube, so the shown scramble fully describes the start position.
+    cube.reset(); cubeDirty = true;
+    restartFeed();
+    mixing = true;
+    queueScramble();
+    updateCubeLabels('Wird gemischt …'); requestFrame();
+  }
+  /** The scramble is kept as notation on the toy (data-scramble) so a round can be checked and replayed. */
+  function queueScramble() {
+    const moves = Moves.scramble();
+    root.dataset.scramble = Moves.formatSequence(moves);
+    for (const move of moves) queue.push({ move, kind: 'mix' });
   }
 
   function enqueueMove(move, kind = 'user') {
@@ -134,16 +239,29 @@ export function mountToys(root, activeToy, personalKey) {
   }
 
   function finishTurn(turn) {
+    let result = null;
     if (turn.move.quarter !== 0) {
       cube.apply(turn.move);
+      if (feedMoves.length < 4000) { const name = Moves.formatMove(turn.move); if (name) feedMoves.push(name); }
+      else feedOverflow = true;
       if (turn.kind !== 'undo') history.push({ move: { ...turn.move }, kind: turn.kind });
-      if (turn.kind === 'user') userMoves++;
-
+      const now = performance.now();
+      if (turn.kind === 'user') { userMoves++; timer.countMove(now); }
+      if (turn.kind === 'undo') timer.countUndo(now);
+      if (turn.kind !== 'mix' && cube.isSolved()) result = timer.solved(now);
     }
     activeTurn = null;
-    if (queue.length === 0) { mixing = false; if (!entrance) ready(); }
+    if (queue.length === 0) {
+      const wasMixing = mixing;
+      mixing = false;
+      // The clock is armed only after a real scramble; it then waits for the first own turn.
+      if (wasMixing && !cube.isSolved()) { history.length = 0; timer.arm(); }
+      if (!entrance) ready();
+    }
+    if (result) celebrate(result);
     updateCubeLabels(mixing ? 'Wird gemischt …' : '');
     cubeDirty = true;
+    emitFeed();
   }
 
   function advanceCube(dt) {
@@ -169,39 +287,58 @@ export function mountToys(root, activeToy, personalKey) {
     }
   }
 
-  for (const button of root.querySelectorAll('[data-face]')) {
-    listen(button, 'click', () => selectFace(button.dataset.face));
+  // Twelve basic turns (U, U′ … B′) plus the middle slices, all through the same notation.
+  for (const button of root.querySelectorAll('[data-move]')) {
+    const move = Moves.parseMove(button.dataset.move);
+    const [face, prime] = [button.dataset.move[0], button.dataset.move.length > 1];
+    button.setAttribute('aria-label', Moves.FACE_NAMES[face] + (prime ? ' gegen den Uhrzeigersinn' : ' im Uhrzeigersinn') + ' drehen (' + button.dataset.move + ')');
+    const keyHint = {U:'W', D:'S', L:'A', R:'D', F:'Q', B:'E'}[face];
+    button.title = button.getAttribute('aria-label') + (keyHint ? ' · Taste ' + (prime ? 'Umschalt + ' : '') + keyHint : '');
+    listen(button, 'click', () => enqueueMove(move));
   }
-  for (const [id, direction] of [['cube-cw', 1], ['cube-ccw', -1]]) {
-    element(id).addEventListener('click', () => {
-
-      const move = Toys.FACE_MOVES[selectedFace];
-      enqueueMove({ ...move, quarter: move.quarter * direction });
-    });
-  }
-  listen(element('cube-mix'), 'click', () => {
-    if (activeTurn || cubePointer || queue.length) return;
-
-    userMoves = 0;
-    mixing = true;
-    for (const move of Toys.scrambleMoves()) queue.push({ move, kind: 'mix' });
-    updateCubeLabels('Wird gemischt …'); requestFrame();
-  });
+  listen(element('cube-mix'), 'click', startRound);
+  listen(element('cube-again'), 'click', startRound);
   listen(element('cube-undo'), 'click', () => {
     if (activeTurn || cubePointer || queue.length || !history.length) return;
-
     const previous = history.pop();
-    if (previous.kind === 'user') userMoves = Math.max(0, userMoves - 1);
-    enqueueMove(Toys.inverseMove(previous.move), 'undo');
+    if (previous.kind === 'user') userMoves++;
+    enqueueMove(Moves.invertMove(previous.move), 'undo');
   });
   listen(element('cube-reset'), 'click', () => {
     queue.length = history.length = 0;
     activeTurn = cubeDrag = cubePointer = null;
-    mixing = false; userMoves = 0; cube.reset();
+    mixing = false; userMoves = 0; cube.reset(); timer.cancel(); hideCelebration();
+    restartFeed(); emitFeed();
     view.yaw = -0.59; view.pitch = 0.44;
     root.dataset.phase = 'ready';
-    selectFace('F'); cubeDirty = true; updateCubeLabels(); requestFrame();
+    cubeDirty = true; updateCubeLabels(); requestFrame();
   });
+  listen(element('cube-mode'), 'click', () => {
+    cubeMode = cubeMode === 'ansicht' ? 'ebenen' : 'ansicht';
+    storage.write(); updateCubeLabels();
+  });
+  listen(element('cube-keys'), 'click', () => {
+    cubeKeys = !cubeKeys;
+    storage.write(); updateCubeLabels();
+  });
+  function showRanking(visible) {
+    element('cube-ranking').hidden = !visible;
+    element('cube-ranking-toggle').setAttribute('aria-expanded', String(visible));
+    if (visible) loadLeaderboard();
+  }
+  listen(element('cube-ranking-toggle'), 'click', () => showRanking(element('cube-ranking').hidden));
+  // The bottom menu is optional: hidden by default (mouse play), remembered per player.
+  function showMenu(visible) {
+    cubeMenu = visible;
+    element('cube-menu').hidden = !visible;
+    element('cube-menu-toggle').setAttribute('aria-expanded', String(visible));
+    storage.write();
+  }
+  listen(element('cube-menu-toggle'), 'click', () => showMenu(element('cube-menu').hidden));
+  listen(element('cube-menu-close'), 'click', () => { showMenu(false); element('cube-menu-toggle').focus(); });
+  showMenu(cubeMenu);
+  listen(element('cube-ranking-close'), 'click', () => { showRanking(false); element('cube-ranking-toggle').focus(); });
+  listen(element('cube-win-close'), 'click', hideCelebration);
   listen(element('cube-view'), 'click', () => {
     view.yaw = -0.59; view.pitch = 0.44;
     cubeDirty = true; requestFrame();
@@ -215,8 +352,9 @@ export function mountToys(root, activeToy, personalKey) {
     event.preventDefault();
     cubeSurface.canvas.focus({ preventScroll: true });
     const point = cubeSurface.point(event);
-    const hit = event.button === 0 && !event.altKey && cubeRendered ? Toys.pickCube(cubeRendered, point) : null;
-    cubePointer = { id: event.pointerId, point, hit, moved: false, yaw: view.yaw, pitch: view.pitch };
+    const turnsLayers = cubeMode === 'ebenen' && event.button === 0 && !event.altKey && !mixing;
+    const hit = turnsLayers && cubeRendered ? Toys.pickCube(cubeRendered, point) : null;
+    cubePointer = { id: event.pointerId, point, hit, moved: false, yaw: view.yaw, pitch: view.pitch, samples: [] };
     capturedPointers.add(event.pointerId); cubeSurface.canvas.setPointerCapture(event.pointerId);
     updateCubeLabels();
   });
@@ -224,19 +362,26 @@ export function mountToys(root, activeToy, personalKey) {
     if (!cubePointer || cubePointer.id !== event.pointerId) return;
     const point = cubeSurface.point(event);
     const dx = point.x - cubePointer.point.x, dy = point.y - cubePointer.point.y;
-    if (Math.hypot(dx, dy) < 9 && !cubePointer.moved) return;
+    const travelled = Math.hypot(dx, dy);
+    if (travelled < Moves.DRAG_START && !cubePointer.moved) return;
     cubePointer.moved = true;
     if (!cubePointer.hit) {
       view.yaw = cubePointer.yaw + dx * 0.009;
       view.pitch = Toys.clamp(cubePointer.pitch + dy * 0.009, -1.2, 1.2);
     } else {
       if (!cubeDrag) {
-        const candidate = Toys.swipeMove(cubePointer.hit, { x: dx, y: dy }, cubeRendered.camera);
-        if (!candidate) return;
-        cubeDrag = { ...candidate, angle: 0 };
+        // Lock one direction only when it is clearly dominant; diagonal wobble turns nothing.
+        const candidates = Toys.swipeCandidates(cubePointer.hit, cubeRendered.camera)
+          .map(candidate => ({ ...candidate, score: Math.abs(candidate.unit[0] * dx + candidate.unit[1] * dy) / travelled }));
+        const chosen = Moves.chooseSwipe(candidates, travelled);
+        if (!chosen) return;
+        cubeDrag = { ...chosen, angle: 0, origin: { x: dx, y: dy } };
       }
       const distance = dx * cubeDrag.unit[0] + dy * cubeDrag.unit[1];
-      cubeDrag.angle = Toys.clamp(distance * Math.PI / 160, -Math.PI * 0.62, Math.PI * 0.62);
+      cubeDrag.angle = Toys.clamp(distance * (Math.PI / 2) / Moves.DRAG_QUARTER, -Math.PI * 0.55, Math.PI * 0.55);
+      const now = performance.now();
+      cubePointer.samples.push({ t: now, angle: cubeDrag.angle });
+      while (cubePointer.samples.length > 2 && now - cubePointer.samples[0].t > 90) cubePointer.samples.shift();
     }
     cubeDirty = true; requestFrame();
   });
@@ -244,14 +389,14 @@ export function mountToys(root, activeToy, personalKey) {
   function endCubePointer(event, cancelled = false) {
     if (!cubePointer || cubePointer.id !== event.pointerId) return;
     if (cubeDrag) {
-      const quarter = !cancelled && Math.abs(cubeDrag.angle) > 0.2 ? Math.sign(cubeDrag.angle) : 0;
+      const samples = cubePointer.samples || [], first = samples[0], last = samples[samples.length - 1];
+      const velocity = first && last && last.t > first.t ? (last.angle - first.angle) / ((last.t - first.t) / 1000) : 0;
+      const quarter = cancelled ? 0 : Moves.releaseQuarter(cubeDrag.angle, velocity);
       activeTurn = {
         move: { axis: cubeDrag.axis, layer: cubeDrag.layer, quarter },
         kind: 'user', from: cubeDrag.angle, to: quarter * Math.PI / 2,
         angle: cubeDrag.angle, elapsed: 0, duration: reduced() ? 0 : 0.16
       };
-    } else if (!cancelled && !cubePointer.moved && cubePointer.hit) {
-      selectFace(Toys.faceFromNormal(cubePointer.hit.normal));
     }
     cubePointer = cubeDrag = null;
     cubeDirty = true; updateCubeLabels(); requestFrame();
@@ -259,21 +404,44 @@ export function mountToys(root, activeToy, personalKey) {
   listen(cubeSurface.canvas, 'pointerup', event => endCubePointer(event));
   listen(cubeSurface.canvas, 'pointercancel', event => endCubePointer(event, true));
   listen(cubeSurface.canvas, 'lostpointercapture', event => endCubePointer(event, true));
-  const keyboardFaces = {
-    ArrowUp: 'U', ArrowDown: 'D', ArrowLeft: 'L', ArrowRight: 'R',
-    w: 'U', a: 'L', s: 'D', d: 'R', q: 'F', e: 'B',
-    u: 'U', l: 'L', r: 'R', f: 'F', b: 'B', m: 'M'
-  };
+  // Gamer layout around WASD: W top, S bottom, A left, D right, Q front, E back. Shift turns backwards (′).
+  // Ctrl turns the middle slice on the same side: Ctrl+A = M, Ctrl+D = M′, Ctrl+S = E, Ctrl+E = S′ (Shift reverses).
+  // Ctrl+W and Ctrl+Q stay with the browser (close tab / quit) and cannot be used by a page.
+  // Ctrl+Z undoes, arrow keys turn the view so the hidden sides can be inspected.
+  const keyboardFaces = { w: 'U', s: 'D', a: 'L', d: 'R', q: 'F', e: 'B' };
+  const keyboardSlices = { a: 'M', d: 'M′', s: 'E', e: 'S′' };
+  const keyboardView = { ArrowLeft: [-0.25, 0], ArrowRight: [0.25, 0], ArrowUp: [0, -0.2], ArrowDown: [0, 0.2] };
+  const invertNotation = name => name.endsWith('′') ? name.slice(0, -1) : name + '′';
   listen(element('rubikwuerfel'), 'keydown', event => {
-    if (event.ctrlKey || event.altKey || event.metaKey || event.repeat || event.target.closest('input,textarea,select,[contenteditable]:not([contenteditable=false])')) return;
-    const key = event.key.length === 1 ? event.key.toLowerCase() : event.key;
-    const face = keyboardFaces[key];
+    if (!cubeKeys || event.altKey || event.metaKey || event.target.closest('input,textarea,select,[contenteditable]:not([contenteditable=false])')) return;
+    const letter = event.key.length === 1 ? event.key.toLowerCase() : '';
+    if (event.ctrlKey) {
+      if (letter === 'z') {
+        event.preventDefault(); event.stopPropagation();
+        if (!event.repeat && !entrance) element('cube-undo').click();
+        return;
+      }
+      const slice = keyboardSlices[letter];
+      if (!slice) return;
+      event.preventDefault(); event.stopPropagation();
+      if (event.repeat || entrance) return;
+      enqueueMove(Moves.parseMove(event.shiftKey ? invertNotation(slice) : slice));
+      return;
+    }
+    if (keyboardView[event.key]) {
+      event.preventDefault(); event.stopPropagation();
+      if (entrance) return;
+      view.yaw += keyboardView[event.key][0];
+      view.pitch = Toys.clamp(view.pitch + keyboardView[event.key][1], -1.2, 1.2);
+      cubeDirty = true; requestFrame();
+      return;
+    }
+    if (event.repeat) return;
+    const face = keyboardFaces[letter];
     if (!face) return;
     event.preventDefault(); event.stopPropagation();
     if (entrance) return;
-    const base = Toys.FACE_MOVES[face];
-    if (['U', 'D', 'L', 'R', 'F', 'B'].includes(face)) selectFace(face);
-    enqueueMove({ ...base, quarter: base.quarter * (event.shiftKey ? -1 : 1) });
+    enqueueMove(Moves.parseMove(face + (event.shiftKey ? '′' : '')));
   });
 
   function updateDollLabels() {
@@ -412,7 +580,7 @@ export function mountToys(root, activeToy, personalKey) {
     entrance = null;
     if (activeToy === 'cube') {
       mixing = true; root.dataset.phase = 'mixing'; controls.disabled = true;
-      for (const move of Toys.scrambleMoves()) queue.push({move,kind:'mix'});
+      queueScramble();
       updateCubeLabels('Wird magisch gemischt …');
     } else { if (activeToy === 'spinner') spinner.stop(); ready(); }
   }
@@ -524,11 +692,14 @@ export function mountToys(root, activeToy, personalKey) {
   listen(spinnerImage,'load',() => { spinnerAsset = spinnerImage; spinnerDirty = true; requestFrame(); });
   if (activeToy === 'spinner') spinnerImage.src = '/spielpause/vampir-spinner.webp';
   element('doll-quote').textContent = activeToy==='doll'&&!dollRenderer?unavailableQuote:initialQuote;
-  selectFace('F'); updateCubeLabels(); updateDollLabels(); updateSpinnerLabels();
+  updateCubeLabels(); updateDollLabels(); updateSpinnerLabels();
+  if (activeToy === 'cube') { loadLeaderboard(); emitFeed(); }
   for (const surface of surfaces) surface.resize();
   requestFrame();
   return () => {
     disposed = true;
+    if (timerInterval) clearInterval(timerInterval);
+    confetti.stop();
     dollRenderer?.dispose();
     lifetime.abort(); observer?.disconnect(); priorityObserver.disconnect();
     cancelAnimationFrame(frameRequest);

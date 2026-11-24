@@ -83,6 +83,11 @@ jobs:
             app/spielbereich/modules/spieltisch/use-voice.ts app/spielbereich/modules/spieltisch/voice-control.tsx tests/live-voice.test.mjs tests/live-voice-integration.mjs
             middleware.ts tests/security-headers.test.mjs
             domain/feedback.ts server/feedback.ts app/api/feedback/route.ts app/profil/feedback-ui.tsx tests/feedback.test.mjs tests/feedback-integration.mjs
+            domain/spielpause.ts server/spielpause.ts app/api/spielpause/route.ts app/spielbereich/modules/spieltisch/spielpause/cube-moves.js
+            app/spielbereich/modules/spieltisch/spielpause/confetti.js tests/spielpause-cube-moves.test.mjs tests/spielpause-results.test.mjs
+            domain/spielpause-watch.ts server/spielpause-watch.ts app/api/spielpause/watch/route.ts app/spielbereich/modules/spieltisch/spielpause/watch-runtime.js
+            tests/spielpause-watch.test.mjs tests/spielpause-watch-integration.mjs
+            app/spielbox/page.tsx app/spielbox/spielbox.tsx app/spielbox/local-results.js app/spielbox/katalog.js tests/spielbox.test.mjs
             app/spielbereich/modules/story-workspace.tsx app/spielbereich/modules/preparation-guide.tsx app/spielbereich/modules/preparation-materials.tsx
             app/spielbereich/modules/preparation-npcs.tsx app/spielbereich/modules/preparation-catalog.ts app/spielbereich/modules/protected-image-gallery.tsx
             app/spielbereich/modules/rich-text.tsx app/spielbereich/modules/session-overview.tsx app/spielbereich/modules/preparation-panel.tsx

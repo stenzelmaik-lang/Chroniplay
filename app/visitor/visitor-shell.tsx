@@ -5,7 +5,7 @@ import type { VisitorContent } from "./content";
 import { SiteFooter } from "./site-footer";
 import styles from "./visitor-shell.module.css";
 type VisitorShellProps = { content: VisitorContent; entryHref: string; isSignedIn: boolean };
-const navItems = [{ label: "Start", href: "#start" }, { label: "Projekt", href: "#projekt" }, { label: "Funktionen", href: "#funktionen" }, { label: "Entwicklungsstand", href: "#status" }, { label: "Erste Kampagne", href: "#kampagne" }, { label: "Community", href: "#community" }, { label: "FAQ", href: "#faq" }];
+const navItems = [{ label: "Start", href: "#start" }, { label: "Projekt", href: "#projekt" }, { label: "Funktionen", href: "#funktionen" }, { label: "Entwicklungsstand", href: "#status" }, { label: "Erste Kampagne", href: "#kampagne" }, { label: "Community", href: "#community" }, { label: "FAQ", href: "#faq" }, { label: "Spielbox", href: "/spielbox" }];
 const extern = { target: "_blank", rel: "noopener noreferrer" } as const;
 /** Strukturierte Daten (schema.org) für Suchmaschinen: Website, Anbieter, Anwendung, FAQ. "<" wird maskiert. */
 export function strukturierteDaten(content: VisitorContent): string {

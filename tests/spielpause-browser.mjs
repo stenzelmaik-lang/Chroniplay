@@ -51,24 +51,54 @@ try {
   await page.screenshot({path:out+'/cube-fall.png'});
   await page.waitForFunction(()=>document.querySelector('[data-spielpause]')?.dataset.phase==='mixing');
   await page.screenshot({path:out+'/cube-mixing.png'});await ready();
-  assert.equal(await id('cube-count').textContent(),'0');assert.equal(await id('cube-state').textContent(),'Noch ein Dreh');
+  assert.equal(await id('cube-count').textContent(),'0');assert.match(await id('cube-state').textContent(),/^Bereit/);
+  assert.equal(await id('cube-time').getAttribute('data-state'),'armed');
+  assert.ok(await id('cube-menu').isHidden(),'mouse play by default: bottom menu hidden');
+  await id('cube-menu-toggle').click();await id('cube-menu').waitFor({state:'visible'});
   await page.screenshot({path:out+'/cube-desktop.png'});pass('Actual rail entry; solved fall, animated legal mixing, then ready');
 
   await page.emulateMedia({reducedMotion:'reduce'});
   await id('cube-reset').click();const solved=await pixels(id('cube-canvas'));
-  for(const key of ['w','a','s','d','q','e','ArrowUp','ArrowLeft','ArrowDown','ArrowRight']) {
+  // Keyboard turns are optional and off by default.
+  await id('cube-canvas').focus();await page.keyboard.press('w');await paint();
+  assert.equal(await id('cube-count').textContent(),'0','keyboard off: no turn');
+  await id('cube-keys').click();assert.equal(await id('cube-keys').getAttribute('aria-pressed'),'true');
+  // Gamer layout: WASD + Q/E, Shift reverses; Ctrl + A/D/S/E turns middle slices, Ctrl+Shift reverses them.
+  for(const key of ['w','a','s','d','q','e','Control+a','Control+d','Control+s','Control+e']) {
     await id('cube-canvas').focus();await page.keyboard.press(key);
     await page.waitForFunction(()=>document.querySelector('[data-toy-id="cube-count"]').textContent==='1');
     assert.notEqual(await pixels(id('cube-canvas')),solved,key+' turns');
-    await page.keyboard.press('Shift+'+key);
+    await page.keyboard.press(key.startsWith('Control+')?'Control+Shift+'+key.slice(8):'Shift+'+key);
     await page.waitForFunction(()=>document.querySelector('[data-toy-id="cube-state"]').textContent==='Gelöst');
     assert.ok(await pixels(id('cube-canvas'))===solved,key+' inverse');
     await id('cube-reset').click();
   }
-  await id('cube-cw').focus();await page.keyboard.press('q');
+  await id('cube-canvas').focus();await page.keyboard.press('d');
   await page.waitForFunction(()=>document.querySelector('[data-toy-id="cube-count"]').textContent==='1');
-  await id('cube-undo').click();assert.ok(await pixels(id('cube-canvas'))===solved);
-  pass('WASDQE and all four arrows, Shift inverses, controls focus and Undo');
+  await page.keyboard.press('Control+z');
+  await page.waitForFunction(()=>document.querySelector('[data-toy-id="cube-state"]').textContent==='Gelöst');
+  await id('cube-reset').click();
+  for(const move of ['U','U′','D','D′','L','L′','R','R′','F','F′','B','B′']){
+    await id('cube-reset').click();await page.locator('[data-move="'+move+'"]').click();
+    await page.waitForFunction(()=>document.querySelector('[data-toy-id="cube-count"]').textContent==='1');
+    await id('cube-undo').click();
+    await page.waitForFunction(()=>document.querySelector('[data-toy-id="cube-state"]').textContent==='Gelöst');
+    assert.ok(await pixels(id('cube-canvas'))===solved,move+' then undo');
+  }
+  await id('cube-reset').click();
+  pass('Optional WASD/QE keyboard, Shift inverses, Ctrl middle slices, Ctrl+Z; twelve turn buttons each undone');
+  // A full round: scramble, the inverse scramble solves it, the clock stops and the celebration shows.
+  await id('cube-mix').click();await page.waitForFunction(()=>!document.querySelector('[data-toy-id="cube-mix"]').disabled);
+  const scramble=await root.getAttribute('data-scramble');
+  for(const m of scramble.split(' ').reverse().flatMap(m=>m.endsWith('2')?[m[0],m[0]]:[m.length>1?m[0]:m[0]+'′'])){
+    await page.locator('[data-move="'+m+'"]').click();await page.waitForFunction(()=>!document.querySelector('[data-toy-id="cube-mix"]').disabled);
+  }
+  await id('cube-win').waitFor({state:'visible'});
+  assert.equal(await id('cube-time').getAttribute('data-state'),'stopped');
+  await page.screenshot({path:out+'/cube-solved.png'});
+  await id('cube-ranking-toggle').click();await page.locator('[data-toy-id="cube-ranking-list"] li').first().waitFor();
+  await id('cube-win-close').click();await id('cube-ranking-close').click();await id('cube-reset').click();
+  pass('Round: scramble, solve, stopped clock, celebration and personal leaderboard');
   await page.getByRole('button',{name:'Spielpause',exact:true}).focus();await page.keyboard.press('w');
   assert.equal(await id('cube-count').textContent(),'0');
   await page.getByRole('button',{name:'Notizbuch · dein eigenes Buch',exact:true}).click();
@@ -83,7 +113,7 @@ try {
 
   const canvas=id('cube-canvas');let rect=await canvas.boundingBox();
   const xy=(x,y)=>[rect.x+x/420*rect.width,rect.y+y/370*rect.height];
-  await page.mouse.move(...xy(210,162));await page.mouse.down();await page.mouse.move(...xy(280,162),{steps:8});await page.mouse.up();
+  await page.mouse.move(...xy(210,162));await page.mouse.down();await page.mouse.move(...xy(300,162),{steps:8});await page.mouse.up();
   await page.waitForFunction(()=>document.querySelector('[data-toy-id="cube-count"]').textContent==='1');
   await id('cube-reset').click();const initialView=await pixels(canvas);
   await page.keyboard.down('Alt');await page.mouse.move(...xy(210,162));await page.mouse.down();await page.mouse.move(...xy(270,190),{steps:8});await page.mouse.up();await page.keyboard.up('Alt');
@@ -150,9 +180,10 @@ try {
     await page.screenshot({path:out+'/cube-'+width+'.png'});
     assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
     const r=await page.locator('[data-toy-controls="cube"]').boundingBox();assert.ok(r.x>=0&&r.x+r.width<=width+1&&r.y>=56);
-    for(const button of await page.locator('[data-toy-controls="cube"] button').all()){
+    for(const button of await page.locator('[data-toy-controls="cube"] button:visible, [data-toy-id="rubikwuerfel"] [role="group"][aria-label="Runde"] button:visible').all()){
       const box=await button.boundingBox();assert.ok(box.x>=0&&box.x+box.width<=width+1);
-      assert.ok(await button.evaluate(n=>{const b=n.getBoundingClientRect();return n.contains(document.elementFromPoint(b.x+b.width/2,b.y+b.height/2));}),'Toy controls are not covered by the table HUD');
+      const cover=await button.evaluate(n=>{const b=n.getBoundingClientRect(),hit=document.elementFromPoint(b.x+b.width/2,b.y+b.height/2);return n.contains(hit)?'':(n.textContent+' covered by '+(hit?.className||hit?.tagName));});
+      assert.equal(cover,'','Toy controls are not covered by the table HUD at '+width+' px');
     }
   }
   await page.setViewportSize({width:320,height:700});await page.emulateMedia({reducedMotion:'no-preference'});await choose('Vampir-Spinner');
@@ -164,7 +195,7 @@ try {
   const tp=await touch.newPage();tp.on('pageerror',e=>errors.push(e.message));await tp.goto(base+'/spielbereich?bereich=sitzung');await tp.waitForLoadState('networkidle');
   const tc=await touch.newCDPSession(tp);
   const tChoose=async name=>{await tp.waitForTimeout(350);await tp.getByRole('button',{name:'Spielpause',exact:true}).tap();await tp.getByRole('button',{name,exact:true}).tap();await tp.waitForFunction(()=>document.querySelector('[data-spielpause]')?.dataset.phase==='ready');};
-  await tChoose('Rubikwürfel');await tp.locator('[data-toy-id="cube-reset"]').tap();
+  await tChoose('Rubikwürfel');await tp.locator('[data-toy-id="cube-menu-toggle"]').tap();await tp.locator('[data-toy-id="cube-reset"]').tap();
   let tb=await tp.locator('[data-toy-id="cube-canvas"]').boundingBox();
   const point={x:tb.x+tb.width/2,y:tb.y+tb.height*162/370};
   await tc.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[point]});
