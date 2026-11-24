@@ -190,5 +190,8 @@ jobs:
       - uses: actions/setup-node@v5
         with:
           node-version: "22.16.0"
+          # setup-node@v5 würde wegen "packageManager" in package.json den pnpm-Cache einrichten;
+          # der Würfeltest braucht keine Abhängigkeiten und kein pnpm.
+          package-manager-cache: false
       - name: "Würfel · Windows-Pfade"
         run: node --experimental-strip-types --test prototypes/spieltisch-2/shared-dice.test.mjs
