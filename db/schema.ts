@@ -773,3 +773,20 @@ export const feedbackReports = sqliteTable("feedback_reports", {
   check("feedback_reports_kind", sql`${t.kind} IN ('fehler','idee','allgemein')`),
   check("feedback_reports_status_values", sql`${t.status} IN ('eingegangen','in_pruefung','erledigt','abgelehnt')`),
 ]);
+
+/** Spielpause (personal mini games at the table): solve times. Private: a member reads only their own rows.
+ * No link to characters, XP or table state. */
+export const spielpauseResults = sqliteTable("spielpause_results", {
+  id: text("id").primaryKey(),
+  campaignId: text("campaign_id").notNull().references(() => campaigns.id),
+  memberId: text("member_id").notNull(),
+  game: text("game").notNull(),
+  timeMs: integer("time_ms").notNull(),
+  moves: integer("moves").notNull(),
+  createdAt: text("created_at").notNull(),
+}, t => [
+  index("spielpause_results_best").on(t.campaignId, t.memberId, t.game, t.timeMs),
+  index("spielpause_results_recent").on(t.campaignId, t.memberId, t.createdAt),
+  check("spielpause_results_game", sql`${t.game} IN ('rubik')`),
+  check("spielpause_results_values", sql`${t.timeMs} > 0 AND ${t.moves} > 0`),
+]);

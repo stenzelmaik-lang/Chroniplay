@@ -3,11 +3,28 @@
 import {useEffect, useRef, useState} from 'react';
 import {createPortal} from 'react-dom';
 import {mountToys} from './toys-runtime.js';
+import {BASIC_MOVES,SLICES} from './cube-moves.js';
 import styles from './spielpause.module.css';
 
 type Toy = 'cube' | 'doll' | 'spinner';
 const names: Record<Toy, string> = {cube:'Rubikwürfel', doll:'Graf Knautsch', spinner:'Vampir-Spinner'};
-const faces = [['U','Oben · W / ↑'],['L','Links · A / ←'],['D','Unten · S / ↓'],['R','Rechts · D / →'],['F','Vorne · Q'],['B','Hinten · E'],['M','Mitte X'],['E','Mitte Y'],['S','Mitte Z']];
+const basicMoves = BASIC_MOVES;
+const sliceMoves = SLICES.flatMap(slice=>[slice, slice+'′']);
+type Result = {timeMs:number; moves:number; createdAt?:string};
+
+/** Personal results live on ChroniPlay (only the player sees them). Outside the app the list is simply unavailable. */
+const resultService = {
+  async loadResults():Promise<Result[]> {
+    const response = await fetch('/api/spielpause?spiel=rubik',{credentials:'same-origin'});
+    if(!response.ok) throw new Error('Bestenliste nicht erreichbar');
+    return ((await response.json()) as {results:Result[]}).results;
+  },
+  async saveResult(result:{game:string;timeMs:number;moves:number}):Promise<Result[]> {
+    const response = await fetch('/api/spielpause',{method:'POST',credentials:'same-origin',headers:{'content-type':'application/json'},body:JSON.stringify(result)});
+    if(!response.ok) throw new Error('Speichern fehlgeschlagen');
+    return ((await response.json()) as {results:Result[]}).results;
+  }
+};
 
 /**
  * Personal, client-only toys. No stage commands or character state enter this boundary.
@@ -42,7 +59,7 @@ function ToyTable({toy,keyboardFocus,personalKey,blocked,onClose}:{toy:Toy;keybo
     const node=root.current;
     if(!node)return;
     node.dataset.input=keyboardFocus?'keyboard':'pointer';
-    const dispose=mountToys(node,toy,personalKey);
+    const dispose=mountToys(node,toy,personalKey,resultService);
     node.querySelector<HTMLCanvasElement>(`[data-toy-motion="${toy}"] canvas`)?.focus({preventScroll:true});
     return dispose;
   },[toy,personalKey,keyboardFocus]);
@@ -51,16 +68,54 @@ function ToyTable({toy,keyboardFocus,personalKey,blocked,onClose}:{toy:Toy;keybo
   }}>
     <section data-toy-id="rubikwuerfel" hidden={toy!=='cube'} aria-label="Rubikwürfel">
       <div className={styles.object} data-toy-motion="cube"><canvas data-toy-id="cube-canvas" tabIndex={0} aria-label="Rubikwürfel bedienen" aria-describedby="spielpause-cube-help"/></div>
-      <fieldset className={styles.controls} data-toy-controls="cube">
+      <canvas className={styles.confetti} data-toy-id="cube-confetti" aria-hidden="true"/>
+      <div className={styles.win} data-toy-id="cube-win" role="status" hidden>
+        <strong>Gelöst!</strong>
+        <span className={styles.winTime} data-toy-id="cube-win-time">0,00</span>
+        <span data-toy-id="cube-win-moves">0 Züge</span>
+        <em data-toy-id="cube-win-best" hidden>Neue Bestzeit</em>
+        <div><button data-toy-id="cube-again">Neue Runde</button><button data-toy-id="cube-win-close">Schließen</button></div>
+      </div>
+      {/* Timer and leaderboard stand on their own, apart from the control panel. */}
+      <div className={styles.hud} role="group" aria-label="Runde">
+        <span className={styles.clock} data-toy-id="cube-time" aria-label="Zeit">0,00</span>
+        <button className={`${styles.hudClose} ${styles.hudCloseMobile}`} onClick={onClose} aria-label="Spielzeug wegräumen">×</button>
+        <span className={styles.hudMeta}><b data-toy-id="cube-count">0</b> Züge</span>
+        <span className={styles.hudState} data-toy-id="cube-state" role="status">Gelöst</span>
+        <button data-toy-id="cube-mix" className={`${styles.hudButton} ${styles.hudPrimary}`}>Neue Runde</button>
+        <button data-toy-id="cube-ranking-toggle" className={styles.hudButton} aria-expanded={false} aria-controls="spielpause-cube-ranking">Bestenliste</button>
+        <button data-toy-id="cube-menu-toggle" className={styles.hudButton} aria-expanded={false} aria-controls="spielpause-cube-menu">Menü</button>
+        <button className={`${styles.hudClose} ${styles.hudCloseWide}`} onClick={onClose} aria-label="Spielzeug wegräumen">×</button>
+      </div>
+      <aside className={styles.ranking} id="spielpause-cube-ranking" data-toy-id="cube-ranking" aria-label="Deine Bestenliste" hidden>
+        <header><strong>Bestenliste</strong><button data-toy-id="cube-ranking-close" aria-label="Bestenliste schließen">×</button></header>
+        <ol data-toy-id="cube-ranking-list"/>
+        <p data-toy-id="cube-ranking-note"/>
+      </aside>
+      {/* Mouse play needs no panel: the menu starts hidden and opens from the round display. */}
+      <fieldset className={`${styles.controls} ${styles.cubeControls}`} data-toy-controls="cube" data-toy-id="cube-menu" id="spielpause-cube-menu" hidden>
         <legend className={styles.sr}>Rubikwürfel bedienen</legend>
-        <header><strong>Rubikwürfel</strong><span><b data-toy-id="cube-count">0</b> Züge · <span data-toy-id="cube-state" role="status">Gelöst</span></span><button onClick={onClose} aria-label="Spielzeug wegräumen">×</button></header>
-        <div className={styles.faces}>{faces.map(([face,label])=><button key={face} data-face={face} aria-pressed={face==='F'}>{label}</button>)}</div>
+        <header>
+          <strong>Menü</strong>
+          <span/>
+          <button data-toy-id="cube-menu-close" aria-label="Menü ausblenden">×</button>
+        </header>
         <div className={styles.actions}>
-          <button data-toy-id="cube-ccw">↶ Drehen</button><button data-toy-id="cube-cw">↷ Drehen</button>
-          <button data-toy-id="cube-undo">Rückgängig</button><button data-toy-id="cube-mix">Mischen</button>
-          <button data-toy-id="cube-reset">Lösen</button><button data-toy-id="cube-view">Ansicht zurück</button>
+          <button data-toy-id="cube-undo">↶ Rückgängig</button>
+          <button data-toy-id="cube-reset">Lösen</button>
+          <span className={styles.spacer}/>
+          <button data-toy-id="cube-mode" className={styles.toggle} aria-pressed={false}>Ziehen: Ebene drehen</button>
+          <button data-toy-id="cube-keys" className={styles.toggle} aria-pressed={false}>Tastatur: aus</button>
+          <button data-toy-id="cube-view">Ansicht zurück</button>
         </div>
-        <p id="spielpause-cube-help">Shift: andersherum · Fläche wischen: Ebene drehen · Rand ziehen oder Alt + Ziehen: Ansicht</p>
+        <div className={styles.moves} role="group" aria-label="Drehungen">
+          {basicMoves.map(move=><button key={move} data-move={move} data-face={move[0]}>{move}</button>)}
+        </div>
+        <details className={styles.more}>
+          <summary>Mittelebenen</summary>
+          <div className={styles.moves}>{sliceMoves.map(move=><button key={move} data-move={move}>{move}</button>)}</div>
+        </details>
+        <p id="spielpause-cube-help" data-toy-id="cube-help">Fläche ziehen: Ebene drehen · Daneben ziehen: Ansicht</p>
         <span className={styles.sr} data-toy-id="cube-history"/>
       </fieldset>
     </section>

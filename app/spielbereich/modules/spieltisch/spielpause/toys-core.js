@@ -360,6 +360,22 @@
     return best;
   }
 
+  /** Both layers a sticker can turn, with the on-screen direction a positive turn moves it. */
+  function swipeCandidates(hit, camera) {
+    const excludedAxis = hit.normal.findIndex(component => Math.abs(component) > 0.5);
+    const screenAnchor = camera.project(hit.center);
+    const candidates = [];
+    for (let axis = 0; axis < 3; axis++) {
+      if (axis === excludedAxis) continue;
+      const end = camera.project(rotateVector(hit.center, axis, 0.08));
+      const tangent = [end.x - screenAnchor.x, end.y - screenAnchor.y];
+      const length = Math.hypot(...tangent);
+      if (length < 0.01) continue;
+      candidates.push({ axis, layer: hit.cubie.position[axis], unit: tangent.map(value => value / length) });
+    }
+    return candidates;
+  }
+
   function heart(ctx, x, y, size, fill) {
     ctx.save();
     ctx.translate(x, y);
@@ -564,6 +580,6 @@
 export {
     TAU, clamp, rotateVector, inverseMove, moveLabel, faceFromNormal,
     FACE_MOVES, STICKER_COLORS, CubeModel, SqueezeModel, SpinnerModel,
-    scrambleMoves, angleDifference, drawCube, pickCube, swipeMove,
+    scrambleMoves, angleDifference, drawCube, pickCube, swipeMove, swipeCandidates,
     drawVampire, drawSpinner, softShadow
 };
