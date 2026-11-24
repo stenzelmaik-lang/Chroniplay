@@ -4,9 +4,9 @@ ChroniPlay verbindet Spieltisch, Live-Regie und Vorbereitung für Pen-&-Paper-Ru
 
 ## Live-Stand und Weiterentwicklung
 
-Der am **7. November 2026** abgeglichene Live-Stand ist als Quellcode auf GitHub gesichert. Neue Releases bauen auf diesem Stand auf. [Live-Quellbranch](https://github.com/stenzelmaik-lang/chronik-von-kleve/tree/codex/live-source-2026-11-07) · [Geprüfter Quellcommit `5e6ae31`](https://github.com/stenzelmaik-lang/chronik-von-kleve/commit/5e6ae3164e701538d8240671ae92bc549eeace9b)
+Der am **7. November 2026** abgeglichene Live-Stand ist als Quellcode auf GitHub gesichert. Neue Releases bauen auf diesem Stand auf. [Live-Quellbranch](https://github.com/stenzelmaik-lang/Chroniplay/tree/codex/live-source-2026-11-07) · [Geprüfter Quellcommit `5e6ae31`](https://github.com/stenzelmaik-lang/Chroniplay/commit/5e6ae3164e701538d8240671ae92bc549eeace9b)
 
-Das **Abenteuerjournal (AJ-01)** liegt auf einem eigenen Entwicklungsbranch. Vor der Veröffentlichung wird es mit dem Live-Quellstand zusammengeführt und gemeinsam mit den bestehenden Figurenprofilen und Tischfunktionen geprüft. [Journal-Branch](https://github.com/stenzelmaik-lang/chronik-von-kleve/tree/claude/chroniplay-abenteuerjournal-23ec22)
+Das **Abenteuerjournal (AJ-01)** liegt auf einem eigenen Entwicklungsbranch. Vor der Veröffentlichung wird es mit dem Live-Quellstand zusammengeführt und gemeinsam mit den bestehenden Figurenprofilen und Tischfunktionen geprüft. [Journal-Branch](https://github.com/stenzelmaik-lang/Chroniplay/tree/claude/chroniplay-abenteuerjournal-23ec22)
 
 ## Funktionen der Alpha
 

@@ -30,3 +30,10 @@ Branch `claude/stabilisieren`, Basis `main` @ `dfc1d07`. Live geprüft wurde Wor
   - Alle öffentlichen Seiten antworten mit 200, alle 30 eingebundenen Dateien und alle externen Links funktionieren. Robots und Sitemap sind in Ordnung, Google ist verifiziert.
   - Es gibt keine Konsolenfehler, auch nicht im angemeldeten Bereich (Zuflucht, Command Center: Spielabende, Charaktere, NPCs, Orte).
   - Auf dem Handy gibt es keinen waagerechten Überlauf, alle Bilder haben Alt-Texte.
+
+## Nachtrag: Repository umbenannt in `stenzelmaik-lang/Chroniplay`
+GitHub leitet alte Adressen um. Zwei Prüfungen verglichen den Namen aber genau und wären still gescheitert:
+- `.github/chroniplay-discord/publish.py`: Die Tagebuch-Weiterleitung nach Discord hätte neue Discussion-Links abgelehnt. `REPOSITORY` hat jetzt den neuen Namen, der Link-Abgleich akzeptiert beide Namen, und es gibt einen Test für den neuen Namen. Lokal laufen 20 von 21 Tests. Der eine Fehler entsteht nur unter Windows, weil eine temporäre Datei noch gesperrt ist. Er ist unabhängig von der Änderung, auf GitHub läuft Linux.
+- Syntax `/chroniplay` (Worker `weltenrast-syntax`, außerhalb dieses Repos) ist im Code angepasst. Der Deploy steht noch aus.
+- Website-Links (`app/visitor/content.ts`) und `README.md` zeigen auf den neuen Namen.
+- Hinweis für alle Agenten: Das lokale Remote kann auf der alten Adresse bleiben, weil die Umleitung funktioniert. Neue Klone sollten `https://github.com/stenzelmaik-lang/Chroniplay.git` nutzen.
