@@ -743,3 +743,33 @@ export const favorCrises = sqliteTable("favor_crises", {
 }, t => [
   uniqueIndex("favor_one_open_crisis").on(t.campaignId, t.characterId, t.npcId).where(sql`${t.closedAt} IS NULL`),
 ]);
+
+/** In-app reports (2.5, issue #5): bugs, ideas and general feedback. Private: reporters see their own, only the
+ * campaign's GM/owner (operator in the closed alpha) sees all. No secrets or form contents are captured automatically. */
+export const feedbackReports = sqliteTable("feedback_reports", {
+  id: text("id").primaryKey(),
+  campaignId: text("campaign_id").notNull().references(() => campaigns.id),
+  reporterId: text("reporter_id").notNull(),
+  kind: text("kind").notNull(),
+  area: text("area").notNull(),
+  title: text("title").notNull(),
+  description: text("description").notNull(),
+  steps: text("steps").notNull().default(""),
+  expected: text("expected").notNull().default(""),
+  actual: text("actual").notNull().default(""),
+  page: text("page").notNull().default(""),
+  appVersion: text("app_version").notNull(),
+  browser: text("browser").notNull().default(""),
+  status: text("status").notNull().default("eingegangen"),
+  severity: text("severity"),
+  operatorNote: text("operator_note").notNull().default(""),
+  reply: text("reply").notNull().default(""),
+  createdAt: text("created_at").notNull(),
+  updatedAt: text("updated_at").notNull(),
+  version: integer("version").notNull().default(1),
+}, t => [
+  index("feedback_reports_reporter").on(t.campaignId, t.reporterId, t.createdAt),
+  index("feedback_reports_status").on(t.campaignId, t.status, t.createdAt),
+  check("feedback_reports_kind", sql`${t.kind} IN ('fehler','idee','allgemein')`),
+  check("feedback_reports_status_values", sql`${t.status} IN ('eingegangen','in_pruefung','erledigt','abgelehnt')`),
+]);
