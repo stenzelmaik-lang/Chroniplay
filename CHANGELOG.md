@@ -3,6 +3,7 @@
 Was sich auf chroniplay.cc geändert hat, die neueste Version zuerst. Versionsschema `A.M.N` (siehe `docs/VERSIONIERUNG.md`). Technische Nachweise stehen in `docs/releases/`.
 
 ## [Unveröffentlicht]
+- **Schneller:** NPC-Karten, Figurenlisten, Galerie und Zuflucht laden kleine Vorschaubilder (720 px, etwa 100 KB) statt der Originale (etwa 2 MB). Fehlende Vorschauen legt der Browser von SL oder Besitzer einmalig an.
 - CI auf zwei Prüfungen zusammengelegt („ChroniPlay · Prüfung“, „ChroniPlay · Windows“). Server-, Browser- und Lockfile-Teile laufen nur bei betroffenen Dateien, Doku-PRs ohne Prüfung (`docs/CI.md`).
 - Statusblock im README, dieses Changelog.
 

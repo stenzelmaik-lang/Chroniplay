@@ -22,8 +22,8 @@ const types = LIVE_MEDIA_TYPES;
 /** Files the actor may manage: own files, or shared SL/group files for the GM. Never other players' private files. */
 const manageable = "SELECT id,owner_id,visibility FROM files WHERE id=? AND campaign_id=? AND (owner_id=? OR (?=1 AND visibility IN ('sl','group')))";
 /** Small preview of an image, made by the browser of someone who may manage the file and stored next to the original. */
-const thumbKey = (key: string) => key + ".thumb";
-const thumbMax = 256 * 1024;
+import {thumbKey,legacyThumbKey,THUMB_MAX_BYTES} from "@/domain/file-thumb";
+const thumbMax = THUMB_MAX_BYTES;
 async function saveThumb(req: Request, id: string) {
   const a = await actor();
   const db = database();
@@ -219,7 +219,7 @@ export async function DELETE(req: Request) {
     }
     // Remove the D1 locator first. If R2 is temporarily unavailable the object
     // is an inaccessible orphan, never a still-referenced public object.
-    try{await env.BUCKET.delete([removed.key,thumbKey(removed.key)]);}catch(error){console.error("Unreachable R2 orphan after safe file metadata removal",error);}
+    try{await env.BUCKET.delete([removed.key,thumbKey(removed.key),legacyThumbKey(removed.key)]);}catch(error){console.error("Unreachable R2 orphan after safe file metadata removal",error);}
     return json({ ok: true });
   } catch (e) {
     return failure(e, req);

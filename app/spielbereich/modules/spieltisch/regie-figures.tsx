@@ -1,11 +1,12 @@
 "use client";
-/* eslint-disable @next/next/no-img-element -- Authenticated GM media must never use a public optimization proxy. */
+ 
 import {useCallback,useEffect,useRef,useState,type ReactNode} from 'react';
 import {api} from '../api-client';
 import type {DiceEvent} from './types';
 import type {Audience} from './stage-client';
 import {CATEGORIES,FIGURE_TYPES,HEALTH_LEVELS,TIERS,effectivePool,resolveFigure,tierById,typeById,woundPenalty,type FigureStatePatch,type LiveFigure,type PreparedFigure} from '@/domain/standard-figures';
 import styles from './regie-figures.module.css';
+import {ThumbImage} from '../file-thumb';
 import {FigureTemplateLibrary} from '../figure-template-library';
 import type {FigureTemplate} from '@/domain/figure-templates';
 import type {TierId} from '@/domain/standard-figures';
@@ -67,7 +68,7 @@ function FigureCard({f,table,assets,files,rollEvent,lock,onPatch,onRetire,onRoll
  const image=f.imageFileId?'/api/files?id='+encodeURIComponent(f.imageFileId):'';
  const fresh=resolveFigure(f.typeId,f.tierId);
  return <li className={styles.card} aria-label={f.label}>
-  <div className={styles.head}>{image?<img className={styles.portrait} src={image} alt="" loading="lazy"/>:<span className={styles.portrait} aria-hidden="true">kein Bild</span>}
+  <div className={styles.head}>{image?<ThumbImage className={styles.portrait} id={f.imageFileId!} />:<span className={styles.portrait} aria-hidden="true">kein Bild</span>}
    <div className={styles.title}><strong>{f.label}</strong><small>{typeById(f.typeId)?.name} · {tier?.label} · {level}{penalty?` (−${penalty} Würfel)`:''}</small></div>
    <button type="button" className={styles.btn} disabled={lock} onClick={onRetire} aria-label={`${f.label} entfernen`}>Entfernen</button></div>
   {f.stats.encounter&&<p className={styles.warn}>{f.stats.encounterHint}</p>}
