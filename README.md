@@ -6,7 +6,7 @@ ChroniPlay verbindet Spieltisch, Live-Regie und Vorbereitung für Pen-&-Paper-Ru
 
 | | |
 |---|---|
-| **Version live** | **2.5.1**, seit 24.11.2026, Tag [`v2.5.1`](https://github.com/stenzelmaik-lang/Chroniplay/releases/tag/v2.5.1) |
+| **Version live** | **2.5.2**, seit 24.11.2026, Tag [`v2.5.2`](https://github.com/stenzelmaik-lang/Chroniplay/releases/tag/v2.5.2) |
 | **Meilenstein** | Alpha 2.5, sauber weiterarbeiten (siehe [`docs/ALPHA-2.5-SCHNITT.md`](docs/ALPHA-2.5-SCHNITT.md)) |
 | **Was sich geändert hat** | [`CHANGELOG.md`](CHANGELOG.md) |
 | **Versionen und Branches** | [`docs/VERSIONIERUNG.md`](docs/VERSIONIERUNG.md): `A.M.N` = Alpha-Generation . Meilenstein . Live-Gang |

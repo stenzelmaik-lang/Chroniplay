@@ -3,7 +3,11 @@
 Was sich auf chroniplay.cc geändert hat, die neueste Version zuerst. Versionsschema `A.M.N` (siehe `docs/VERSIONIERUNG.md`). Technische Nachweise stehen in `docs/releases/`.
 
 ## [Unveröffentlicht]
-- Versionsnummer 2.5.1 in `package.json`, Release-Nachweis für 2.5.1.
+- Versionsnummer 2.5.2 in `package.json`, Release-Nachweise für 2.5.1 und 2.5.2.
+
+## [2.5.2] – 24.11.2026: Voice-Ton
+Nachweis: `docs/releases/2026-11-24-v2.5.2-voice-ton.md` · Tag `v2.5.2` · Worker `2631adec`
+- **Voice am Spieltisch:** Man hört jetzt die anderen. Vorher sendete das Mikrofon, aber die Stimmen wurden nicht abgespielt (#106).
 
 ## [2.5.1] – 24.11.2026: Vorschaubilder und Feedback
 Nachweis: `docs/releases/2026-11-24-v2.5.1-vorschau-feedback.md` · Tag `v2.5.1` · Worker `f90dc917` · Migration `0019`
