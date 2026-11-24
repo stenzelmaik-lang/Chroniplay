@@ -21,12 +21,14 @@ permissions:
 jobs:
   pruefung:
     name: "ChroniPlay · Prüfung"
-    runs-on: ubuntu-latest
+    # Ubuntu 24.04 fest: Playwright 1.58 installiert seine Browser-Pakete nur auf unterstützten Versionen
+    # (mit "ubuntu-latest" scheiterte "Browser · Chromium vorbereiten").
+    runs-on: ubuntu-24.04
     timeout-minutes: 75
     outputs:
       windows: ${{ steps.bereiche.outputs.windows }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Geänderte Bereiche erkennen
         id: bereiche
         shell: bash
@@ -51,11 +53,11 @@ jobs:
           bereich windows '^(prototypes/spieltisch-2/(shared-dice|dice-)|app/spielbereich/modules/spieltisch/(use-shared-dice|dice-)|\.github/workflows/ci\.yml)'
 
       # ---------- Basis: läuft immer ----------
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v5
         with:
           version: 11.25.0
           run_install: false
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: "22.16.0"
           cache: pnpm
@@ -169,7 +171,7 @@ jobs:
           CVK_TEST_URL=http://127.0.0.1:8820 node --experimental-strip-types tests/preparation-guide-browser.mjs || { tail -n 100 "$RUNNER_TEMP/browser.log"; exit 1; }
       - name: "Browser · Bildschirmfotos sichern"
         if: always() && steps.bereiche.outputs.browser == 'true'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: browser-bildschirmfotos
           path: |
@@ -184,8 +186,8 @@ jobs:
     runs-on: windows-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: "22.16.0"
       - name: "Würfel · Windows-Pfade"
