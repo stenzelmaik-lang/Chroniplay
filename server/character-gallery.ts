@@ -3,6 +3,7 @@ import {database,HttpError,type Actor} from './access';
 import {galleryFiles} from './live-participants';
 import {galleryImagesFor} from '@/domain/player-gallery';
 import type {LegacyRecordRow} from '@/domain/legacy';
+import {thumbKey} from '@/domain/file-thumb';
 
 /**
  * Galerie. Players: a personal gallery with the images of their own characters only; another player's images never
@@ -29,11 +30,14 @@ export async function campaignGallery(a:Actor){
  return {characters};
 }
 
-export async function campaignGalleryImage(a:Actor,characterId:string,fileId:string){
+/** One released gallery image. With thumb=true the stored preview when one exists (gallery tiles, Zuflucht);
+ * otherwise the original, marked with X-CVK-Thumb: missing so the client may create the preview. */
+export async function campaignGalleryImage(a:Actor,characterId:string,fileId:string,thumb=false){
  const row=(await galleryRows(a)).find(r=>r.id===characterId);
  if(!row||!galleryImagesFor(a,row.owner_id,JSON.parse(row.body)).some(e=>e.fileId===fileId))throw new HttpError(404,'Bild nicht verfügbar.');
  const [file]=await galleryFiles(a,row.owner_id,[fileId]);
- const image=file&&env.BUCKET?await env.BUCKET.get(file.key):null;
+ const preview=thumb&&file&&env.BUCKET&&file.mime.startsWith('image/')?await env.BUCKET.get(thumbKey(file.key)):null;
+ const image=preview||(file&&env.BUCKET?await env.BUCKET.get(file.key):null);
  if(!image)throw new HttpError(404,'Bild nicht verfügbar.');
- return new Response(image.body,{headers:{'Content-Type':file.mime,'Cache-Control':'private, no-store','X-Content-Type-Options':'nosniff','Content-Security-Policy':"default-src 'none'; sandbox"}});
+ return new Response(image.body,{headers:{'Content-Type':preview?'image/webp':file.mime,...(thumb&&!preview?{'X-CVK-Thumb':'missing'}:{}),'Cache-Control':'private, no-store','X-Content-Type-Options':'nosniff','Content-Security-Policy':"default-src 'none'; sandbox"}});
 }
