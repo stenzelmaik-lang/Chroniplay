@@ -82,6 +82,7 @@ jobs:
             domain/live-voice.ts server/live-voice.ts app/api/live-voice/route.ts
             app/spielbereich/modules/spieltisch/use-voice.ts app/spielbereich/modules/spieltisch/voice-control.tsx tests/live-voice.test.mjs tests/live-voice-integration.mjs
             middleware.ts tests/security-headers.test.mjs
+            domain/feedback.ts server/feedback.ts app/api/feedback/route.ts app/profil/feedback-ui.tsx tests/feedback.test.mjs tests/feedback-integration.mjs
             app/spielbereich/modules/story-workspace.tsx app/spielbereich/modules/preparation-guide.tsx app/spielbereich/modules/preparation-materials.tsx
             app/spielbereich/modules/preparation-npcs.tsx app/spielbereich/modules/preparation-catalog.ts app/spielbereich/modules/protected-image-gallery.tsx
             app/spielbereich/modules/rich-text.tsx app/spielbereich/modules/session-overview.tsx app/spielbereich/modules/preparation-panel.tsx
