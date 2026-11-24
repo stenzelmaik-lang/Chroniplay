@@ -1,9 +1,10 @@
-/* eslint-disable @next/next/no-img-element -- Protected existing file endpoints. */
+ 
 "use client";
 import {useState} from 'react';
 import {CATEGORIES,FIGURE_TYPES,TIERS,resolveFigure,tierById,typeById,type PreparedFigure,type TierId} from '@/domain/standard-figures';
 import {ProtectedImageGallery,type PreparationFile} from './protected-image-gallery';
 import {PreparationUpload} from './preparation-upload';
+import {ThumbImage} from './file-thumb';
 import {FigureTemplateLibrary} from './figure-template-library';
 import type {FigureTemplate} from '@/domain/figure-templates';
 import s from './story-workspace.module.css';
@@ -30,7 +31,7 @@ export function PreparationFigures({values,onChange,files,onUploaded}:{values:Pr
   {type&&<small>{type.description} {stats?.encounter?stats.encounterHint:''}</small>}
   {!!values.length&&<ul className={s.selectedPeople}>{values.map(v=>{const t=typeById(v.typeId),tier=tierById(v.tierId),image=files.find(f=>f.id===v.imageFileId);return <li key={v.id} style={{display:'grid',gap:8,alignItems:'stretch'}}>
    <div style={{display:'flex',flexWrap:'wrap',gap:8,alignItems:'center'}}>
-    {image?<img loading="lazy" src={'/api/files?id='+encodeURIComponent(image.id)} alt={'Bild: '+image.name} style={{width:44,height:44,objectFit:'cover',borderRadius:4,background:'#0f161d'}}/>:null}
+    {image?<ThumbImage id={image.id} alt={'Bild: '+image.name} style={{width:44,height:44,objectFit:'cover',borderRadius:4,background:'#0f161d'}}/>:null}
     <strong style={{flex:'1 1 200px'}}>{v.templateId?(templates.find(item=>item.id===v.templateId)?.name||"Eigene Vorlage"):t?.name||v.typeId} · {tier?.label||v.tierId} · ×{v.count}{v.imageFileId&&!image?' · Bild derzeit nicht verfügbar':''}</strong>
     <select disabled={!!v.templateId} aria-label={`Stufe ändern: ${t?.name||v.typeId}`} value={v.tierId} onChange={e=>onChange(values.map(x=>x.id===v.id?{...x,tierId:e.target.value as TierId}:x))}>{TIERS.map(x=><option key={x.id} value={x.id}>{x.label}</option>)}</select>
     <button type="button" aria-label={`${t?.name||v.typeId} entfernen`} onClick={()=>onChange(values.filter(x=>x.id!==v.id))}>Figur entfernen</button>

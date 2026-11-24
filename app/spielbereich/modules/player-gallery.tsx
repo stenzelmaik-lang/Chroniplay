@@ -3,6 +3,7 @@
 import {useEffect,useState} from 'react';
 import {ChevronLeft,ChevronRight,ImagePlus,X} from 'lucide-react';
 import {api} from './api-client';
+import {GalleryThumb} from './file-thumb';
 import styles from './player-gallery.module.css';
 
 type Gallery={characters:{id:string;name:string;images:{url:string;caption:string;portrait:boolean}[]}[]};
@@ -34,7 +35,7 @@ export function PlayerGallery({characterId:givenCharacterId}:{characterId?:strin
   {addButton}
   {data.characters.map((c,ci)=><section key={c.id} className={styles.character} aria-labelledby={'g-'+c.id}>
    <h2 id={'g-'+c.id}>{c.name}</h2>
-   <ul>{c.images.map((img,ii)=><li key={img.url}><button type="button" onClick={()=>setOpen({c:ci,i:ii})} aria-label={(img.caption||(img.portrait?'Porträt':'Bild '+(ii+1)))+' von '+c.name+' groß ansehen'}><img src={img.url} alt="" loading="lazy"/>{(img.caption||img.portrait)&&<span>{img.caption||'Porträt'}</span>}</button></li>)}</ul>
+   <ul>{c.images.map((img,ii)=><li key={img.url}><button type="button" onClick={()=>setOpen({c:ci,i:ii})} aria-label={(img.caption||(img.portrait?'Porträt':'Bild '+(ii+1)))+' von '+c.name+' groß ansehen'}><GalleryThumb url={img.url}/>{(img.caption||img.portrait)&&<span>{img.caption||'Porträt'}</span>}</button></li>)}</ul>
   </section>)}
   {current&&image&&open&&<div className={styles.viewer} role="dialog" aria-modal="true" aria-label={current.name+' · Bild '+(open.i+1)+' von '+current.images.length}>
    <button type="button" className={styles.close} onClick={()=>setOpen(null)} aria-label="Schließen"><X size={20}/></button>

@@ -7,11 +7,14 @@ import type {CSSProperties} from 'react';
  * preview, or with the original while none exists yet. In that case the browser that just loaded the original scales
  * it down once and stores the preview (only accepted for files the person may manage), so the next list is light.
  */
-const THUMB=360;
+import {THUMB_PX as THUMB,fileIdFromUrl} from '@/domain/file-thumb';
+export {fileIdFromUrl};
 const tried=new Set<string>();
 export const thumbUrl=(id:string)=>'/api/files?id='+encodeURIComponent(id)+'&size=thumb';
 
-async function backfill(img:HTMLImageElement,id:string){
+
+/** Scales a loaded original down once and stores it as preview (the server accepts it only from people who may manage the file). */
+export async function backfill(img:HTMLImageElement,id:string){
  const w=img.naturalWidth,h=img.naturalHeight;
  if(tried.has(id)||!w||!h||Math.max(w,h)<=THUMB*1.5)return;
  tried.add(id);
@@ -28,4 +31,11 @@ async function backfill(img:HTMLImageElement,id:string){
 
 export function ThumbImage({id,className,style,alt=''}:{id:string;className?:string;style?:CSSProperties;alt?:string}){
  return <img className={className} style={style} src={thumbUrl(id)} alt={alt} loading="lazy" decoding="async" onLoad={e=>void backfill(e.currentTarget,id)}/>;
+}
+
+/** Gallery tile: the preview of a released gallery image ("/api/character-gallery?characterId=…&fileId=…"). While no preview
+ * exists the server sends the original; the owner's or the GM's browser then stores one (others are refused, harmlessly). */
+export function GalleryThumb({url,className,alt=''}:{url:string;className?:string;alt?:string}){
+ const fileId=new URLSearchParams(url.split('?')[1]||'').get('fileId')||'';
+ return <img className={className} src={url+'&size=thumb'} alt={alt} loading="lazy" decoding="async" onLoad={e=>{if(fileId)void backfill(e.currentTarget,fileId);}}/>;
 }

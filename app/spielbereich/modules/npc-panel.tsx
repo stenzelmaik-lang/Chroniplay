@@ -10,6 +10,7 @@ import { describeDataError, requestPlayerData, invalidatePlayerData } from './pl
 import { loadNPCList, npcListPath,isRedactedNPC,type NPCListEntry } from './npc-data';
 import {npcTopSecretImage} from './npc-top-secret';
 import { safeImage } from './shared';
+import { ThumbImage, fileIdFromUrl } from './file-thumb';
 import { NPCDossier } from './npc-dossier';
 import { NPCEditor } from './npc-editor';
 import dossierStyles from './npc-dossier.module.css';
@@ -64,7 +65,7 @@ export function NPCPanel({ dataScope, gm }: { dataScope: string; gm: boolean }) 
         const image = safeImage(e.content.image_secondary)||safeImage(e.content.image_primary)||safeImage(e.content.image);
         const card = npcCardData(e,gm);
         return <button key={e.id} className={cards.card} aria-label={`${e.title}${card.alias ? ` · ${card.alias}` : ''} – Akte öffnen`} onClick={event => {opener.current=event.currentTarget;overviewScroll.current=window.scrollY;pendingScroll.current=0;setPreview(false);setFrames([{id:e.id,title:e.title,scroll:0}]);}}>
-          <span className={cards.portrait} aria-hidden="true">{gm && (e.defaultVisibility === 'sl_secret' || e.canonStatus === 'GM_SECRET') && <span className={cards.secret}>SL-INTERN</span>}{image ? <img src={image} alt="" loading="lazy" /> : <><span className={cards.placeholder}>{card.initials}</span><span className={cards.noPortrait}>Kein Bild hinterlegt</span></>}</span>
+          <span className={cards.portrait} aria-hidden="true">{gm && (e.defaultVisibility === 'sl_secret' || e.canonStatus === 'GM_SECRET') && <span className={cards.secret}>SL-INTERN</span>}{image ? (fileIdFromUrl(image) ? <ThumbImage id={fileIdFromUrl(image)} /> : <img src={image} alt="" loading="lazy" />) : <><span className={cards.placeholder}>{card.initials}</span><span className={cards.noPortrait}>Kein Bild hinterlegt</span></>}</span>
           <span className={cards.body}><span className={cards.name}>{e.title}</span>{card.alias && <span className={cards.alias}>{card.alias}</span>}<span className={cards.facts}>{card.facts.map(fact => <span key={fact.label} className={cards.fact}><span className={cards.factLabel}>{fact.label}</span><span className={cards.factValue}>{fact.value}</span></span>)}</span><span className={cards.open}>Akte öffnen <span aria-hidden="true">↗</span></span></span>
         </button>;
       })}</div>}

@@ -4,6 +4,7 @@
 import { FormEvent, useEffect, useState } from "react";
 import { profileBanners, profilePlayStyles } from "@/domain/account-access";
 import styles from "./account.module.css";
+import { FeedbackSection } from "./feedback-ui";
 
 type Mutation={ok:boolean;logout?:boolean;id?:string;token?:string};
 export async function accountApi<T=Mutation>(path:string,method='GET',body?:unknown):Promise<T>{
@@ -35,7 +36,7 @@ export default function AccountProfile({engagementAvailable}:{engagementAvailabl
   async function revoke(action:string,id?:string){if(!window.confirm('Diese Sitzung(en) wirklich abmelden?'))return;await run(async()=>{const r=await accountApi('/api/auth/sessions','POST',{action,...(id?{id}:{})});if(r.logout)window.location.href='/anmelden';else{await load();setFeedback('Die ausgewählten Sitzungen sind abgemeldet.');}});}
   async function password(event:FormEvent<HTMLFormElement>){event.preventDefault();if(!profile)return;const form=event.currentTarget,d=Object.fromEntries(new FormData(form));await run(async()=>{await accountApi('/api/auth/password','POST',{...d,version:profile.version});form.reset();window.location.href='/anmelden';});}
   return <main className={styles.page}><header className={styles.topbar}><a href="/spielbereich">← Zum Spieltisch</a><strong>CHRONIPLAY</strong><button disabled={busy} onClick={()=>void run(async()=>{await accountApi('/api/auth/logout','POST');window.location.href='/anmelden';})}>Abmelden</button></header>
-    <div className={styles.container}><header className={styles.hero}><p>DEINE SPIELERVORSTELLUNG</p><h1>Mein Profil</h1><span>Hier ist Platz für dich und dafür, wie du am liebsten spielst.</span></header>
+    <div className={styles.container}><header className={styles.hero}><p>DEINE SPIELERVORSTELLUNG</p><h1>Mein Profil</h1><span>Hier ist Platz für dich und dafür, wie du am liebsten spielst.</span> <a href="#feedback">Feedback & Fehler melden</a></header>
     {error&&<p role="alert" className={styles.error}>{error}</p>}{feedback&&<p role="status" className={styles.success}>{feedback}</p>}
     {!profile?<p>Dein Konto wird geladen…</p>:<>
     <div className={styles.grid}><section className={styles.card} aria-label="Profil bearbeiten"><div className={styles.heading}><h2>Dein Auftreten</h2><span>{dirty?'Ungespeicherte Änderungen':'Gespeicherter Stand'}</span></div>
@@ -97,6 +98,7 @@ export default function AccountProfile({engagementAvailable}:{engagementAvailabl
           </div>
         </article>
       </aside></div>
+      <FeedbackSection/>
       <details className={styles.card}><summary>Aktive Sitzungen ({sessions.length})</summary><div className={styles.heading}><div><h2>Deine Sitzungen</h2><small>Nur deine eigenen Sitzungen. Keine Sitzungsschlüssel werden angezeigt.</small></div><button disabled={busy||sessions.filter(s=>!s.current).length===0} onClick={()=>void revoke('revoke_others')}>Andere Geräte abmelden</button></div>{sessions.map(s=><article className={styles.row} key={s.id}><div><strong>{s.current?'Diese Sitzung':'Weitere Sitzung'}</strong><small>Zuletzt aktiv {date(s.lastSeenAt)} · läuft bis {date(s.expiresAt)}</small></div><button disabled={busy} onClick={()=>void revoke('revoke',s.id)}>Abmelden</button></article>)}</details>
       <details className={styles.card}><summary>Passwort & Kontosicherheit</summary><p>Nach einer Passwortänderung werden alle Geräte abgemeldet. Du meldest dich anschließend mit dem neuen Passwort an.</p><form className={styles.passwordForm} onSubmit={password}><label>Aktuelles Passwort<input name="currentPassword" type="password" required maxLength={200} autoComplete="current-password"/></label><label>Neues Passwort<input name="password" type="password" required minLength={12} maxLength={200} autoComplete="new-password"/></label><label>Neues Passwort wiederholen<input name="confirmation" type="password" required minLength={12} maxLength={200} autoComplete="new-password"/></label><small>12–200 Zeichen. Keine Passwörter per Chat versenden.</small><button disabled={busy}>Passwort ändern und abmelden</button></form><p>Passwort vergessen? <a href="/passwort-zuruecksetzen">Persönliche Wiederherstellung</a></p></details>
     </>}

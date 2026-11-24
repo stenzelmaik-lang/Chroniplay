@@ -3,6 +3,8 @@
 Was sich auf chroniplay.cc geändert hat, die neueste Version zuerst. Versionsschema `A.M.N` (siehe `docs/VERSIONIERUNG.md`). Technische Nachweise stehen in `docs/releases/`.
 
 ## [Unveröffentlicht]
+- **Feedback & Fehler melden** im Profil: Fehler, Ideen und Feedback direkt an die Spielleitung, mit Status und Antwort; für die SL eine Übersicht zum Abarbeiten (Issue #5). Braucht beim Deploy die Datenbank-Migration `0019`.
+- **Schneller:** NPC-Karten, Figurenlisten, Galerie und Zuflucht laden kleine Vorschaubilder (720 px, etwa 100 KB) statt der Originale (etwa 2 MB). Fehlende Vorschauen legt der Browser von SL oder Besitzer einmalig an.
 - Cloudflare „Workers Builds“ vom Repo getrennt: kein rotes Häkchen mehr, kein automatisches Veröffentlichen.
 - CI auf zwei Prüfungen zusammengelegt („ChroniPlay · Prüfung“, „ChroniPlay · Windows“). Server-, Browser- und Lockfile-Teile laufen nur bei betroffenen Dateien, Doku-PRs ohne Prüfung (`docs/CI.md`).
 - Statusblock im README, dieses Changelog.
