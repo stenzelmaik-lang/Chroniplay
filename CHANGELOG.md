@@ -3,8 +3,16 @@
 Was sich auf chroniplay.cc geändert hat, die neueste Version zuerst. Versionsschema `A.M.N` (siehe `docs/VERSIONIERUNG.md`). Technische Nachweise stehen in `docs/releases/`.
 
 ## [Unveröffentlicht]
-- **Feedback & Fehler melden** im Profil: Fehler, Ideen und Feedback direkt an die Spielleitung, mit Status und Antwort; für die SL eine Übersicht zum Abarbeiten (Issue #5). Braucht beim Deploy die Datenbank-Migration `0019`.
-- **Schneller:** NPC-Karten, Figurenlisten, Galerie und Zuflucht laden kleine Vorschaubilder (720 px, etwa 100 KB) statt der Originale (etwa 2 MB). Fehlende Vorschauen legt der Browser von SL oder Besitzer einmalig an.
+- Versionsnummer 2.5.2 in `package.json`, Release-Nachweise für 2.5.1 und 2.5.2.
+
+## [2.5.2] – 24.11.2026: Voice-Ton
+Nachweis: `docs/releases/2026-11-24-v2.5.2-voice-ton.md` · Tag `v2.5.2` · Worker `2631adec`
+- **Voice am Spieltisch:** Man hört jetzt die anderen. Vorher sendete das Mikrofon, aber die Stimmen wurden nicht abgespielt (#106).
+
+## [2.5.1] – 24.11.2026: Vorschaubilder und Feedback
+Nachweis: `docs/releases/2026-11-24-v2.5.1-vorschau-feedback.md` · Tag `v2.5.1` · Worker `f90dc917` · Migration `0019`
+- **Feedback & Fehler melden** im Profil: Fehler, Ideen und Feedback gehen direkt an die Spielleitung, mit Status und Antwort. Die SL bekommt eine Übersicht zum Abarbeiten (Issue #5).
+- **Schneller:** NPC-Karten, Figurenlisten, Galerie und Zuflucht laden kleine Vorschaubilder statt der Originale. Auf der NPC-Seite sind es 1,1 MB statt rund 46 MB für 23 Bilder.
 - Cloudflare „Workers Builds“ vom Repo getrennt: kein rotes Häkchen mehr, kein automatisches Veröffentlichen.
 - CI auf zwei Prüfungen zusammengelegt („ChroniPlay · Prüfung“, „ChroniPlay · Windows“). Server-, Browser- und Lockfile-Teile laufen nur bei betroffenen Dateien, Doku-PRs ohne Prüfung (`docs/CI.md`).
 - Statusblock im README, dieses Changelog.
