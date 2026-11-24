@@ -33,6 +33,10 @@ Ein Windows-Rechner, nur wenn Würfel-Dateien geändert wurden (`prototypes/spie
 | Windows | `node --experimental-strip-types --test prototypes/spieltisch-2/shared-dice.test.mjs` |
 | Tagebuch-Brücke | in `.github/chroniplay-discord`: `python -m unittest` |
 
+## Laufumgebung
+- Die Prüfung läuft auf **Ubuntu 24.04**. Die Version ist fest eingestellt, weil Playwright 1.58 seine Browser-Pakete nur auf unterstützten Versionen installiert. Mit „ubuntu-latest“ ist der Browser-Schritt gescheitert.
+- Die verwendeten GitHub-Actions laufen auf Node 24: `checkout@v5`, `setup-node@v5`, `pnpm/action-setup@v5`, `upload-artifact@v6`. Die Warnung „Node.js 20 is deprecated“ entfällt damit.
+
 ## Was nicht von uns ist
 **Workers Builds: chronik-von-kleve** (rot) kommt aus der Git-Anbindung von Cloudflare, nicht aus dieser Datei. Cloudflare versucht, selbst zu bauen und zu veröffentlichen, und scheitert dabei. Würde das gelingen, ginge jeder Merge ohne Freigabe live. Empfehlung: im Cloudflare-Dashboard trennen (Workers & Pages → chronik-von-kleve → Settings → Build → Disconnect).
 
