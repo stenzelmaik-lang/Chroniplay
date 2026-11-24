@@ -2,7 +2,8 @@
 "use client";
 import {useCallback,useEffect,useMemo,useRef,useState,type CSSProperties} from 'react';
 import {createPortal} from 'react-dom';
-import {fragmentDuration,presetById,documentNumber,type PlayerDelivery} from '@/domain/personal-delivery';
+import {fragmentDuration,presetById,tempoById,documentNumber,type PlayerDelivery} from '@/domain/personal-delivery';
+import {visionMoments} from '@/domain/vision-moments';
 import {RichTextView} from '../rich-text';
 import {richTextFileIds} from '@/domain/location-rich-text';
 import {playArrivalSound} from './delivery-sounds';
@@ -37,15 +38,23 @@ function useIsolate(host:HTMLElement|null,active:boolean,pull:boolean){
 
 /* ------------------------------------------------------------------ vision */
 type Phase='enter'|'play'|'end'|'exit';
-const IMAGE_SPOTS:CSSProperties[]=[{left:'5%',top:'10%'},{right:'5%',top:'30%'},{left:'9%',bottom:'7%'},{right:'10%',bottom:'10%'},{left:'34%',top:'4%'},{right:'30%',bottom:'4%'}];
+const IMAGE_WAIT_MS=6500;
+type ImageStatus='ready'|'unavailable';
 
 export function VisionPlayer({delivery,assetUrl,onSeen,onDone,preview=false,withdrawn=false}:{delivery:PlayerDelivery;assetUrl:(fileId:string)=>string;onSeen?:()=>void;onDone:()=>void;preview?:boolean;withdrawn?:boolean}){
  const [host]=useState(()=>{if(typeof document==='undefined')return null;const el=document.createElement('div');el.className=styles.host;return el;});
  const {reduced,own,toggle}=useReducedEffects();
  const preset=presetById(delivery.preset);
- // Without text the pictures carry the vision: one "fragment" per picture keeps the same pacing and the same end.
- const steps=useMemo(()=>delivery.fragments.length?delivery.fragments:delivery.images.map(()=>''),[delivery]);
+ const moments=useMemo(()=>visionMoments(delivery.images,delivery.fragments),[delivery.images,delivery.fragments]);
  const [phase,setPhase]=useState<Phase>('enter'),[index,setIndex]=useState(0),[fullText,setFullText]=useState(false),[sound,setSound]=useState<'off'|'on'|'blocked'>('off'),[skipped,setSkipped]=useState(false);
+ const [imageStatus,setImageStatus]=useState<Partial<Record<number,ImageStatus>>>({});
+ const [expiredImage,setExpiredImage]=useState<number>();
+ const moment=moments[index];
+ const hasImage=Boolean(moment?.imageId);
+ const unavailable=hasImage&&(imageStatus[index]==='unavailable'||expiredImage===index);
+ const waiting=hasImage&&imageStatus[index]!=='ready'&&!unavailable;
+ const playing=phase==='play'&&!waiting;
+ const narration=moment?.text;
  const root=useRef<HTMLDivElement>(null),audio=useRef<HTMLAudioElement>(null),shownAt=useRef(0),seenSent=useRef(false);
  // Parents re-render on every poll; the latest callbacks are read at call time so timers are never restarted by that.
  const doneRef=useRef(onDone),seenRef=useRef(onSeen);
@@ -57,14 +66,24 @@ export function VisionPlayer({delivery,assetUrl,onSeen,onDone,preview=false,with
  useEffect(()=>{root.current?.focus({preventScroll:true});},[host]);
  // enter -> play
  useEffect(()=>{if(phase!=='enter')return;const t=window.setTimeout(()=>{setPhase('play');shownAt.current=Date.now();},reduced?500:preset.enterMs);return()=>window.clearTimeout(t);},[phase,reduced,preset.enterMs]);
- // fragment timing: fade in, readable hold, fade out, next. The last one stays and the confirmation appears.
- const inMs=reduced?500:1700,outMs=reduced?400:1300,hold=fragmentDuration(steps[index]||'',delivery.preset,reduced,delivery.tempo);
+ const inMs=reduced?180:760,outMs=reduced?140:640;
+ const imageHold=Math.max(2100,Math.round(3100*tempoById(delivery.tempo).factor));
+ const textHold=narration?fragmentDuration(narration,delivery.preset,reduced,delivery.tempo):0;
+ const hold=Math.max(textHold,hasImage&&!unavailable?imageHold:0);
  useEffect(()=>{
-  if(phase!=='play')return;
-  const last=index>=steps.length-1;
-  const t=window.setTimeout(()=>{if(last)setPhase('end');else{setIndex(i=>i+1);shownAt.current=Date.now();}},inMs+hold+(last?0:outMs));
-  return()=>window.clearTimeout(t);
- },[phase,index,steps.length,inMs,hold,outMs]);
+  if(phase!=='play'||!waiting)return;
+  const timeout=window.setTimeout(()=>setExpiredImage(index),IMAGE_WAIT_MS);
+  return()=>window.clearTimeout(timeout);
+ },[phase,waiting,index]);
+ useEffect(()=>{
+  if(!playing)return;
+  if(!moments.length){const timeout=window.setTimeout(()=>setPhase('end'),0);return()=>window.clearTimeout(timeout);}
+  const timeout=window.setTimeout(()=>{
+   if(index===moments.length-1)setPhase('end');
+   else{setIndex(index+1);shownAt.current=Date.now();}
+  },inMs+hold+outMs);
+  return()=>window.clearTimeout(timeout);
+ },[playing,index,moments.length,inMs,hold,outMs]);
  // a withdrawn vision leaves gracefully
  useEffect(()=>{if(withdrawn&&phase!=='exit')queueMicrotask(()=>setPhase('exit'));},[withdrawn,phase]);
  useEffect(()=>{if(phase!=='exit')return;const a=audio.current;if(a){const v=a.volume;let k=0;const f=window.setInterval(()=>{k++;a.volume=Math.max(0,v*(1-k/10));if(k>=10)window.clearInterval(f);},120);}const t=window.setTimeout(()=>doneRef.current(),reduced?350:1500);return()=>window.clearTimeout(t);},[phase,reduced]);
@@ -75,15 +94,17 @@ export function VisionPlayer({delivery,assetUrl,onSeen,onDone,preview=false,with
   if(p)p.then(()=>{setSound('on');let k=0;const f=window.setInterval(()=>{k++;a.volume=Math.min(.6,k*.06);if(k>=10)window.clearInterval(f);},150);}).catch(()=>setSound('blocked'));
  },[delivery.audio]);
  // a short guard only against double clicks; fast readers may skip ahead right away
- const next=()=>{setSkipped(true);if(phase==='enter'){setPhase('play');shownAt.current=Date.now();return;}if(phase!=='play'||Date.now()-shownAt.current<500)return;if(index>=steps.length-1)setPhase('end');else{setIndex(i=>i+1);shownAt.current=Date.now();}};
+ const next=()=>{setSkipped(true);if(phase==='enter'){setPhase('play');shownAt.current=Date.now();return;}if(phase!=='play'||Date.now()-shownAt.current<500)return;if(index>=moments.length-1)setPhase('end');else{setIndex(i=>i+1);shownAt.current=Date.now();}};
  const keys=(e:React.KeyboardEvent)=>{
-  if(e.key==='Escape'){e.preventDefault();setFullText(true);return;} // no silent exit: offer the readable full text instead
+  if(e.key==='Escape'){e.preventDefault();if(delivery.fragments.length)setFullText(value=>!value);return;} // no silent exit: offer the readable full text instead
   if((e.key===' '||e.key==='Enter'||e.key==='ArrowRight')&&e.target===root.current){e.preventDefault();next();}
-  if(e.key==='Tab'){const f=[...(root.current?.querySelectorAll<HTMLElement>('button:not([disabled])')||[])];if(!f.length)return;const i=f.indexOf(document.activeElement as HTMLElement);if(e.shiftKey&&i<=0){e.preventDefault();f.at(-1)!.focus();}else if(!e.shiftKey&&i===f.length-1){e.preventDefault();f[0].focus();}}
+  if(e.key==='Tab'){const f=[...(root.current?.querySelectorAll<HTMLElement>('button:not([disabled]), [tabindex="0"]')||[])];if(!f.length)return;const i=f.indexOf(document.activeElement as HTMLElement);if(e.shiftKey&&i<=0){e.preventDefault();f.at(-1)!.focus();}else if(!e.shiftKey&&i===f.length-1){e.preventDefault();f[0].focus();}}
  };
- // pictures: each one belongs to a range of fragments and floats in its own spot, never on the text column
- const imageOf=(i:number)=>steps.length?Math.min(delivery.images.length-1,Math.floor(i*delivery.images.length/steps.length)):i;
- const visibleImages=delivery.images.map((id,k)=>({id,k,on:phase!=='enter'&&(phase==='end'?k===imageOf(steps.length-1):k===imageOf(index))||(phase==='end'&&delivery.images.length<=2)}));
+ const bufferedImages=(phase==='enter'||phase==='play')?moments.slice(index,index+2):[];
+ const replay=()=>{
+  setIndex(0);setFullText(false);setImageStatus({});setExpiredImage(undefined);setSkipped(false);
+  setPhase('enter');root.current?.focus({preventScroll:true});
+ };
  if(!host)return null;
  return createPortal(<div ref={root} tabIndex={-1} className={styles.vision} data-preset={preset.id} data-phase={phase} data-reduced={reduced||undefined} role="dialog" aria-modal="true" aria-label={preview?'Vorschau einer Vision':'Eine Vision'} onKeyDown={keys} onClick={e=>{if(e.target===e.currentTarget)next();}} style={{'--enter':`${reduced?500:preset.enterMs}ms`} as CSSProperties}>
   <div className={styles.veil} aria-hidden="true"/>
@@ -92,18 +113,41 @@ export function VisionPlayer({delivery,assetUrl,onSeen,onDone,preview=false,with
   <div className={styles.light} aria-hidden="true"/>
   {preset.id==='threat'&&!reduced&&<Tentacles/>}
   <div className={styles.motes} aria-hidden="true"/>
-  <div className={styles.apparitions} aria-hidden="true">{visibleImages.map(img=><img key={img.id} src={assetUrl(img.id)} alt="" draggable={false} data-on={img.on||undefined} data-motion={preset.imageMotion} style={!delivery.fragments.length?{left:'50%',top:'50%',translate:'-50% -50%',width:'min(62vw,720px)'}:IMAGE_SPOTS[img.k%IMAGE_SPOTS.length]}/>)}</div>
   <div className={`${styles.fog} ${styles.fogFront}`} aria-hidden="true"/>
   <div className={styles.grain} aria-hidden="true"/>
   {preview&&<p className={styles.previewBadge}>Vorschau · nichts wird zugestellt</p>}
-  <div className={styles.words} aria-live="polite">
-   {phase!=='enter'&&!fullText&&steps[index]&&<p key={index} className={styles.fragment} data-last={index===steps.length-1||undefined} style={{'--in':`${inMs}ms`,'--hold':`${hold}ms`,'--out':`${outMs}ms`} as CSSProperties}>{steps[index]}</p>}
-   {fullText&&<div className={styles.fullText}>{delivery.fragments.map((f,i)=><p key={i}>{f}</p>)}{!delivery.fragments.length&&<p>Diese Vision besteht aus Bildern.</p>}</div>}
+  <div className={styles.visionStage} data-image={hasImage&&(phase==='enter'||phase==='play')||undefined}>
+   <div className={styles.apparitions} aria-hidden="true">
+    {bufferedImages.map(({imageId},offset)=>{
+     if(!imageId)return null;
+     const imageIndex=index+offset;
+     const active=offset===0&&playing&&!unavailable;
+     return <figure key={`${imageIndex}:${imageId}`} data-active={active||undefined} data-position={imageIndex%3}
+       style={{'--in':`${inMs}ms`,'--hold':`${hold}ms`,'--out':`${outMs}ms`} as CSSProperties}>
+      <img src={assetUrl(imageId)} alt="" draggable={false} decoding="async"
+       onLoad={event=>{
+        const image=event.currentTarget;
+        void image.decode().then(
+         ()=>{if(image.isConnected)setImageStatus(status=>({...status,[imageIndex]:'ready'}));},
+         ()=>{if(image.isConnected)setImageStatus(status=>({...status,[imageIndex]:'unavailable'}));},
+        );
+       }}
+       onError={()=>setImageStatus(status=>({...status,[imageIndex]:'unavailable'}))}/>
+     </figure>;
+    })}
+   </div>
+   <div className={styles.words} aria-live="polite">
+    {fullText
+     ?<div className={styles.fullText} tabIndex={0} role="region" aria-label="Vollständiger Visionstext">{delivery.fragments.map((f,i)=><p key={i}>{f}</p>)}</div>
+     :(playing||phase==='end'||phase==='exit')&&narration&&<p key={index} className={styles.fragment} data-last={phase==='end'||undefined}
+       style={{'--in':`${inMs}ms`,'--hold':`${hold}ms`,'--out':`${outMs}ms`} as CSSProperties}>{narration}</p>}
+   </div>
   </div>
-  {(phase==='end'||fullText)&&phase!=='exit'&&<div className={styles.closing}><button type="button" autoFocus className={styles.seen} onClick={()=>setPhase('exit')}>Ich habe alles gesehen</button>{!fullText&&<button type="button" className={styles.quiet} onClick={()=>{setIndex(0);setPhase('play');shownAt.current=Date.now();}}>Noch einmal</button>}</div>}
+  {phase==='end'&&<div className={styles.closing}><button type="button" autoFocus className={styles.seen} onClick={()=>setPhase('exit')}>Ich habe alles gesehen</button><button type="button" className={styles.quiet} onClick={replay}>Noch einmal</button></div>}
   <div className={styles.tools}>
    {phase==='play'&&<button type="button" className={`${styles.quiet} ${styles.next}`} data-hint={!skipped&&index===0||undefined} aria-keyshortcuts="Space ArrowRight" onClick={next}>Weiter ›</button>}
-   {!fullText&&phase!=='exit'&&<button type="button" className={styles.quiet} onClick={()=>setFullText(true)}>Text vollständig anzeigen</button>}
+   {(phase==='enter'||phase==='play')&&<button type="button" className={styles.quiet} onClick={()=>setPhase('end')}>Vision überspringen</button>}
+   {delivery.fragments.length>0&&phase!=='exit'&&<button type="button" className={styles.quiet} aria-pressed={fullText} onClick={()=>setFullText(value=>!value)}>{fullText?'Zur laufenden Vision':'Text vollständig anzeigen'}</button>}
    <button type="button" className={styles.quiet} aria-pressed={own} onClick={toggle}>{own?'Effekte wieder voll':'Effekte ruhiger'}</button>
    {delivery.audio&&sound==='blocked'&&<button type="button" className={styles.quiet} onClick={()=>{const a=audio.current;if(!a)return;a.volume=.6;void a.play().then(()=>setSound('on')).catch(()=>setSound('blocked'));}}>Ton einschalten</button>}
    {delivery.audio&&sound==='on'&&<button type="button" className={styles.quiet} onClick={()=>{audio.current?.pause();setSound('off');}}>Ton aus</button>}

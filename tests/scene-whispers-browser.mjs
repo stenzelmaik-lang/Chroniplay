@@ -82,6 +82,8 @@ try{
  const longBody=visionB.locator('p').filter({hasText:'Eine weitere unabhängig vorbereitete Vision.'}).first().locator('xpath=..');
  assert.ok(await longBody.evaluate(el=>el.scrollHeight>el.clientHeight),'long visions remain scrollable');await longBody.evaluate(el=>{el.scrollTop=el.scrollHeight;});assert.ok(await longBody.evaluate(el=>el.scrollTop>0));
  assert.equal(await a.getByText('Eine weitere unabhängig vorbereitete Vision.').count(),0);
+ assert.equal(await visionB.getByRole('button',{name:'Ich habe alles gesehen'}).count(),0,'opening the transcript does not end playback');
+ await b.getByRole('button',{name:'Vision überspringen'}).click();
  await b.getByRole('button',{name:'Ich habe alles gesehen'}).click();await visionB.waitFor({state:'detached',timeout:8000});
  const preparedLetter=releases.getByRole('group',{name:'Vorbereitet in dieser Szene'}).locator('article').filter({has:gm.getByRole('heading',{name:'Zweiter Brief für Spieler A',exact:true})});
  await preparedLetter.getByRole('button',{name:'Aufklappen: Zweiter Brief für Spieler A'}).click();await preparedLetter.getByRole('button',{name:'Botschaft zustellen',exact:true}).click();

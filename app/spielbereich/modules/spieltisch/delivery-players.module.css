@@ -15,7 +15,7 @@
   color: var(--text); font-family: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif; cursor: default;
   padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
 }
-.veil, .fog, .light, .motes, .grain, .apparitions, .tentacles { position: absolute; pointer-events: none; }
+.veil, .fog, .light, .motes, .grain, .tentacles { position: absolute; pointer-events: none; }
 .veil { inset: 0; background: radial-gradient(ellipse 70% 60% at 50% 52%, var(--veilCenter) 0%, var(--veilEdge) 78%); opacity: 0; animation: veilIn var(--enter) cubic-bezier(.45, 0, .2, 1) forwards; }
 .fog { inset: -25%; background: url("/images/personal-delivery/mist-v2.webp") center / 70% auto repeat; filter: var(--fogFilter); mix-blend-mode: var(--fogBlend); opacity: 0; will-change: transform, opacity; }
 .fogBack { transform: scale(1.5); animation: fogRise var(--enter) cubic-bezier(.3, 0, .2, 1) forwards, driftA 70s ease-in-out var(--enter) infinite alternate; }
@@ -26,32 +26,57 @@
 .motes { inset: -10%; opacity: 0; background-image: radial-gradient(circle at 23% 31%, var(--mote) 0 1.1px, transparent 1.9px), radial-gradient(circle at 71% 64%, var(--mote) 0 .8px, transparent 1.5px), radial-gradient(circle at 46% 87%, var(--mote) 0 1.4px, transparent 2.3px); background-size: 337px 291px, 463px 419px, 571px 523px; background-position: 0 0, 131px 77px, 263px 199px; animation: fadeIn 4s ease var(--enter) forwards, motes 70s linear infinite; }
 .grain { inset: 0; display: none; }
 
-.apparitions { inset: 0; z-index: 2; }
-.apparitions img {
-  position: absolute; width: min(30vw, 400px); max-height: 46vh; object-fit: cover; border-radius: 4px; opacity: 0;
-  pointer-events: none; user-select: none; -webkit-user-drag: none;
-  -webkit-mask-image: radial-gradient(ellipse 50% 50% at 50% 50%, #000 45%, transparent 72%); mask-image: radial-gradient(ellipse 50% 50% at 50% 50%, #000 45%, transparent 72%);
-  transition: opacity 2.6s ease, filter 2.6s ease;
+.visionStage {
+  position: absolute; inset: max(3.5rem, env(safe-area-inset-top)) 5% 6rem;
+  z-index: 3; display: grid; grid-template-rows: minmax(0, 1fr) auto;
+  align-items: center; justify-items: center; gap: .75rem; min-height: 0;
+  pointer-events: none;
 }
-.apparitions img[data-on] { opacity: .8; }
-.apparitions img[data-motion="float"] { animation: float 13s ease-in-out infinite alternate; }
-.apparitions img[data-motion="drift"] { animation: drift 17s ease-in-out infinite alternate; filter: blur(.6px) saturate(.85); }
-.apparitions img[data-motion="surface"] { filter: brightness(.25) blur(5px); }
-.apparitions img[data-motion="surface"][data-on] { filter: brightness(.85) blur(0); transition-duration: 5s; animation: float 18s ease-in-out infinite alternate; }
-.apparitions img[data-motion="pulse"] { animation: pulse 8s ease-in-out infinite; filter: contrast(1.15) saturate(.7) drop-shadow(0 0 18px rgba(160, 0, 20, .45)); }
-.apparitions img[data-motion="reveal"] { transform: scale(.9); transition: opacity 2s ease, transform 4s cubic-bezier(.2, .7, .2, 1), filter 2s ease; filter: brightness(1.5) sepia(.3); }
-.apparitions img[data-motion="reveal"][data-on] { transform: scale(1); filter: brightness(1) sepia(0); }
-.apparitions img[data-motion="fade"] { filter: sepia(.85) contrast(.85) brightness(.9); animation: float 20s ease-in-out infinite alternate; }
+.visionStage:not([data-image]) { grid-template-rows: 1fr; }
+.visionStage:not([data-image]) .apparitions { position: absolute; inset: 0; }
+.apparitions { position: relative; width: 100%; height: 100%; }
+.apparitions figure {
+  position: absolute; inset: 0 6%; margin: 0; opacity: 0; visibility: hidden;
+}
+.apparitions figure[data-position="1"] { inset-inline: 2% 10%; }
+.apparitions figure[data-position="2"] { inset-inline: 10% 2%; }
+.apparitions figure[data-active] {
+  visibility: visible;
+  animation: memoryIn var(--in) ease-out both, fadeOut var(--out) ease-in calc(var(--in) + var(--hold)) forwards;
+}
+.apparitions img {
+  display: block; width: 100%; height: 100%; object-fit: contain;
+  filter: var(--memoryFilter, contrast(1.045) saturate(.94));
+  user-select: none;
+}
+.vision[data-preset="dream"] { --memoryFilter: saturate(.87) sepia(.1) hue-rotate(12deg) contrast(.98); }
+.vision[data-preset="dark"] { --memoryFilter: saturate(.63) contrast(1.12) brightness(.93); }
+.vision[data-preset="threat"] { --memoryFilter: sepia(.15) saturate(.93) contrast(1.16); }
+.vision[data-preset="drama"] { --memoryFilter: contrast(1.12) saturate(.94) brightness(1.04); }
+.vision[data-preset="echo"] { --memoryFilter: sepia(.27) saturate(.83) contrast(1.07); }
+@keyframes memoryIn { from { opacity: 0; } to { opacity: 1; } }
+.fogFront { z-index: 1; --fogOpacity: .32; }
+.words {
+  position: relative; width: min(47rem, 100%); max-height: 45dvh; overflow: auto;
+  padding-inline: .5rem; text-align: center; pointer-events: auto;
+}
+.words:empty { display: none; }
+.visionStage[data-image] .words { max-height: min(36dvh, 13rem); --size: clamp(1.1rem, 2vw, 1.7rem); }
+.visionStage[data-image] .fragment { background: rgba(5, 5, 7, .46); padding: .35rem .8rem; }
+.vision[data-phase="end"] .visionStage { inset-block-end: 10rem; }
+@media (max-width: 600px) {
+  .visionStage { inset-inline: max(.75rem, env(safe-area-inset-left)); }
+  .apparitions figure[data-position] { inset-inline: 0; }
+  .vision[data-phase="end"] .closing { width: max-content; max-width: calc(100% - 24px); bottom: 6rem; }
+  .vision .tools { right: max(12px, env(safe-area-inset-right)); }
+}
 
-.words { position: relative; z-index: 5; width: min(42rem, 86vw); min-height: 9em; display: grid; place-items: center; text-align: center; }
-/* soft scrim: contrast for the text without a box */
-.words::before { content: ""; position: absolute; inset: -30% -18%; z-index: -1; background: radial-gradient(ellipse 50% 50% at 50% 50%, rgba(0, 0, 0, .55), transparent 72%); }
 .fragment {
   margin: 0; font-size: var(--size); line-height: 1.45; letter-spacing: .01em; text-shadow: var(--glow); text-wrap: balance;
   animation: fragIn var(--in) cubic-bezier(.2, .7, .2, 1) both, fragOut var(--out) ease-in calc(var(--in) + var(--hold)) forwards;
 }
 .fragment[data-last] { animation: fragIn var(--in) cubic-bezier(.2, .7, .2, 1) both; }
-.fullText { max-height: 58vh; overflow: auto; text-align: left; font-size: 1.15rem; line-height: 1.6; padding: 1.4rem 1.6rem; background: rgba(0, 0, 0, .55); border: 1px solid rgba(255, 255, 255, .12); border-radius: 6px; animation: fadeIn .6s ease both; }
+.fullText { max-height: inherit; overflow: auto; box-sizing: border-box; text-align: left; font-size: 1.15rem; line-height: 1.6; padding: 1.4rem 1.6rem; background: rgba(0, 0, 0, .55); border: 1px solid rgba(255, 255, 255, .12); border-radius: 6px; animation: fadeIn .6s ease both; }
 .fullText p { margin: 0 0 .9em; text-shadow: none; }
 
 .closing { position: absolute; z-index: 6; bottom: max(11vh, 72px); left: 50%; translate: -50% 0; display: flex; gap: 12px; align-items: center; animation: fadeIn 1.6s ease both; }
@@ -67,7 +92,7 @@
 /* leaving the vision: the fog clears, the table returns */
 .vision[data-phase="exit"] .veil { animation: veilOut 1.5s ease forwards; }
 .vision[data-phase="exit"] .fog { animation: dissolve 1.4s ease forwards; }
-.vision[data-phase="exit"] .words, .vision[data-phase="exit"] .apparitions, .vision[data-phase="exit"] .light, .vision[data-phase="exit"] .motes, .vision[data-phase="exit"] .tentacles, .vision[data-phase="exit"] .grain { animation: fadeOut 1s ease forwards; }
+.vision[data-phase="exit"] .visionStage, .vision[data-phase="exit"] .light, .vision[data-phase="exit"] .motes, .vision[data-phase="exit"] .tentacles, .vision[data-phase="exit"] .grain { animation: fadeOut 1s ease forwards; }
 
 /* ---------------------------------------------------------------- presets */
 .vision[data-preset="classic"] .light { background: linear-gradient(104deg, transparent 38%, rgba(255, 240, 205, .1) 46%, transparent 55%), linear-gradient(76deg, transparent 52%, rgba(220, 225, 235, .07) 60%, transparent 68%); animation: fadeIn 3s ease var(--enter) forwards, sway 22s ease-in-out infinite alternate; transform-origin: 50% -20%; }
@@ -103,7 +128,7 @@
 .vision[data-reduced] .fog { animation: fadeIn .6s ease forwards !important; transform: none; }
 .vision[data-reduced] .motes, .vision[data-reduced] .grain, .vision[data-reduced] .tentacles { display: none; }
 .vision[data-reduced] .light { animation: fadeIn .6s ease forwards !important; }
-.vision[data-reduced] .apparitions img { animation: none !important; transition: opacity .6s ease; }
+
 .vision[data-reduced] .fragment { animation: plainIn var(--in) ease both, fadeOut var(--out) ease calc(var(--in) + var(--hold)) forwards !important; }
 .vision[data-reduced] .fragment[data-last] { animation: plainIn var(--in) ease both !important; }
 .vision[data-reduced] .veil { animation-duration: .5s; }
@@ -163,9 +188,6 @@
 @keyframes threatIn { 0% { opacity: 0; transform: scale(1.08); filter: blur(6px); letter-spacing: .12em; } 70% { opacity: 1; transform: scale(.995); filter: blur(0); } 80% { transform: translateX(2px); } 90% { transform: translateX(-2px); } 100% { transform: none; letter-spacing: .01em; } }
 @keyframes dramaIn { from { opacity: 0; transform: scale(1.22); filter: blur(10px) brightness(1.8); } to { opacity: 1; transform: none; filter: none; } }
 @keyframes echoIn { 0% { opacity: 0; filter: blur(3px); } 30% { opacity: .5; } 45% { opacity: .2; } 70% { opacity: .75; } 100% { opacity: 1; filter: blur(0); } }
-@keyframes float { from { transform: translate3d(0, 8px, 0) rotate(-1.2deg); } to { transform: translate3d(0, -12px, 0) rotate(1.4deg); } }
-@keyframes drift { from { transform: translate3d(-18px, 6px, 0) scale(.98); } to { transform: translate3d(22px, -8px, 0) scale(1.03); } }
-@keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.035); } }
 @keyframes sway { from { transform: rotate(-3deg); } to { transform: rotate(3deg); } }
 @keyframes wander { from { transform: translate3d(-4%, 2%, 0); } to { transform: translate3d(5%, -3%, 0); } }
 @keyframes dreamwave { from { transform: translate3d(2%, 0, 0) skewX(-2deg) scale(1.02); } to { transform: translate3d(-3%, 1%, 0) skewX(2deg) scale(1.08); } }
