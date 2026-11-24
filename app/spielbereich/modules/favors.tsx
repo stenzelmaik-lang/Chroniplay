@@ -36,7 +36,7 @@ export function FavorPanel({ sl }: { sl: boolean }) {
   const retry = useRef<{ signature: string; id: string } | null>(null);
   const sending = useRef(false);
   const load = useCallback(async () => { setData(await api<Overview>(path)); }, [path]);
-  useEffect(() => { void load().catch(error => setError((error as Error).message)); }, [load]);
+  useEffect(() => { queueMicrotask(() => { void load().catch(error => setError((error as Error).message)); }); }, [load]);
 
   async function send(body: object, after: () => void) {
     if (sending.current) return;

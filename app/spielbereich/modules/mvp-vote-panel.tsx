@@ -26,9 +26,9 @@ export function MvpVotePanel({actorId}:{actorId:string}) {
     }catch(e){setError((e as Error).message);}
     finally{setLoading(false);}
   },[]);
-  useEffect(()=>{void refresh();},[refresh]);
+  useEffect(()=>{queueMicrotask(()=>void refresh());},[refresh]);
   useEffect(()=>{
-    if(!selected){setVote(null);setNominee('');return;}
+    if(!selected){queueMicrotask(()=>{setVote(null);setNominee('');});return;}
     let active=true;
     api<{poll:Vote}>('/api/mvp?sessionId='+encodeURIComponent(selected))
       .then(response=>{if(active){setVote(response.poll);setNominee(response.poll.myVote??'');}})

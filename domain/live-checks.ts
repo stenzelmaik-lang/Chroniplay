@@ -1,6 +1,7 @@
 /** Lifecycle of character checks at the live table. Pure presentation logic: no randomness, no rules, no writes.
  * A check is "ausstehend" for a target until a roll with its request id exists; a roll is final once stored.
  * Whether a result view is open is a per-client matter and never makes a roll "open" again. */
+import {campaignAllowed} from './campaign-allowlist.ts';
 import {W10_ATTRIBUTE_KEYS,W10_ABILITY_KEYS} from './trait-ids.ts';
 
 export type CheckLike={id:string;title:string;difficulty:number;attributeId?:string;abilityId?:string;recipients:string[]|null};
@@ -81,7 +82,7 @@ export type ChecksSwitch={runId:string;on:boolean};
 const localChecks=(env:ChecksGateEnv)=>env.GE01_CHECKS==='local-only'&&env.AUTH_ACCESS_ENVIRONMENT==='local-test';
 export function checksAvailable(env:ChecksGateEnv,campaignId:string){
  if(localChecks(env))return true;
- return !!campaignId&&(env.GE01_ALPHA_CAMPAIGNS||'').split(',').map(s=>s.trim()).filter(s=>s&&s!=='*').includes(campaignId);
+ return campaignAllowed(env.GE01_ALPHA_CAMPAIGNS,campaignId);
 }
 export function checksActive(env:ChecksGateEnv,campaignId:string,room:{runId?:string;checks?:ChecksSwitch}){
  if(!checksAvailable(env,campaignId)||!room.runId)return false;

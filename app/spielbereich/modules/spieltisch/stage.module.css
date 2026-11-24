@@ -178,7 +178,7 @@ button.stickyGrip:active{cursor:grabbing}.stickyGrip>span{display:flex;align-ite
 .diceDesk .diceJournalTitle{margin:21px 0 10px}
 .rawRoll>summary{cursor:pointer;margin:0 0 8px;color:#e4c48b}
 
-.brand>svg,.simulation svg{color:var(--accent);flex:none}
+.brand>svg,.simulation>span>svg,.simulation>button>svg{color:var(--accent);flex:none}
 .simulation>button{display:inline-flex;align-items:center;gap:5px}
 @media(max-width:600px){.brand>svg{width:16px;margin-right:5px}.simulation>button>svg{display:none}}
 .tableMapMount{
