@@ -100,8 +100,13 @@ class PublicationSafetyTests(unittest.TestCase):
         from publish import validate_discussion_url
         valid = 'https://github.com/stenzelmaik-lang/chronik-von-kleve/discussions/4'
         self.assertEqual(validate_discussion_url(valid, 4), valid)
+        # Repository renamed on 24.11.2026: GitHub now reports the new name.
+        renamed = 'https://github.com/stenzelmaik-lang/Chroniplay/discussions/4'
+        self.assertEqual(validate_discussion_url(renamed, 4), renamed)
         for bad in (
             'https://github.com/other/repo/discussions/4',
+            'https://github.com/stenzelmaik-lang/Chroniplay/discussions/5',
+            'https://github.com/stenzelmaik-lang/Chroniplay-evil/discussions/4',
             'https://github.com/stenzelmaik-lang/chronik-von-kleve/discussions/5',
             'https://github.com/stenzelmaik-lang/chronik-von-kleve/discussions/4?view=1',
             'https://github.com/stenzelmaik-lang/chronik-von-kleve/discussions/4/extra',

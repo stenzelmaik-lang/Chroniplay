@@ -10,7 +10,7 @@ import urllib.error
 import urllib.request
 
 OWNER = "stenzelmaik-lang"
-REPOSITORY = "stenzelmaik-lang/chronik-von-kleve"
+REPOSITORY = "stenzelmaik-lang/Chroniplay"  # umbenannt am 24.11.2026 (vorher chronik-von-kleve)
 CATEGORY = "Entwicklertagebuch"
 LABEL = "discord-freigabe"
 WEBHOOK_NAME = "ChroniPlay · Entwicklertagebuch"
@@ -19,7 +19,7 @@ MARKER = "<!-- chroniplay-discord:sent:v1 -->"
 CLAIM = "<!-- chroniplay-discord:claimed:v1 -->"
 GITHUB_GRAPHQL = "https://api.github.com/graphql"
 DISCUSSION_URL = re.compile(
-    r"https://github\.com/stenzelmaik-lang/chronik-von-kleve/discussions/(\d+)"
+    r"https://github\.com/stenzelmaik-lang/(?:Chroniplay|chronik-von-kleve)/discussions/(\d+)"
 )
 
 

@@ -51,12 +51,12 @@ export function XpSessionDesk({entries}:{entries:Entry[]}) {
       setError('');
     }catch(e){setError((e as Error).message);}finally{setLoading(false);}
   },[]);
-  useEffect(()=>{void reload();},[reload]);
+  useEffect(()=>{queueMicrotask(()=>void reload());},[reload]);
 
   useEffect(()=>{
-    if(!selected||!players){setDraft([]);setReceipt(null);return;}
+    if(!selected||!players){queueMicrotask(()=>{setDraft([]);setReceipt(null);});return;}
     let cancelled=false;
-    setReceiptLoading(true);
+    queueMicrotask(()=>{if(!cancelled)setReceiptLoading(true);});
     api<{settlement:ReceiptWithReversals|null}>('/api/character-engine?settlement='+encodeURIComponent(selected))
       .then(result=>{if(cancelled)return;setReceipt(result.settlement);setDraft(prepareSessionDraft(players,result.settlement));})
       .catch(e=>{if(!cancelled){setError((e as Error).message);setDraft([]);}})

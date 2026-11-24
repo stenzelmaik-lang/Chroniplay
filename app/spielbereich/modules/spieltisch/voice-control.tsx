@@ -5,7 +5,7 @@ import type {Voice} from './use-voice';
 import styles from './voice-control.module.css';
 
 export function VoiceControl({voice:v}:{voice:Voice}){
- if(!v.status?.available)return null;
+ if(!v.status)return null;
  const count=Object.keys(v.peers).length;
  const joined=v.phase==='joined';
  return <div className={styles.voice} data-joined={joined} role="group" aria-label="Sprachchat">

@@ -11,7 +11,7 @@ Spielende und SL können während eines laufenden Spielabends direkt am Spieltis
 | Variable | Bedeutung |
 |---|---|
 | `CVK_VOICE_CAMPAIGNS` | Komma-Liste der freigeschalteten Kampagnen, `*` wird ignoriert. **Fehlt sie, ist Voice aus** (Route 404, keine Leiste). |
-| `CVK_VOICE_VIDEO` | **Eigentümerentscheidung 23.11.2026: zuerst nur Sprache.** Nur der Wert `1` zeigt die Kamera. Ohne die Variable gibt es keinen Kamera-Knopf. Für eine harte Grenze und den günstigeren Nur-Audio-Preis sollten die RealtimeKit-Presets den Meeting-Typ „Voice“ haben. |
+| *(entfernt)* `CVK_VOICE_VIDEO` | Eigentümerentscheidung 23.11.2026: nur Sprache. Der Schalter ist mit dem Aufräumen vom 24.11.2026 entfallen, weil es keine Kamera-Oberfläche gibt. Die Presets nutzen den Meeting-Typ „Voice“. |
 | `CVK_VOICE=local-only` | Nur zusammen mit `AUTH_ACCESS_ENVIRONMENT=local-test`: überall verfügbar, ohne Secrets als Attrappe ohne Verbindung. In Produktion wirkungslos. |
 | `CF_REALTIME_ACCOUNT_ID`, `CF_REALTIME_APP_ID`, `CF_REALTIME_API_TOKEN` | **Worker-Secrets**, setzt der Eigentümer selbst (Token mit Recht „Realtime“). Nur alle drei zusammen gelten. |
 | `CF_REALTIME_PRESET_HOST` / `CF_REALTIME_PRESET_PARTICIPANT` | optional, Standard `group_call_host` / `group_call_participant` (Standard-Presets einer im Dashboard angelegten App) |
@@ -78,9 +78,30 @@ Die `VOICE`-Integration läuft direkt nach `dashboardHubIntegration`, und das ha
 - Die Zustandslogik steckt in `use-voice.ts`. **Sprechen wird lokal gemessen:** Pro Audiospur läuft ein Web-Audio-Analyser, der nie mit den Lautsprechern verbunden ist. Liegt der Pegel über der Schwelle, gilt die Person als sprechend, mit 450 ms Nachlauf.
 - Die Zuordnung erfolgt über `customParticipantId` (= Mitglieds-ID).
 - **Spielerleiste:** Wer im Sprachchat ist, bekommt ein Mikro-Abzeichen am Profilbild (gold = Mikro an, grau mit rotem Symbol = stumm). Wer spricht, bekommt einen pulsierenden goldenen Ring. Der Status steht auch im zugänglichen Namen („spricht“, „im Sprachchat, stumm“).
-- **Video-UI** gibt es in der oberen Leiste nicht. Sie folgt in einer späteren Phase. `CVK_VOICE_VIDEO` bleibt ohne Wirkung auf die Oberfläche.
+- **Video-UI** gibt es nicht. Sie folgt in einer späteren Phase, dann mit eigenem Schalter.
 - **Geprüft:**
   - typecheck, ESLint (geänderte Dateien), `pnpm test` 635/635, alle Unit-Tests 746/746.
   - Lokale Browser-Sichtprüfung im Testmodus (1100 px): Leiste, Mikro-Zustände, Abzeichen und Ring. Den Sprechzustand habe ich dafür im DOM gesetzt, weil die Attrappe keinen Ton hat.
   - Die Integration wurde nicht neu ausgeführt, weil am Server nichts geändert ist.
 - **Bekannt und nicht neu:** Unter etwa 850 px ist die obere Leiste der SL schon ohne Voice zu voll. Die Voice-Gruppe wird unter 900 px auf Symbole verkleinert.
+
+## Nachtrag 24.11.2026: Aufräumen (`/simplify`)
+- **Wiederverwendung:**
+  - Die Freigabeliste ist jetzt ein gemeinsamer Helfer `campaignAllowed` (`domain/campaign-allowlist.ts`) für Voice und Charakterproben.
+  - `liveRoomKey` steht einmal in `server/live-game.ts` und wird von `live-checks` und `live-voice` genutzt.
+  - Die Route nutzt `input(req,2000)` aus `server/access.ts`.
+- **Vereinfachung:**
+  - Gemeinsame Abendprüfung `evening()`.
+  - Das ungenutzte `fetchImpl` ist raus, ebenso die toten Felder `video` und `available` und der `runId` im Status. Der Status liefert jetzt nur `{mode}`.
+  - Der Testmodus wird abgeleitet statt gespeichert, Auflegen läuft über einen einzigen `hangUp()`.
+- **Effizienz:**
+  - Der Sprechzustand liegt in einem kleinen Store (`SpeakingStore`, `useSyncExternalStore`). Beim Sprechen rendert nur das betroffene Profilbild neu, nicht mehr der ganze Spieltisch.
+  - Ein Messpuffer pro Spur statt eines neuen Puffers bei jeder Messung.
+  - `peers` ändert sich nur bei echtem Wechsel.
+- **Ebene:**
+  - `stage.module.css` färbt nur noch direkte Icons in `.simulation`. Die `!important`-Krücken in `voice-control.module.css` sind entfallen.
+  - Der Status „spricht“ steht nicht mehr im zugänglichen Namen, weil eine Ansage bei jedem Wort störend wäre. Die Teilnahme mit „im Sprachchat“ und „stumm“ bleibt im Namen.
+- **Bewusst nicht geändert:**
+  - Die Reihenfolgeabhängigkeit der HUB-Integrationsprüfung „letzter Spielabend“. Das ist ein bestehender Test außerhalb von Voice.
+  - Die übrigen vier Stellen mit eigener Raum-ID (`live-commands`, `live-vitals`).
+  - Exporte, die nur Tests verwenden.

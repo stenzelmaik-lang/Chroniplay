@@ -3,7 +3,7 @@
 import {env} from 'cloudflare:workers';
 import {z} from 'zod';
 import {database,gmOnly,HttpError,type Actor} from './access';
-import {liveMembers,isGmMembership,roomCrew} from './live-game';
+import {liveMembers,isGmMembership,roomCrew,liveRoomKey} from './live-game';
 import {stageRoom} from './live-stage';
 import {previewCharacter,w10Preview} from './w10-preview';
 import {readScene} from './story-scenes';
@@ -24,7 +24,7 @@ const requestSchema=z.object({...common,action:z.literal('requestCheck'),title:z
  targetCharacterIds:z.array(z.string().min(1).max(100)).min(1).max(30).refine(v=>new Set(v).size===v.length,'Figur doppelt.').optional(),preparedId:z.string().uuid().optional(),
  consequences:z.object({success:z.string().trim().max(1000),failure:z.string().trim().max(1000),botch:z.string().trim().max(1000)}).strict().optional()}).strict().refine(d=>!!d.audience!==!!d.targetCharacterIds,'Entweder Zielgruppe oder Zielfiguren angeben.');
 const rollSchema=z.object({...common,action:z.literal('rollCheck'),requestId:uuid,characterId:z.string().min(1).max(100),selection:z.object({attributeId:z.string().min(1).max(40),abilityId:z.string().min(1).max(80).optional(),specialtyId:z.string().regex(/^spec_[A-Za-z0-9-]{8,64}$/).optional()}).strict()}).strict();
-const roomKey=(a:Actor,sessionId:string)=>`live-table:${a.campaignId}:${sessionId}`;
+const roomKey=liveRoomKey;
 const eventKey=(eventId:string)=>`live-event:${eventId}`;
 type Row={body:string};
 async function prior(a:Actor,eventId:string){return database().prepare('SELECT body FROM records WHERE id=? AND campaign_id=?').bind(eventKey(eventId),a.campaignId).first<Row>();}

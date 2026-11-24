@@ -13,7 +13,7 @@ export function MvpVoteAdmin({sessionId,players,draft,receiptStatus,onBooked}:{
 }){
   const [poll,setPoll]=useState<View|null>(null),[busy,setBusy]=useState(false),[error,setError]=useState('');
   const [selected,setSelected]=useState(''),[characterId,setCharacterId]=useState(''),[amount,setAmount]=useState<1|2>(1);
-  useEffect(()=>{let active=true;setPoll(null);setError('');
+  useEffect(()=>{let active=true;queueMicrotask(()=>{if(active){setPoll(null);setError('');}});
     api<{poll:View}>('/api/mvp?sessionId='+encodeURIComponent(sessionId)).then(r=>{if(active)setPoll(r.poll);})
       .catch(e=>{if(active)setError((e as Error).message);});
     return()=>{active=false;};

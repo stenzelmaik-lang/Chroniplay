@@ -3,8 +3,8 @@
 .bottom{padding-top:16px;border-top:1px solid #ffffff12}
 .brand{display:inline-flex}
 .logo{display:block;width:150px;height:34px;object-fit:contain;object-position:left center;filter:drop-shadow(0 0 8px #e9b96e22)}
-.community,.legal{display:flex;gap:20px;flex-wrap:wrap}
-.community a,.legal a{display:inline-flex;align-items:center;gap:7px;color:#b6c0c4;text-decoration:none;letter-spacing:normal}
+.community,.legal{display:flex;gap:0 20px;flex-wrap:wrap}
+.community a,.legal a{display:inline-flex;align-items:center;gap:7px;min-height:44px;color:#b6c0c4;text-decoration:none;letter-spacing:normal}
 .community a:hover,.legal a:hover{color:#e9b96e}
 .legal a{font-weight:700;color:#f5f0e7}
 .footer a{outline-offset:4px}.footer a:focus-visible{outline:2px solid #e9b96e}

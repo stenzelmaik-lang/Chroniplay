@@ -31,7 +31,7 @@ export const visitorContent = {
     title: "ChroniPlay wird gebaut – und schon gespielt.",
     text: "Seit Oktober 2026 läuft die geschlossene Alpha: Unsere erste Runde spielt die Chronik von Kleve direkt auf ChroniPlay. Mit Alpha 2.0 kamen im November unter anderem nachvollziehbare Erfahrungspunkte, die Wahl des MVP am Spielabend und ein Storyboard für Spielleitungen dazu.",
     action: "Zum Entwicklertagebuch",
-    actionHref: "https://github.com/stenzelmaik-lang/chronik-von-kleve/discussions/categories/entwicklertagebuch",
+    actionHref: "https://github.com/stenzelmaik-lang/Chroniplay/discussions/categories/entwicklertagebuch",
     // erreicht: abgeschlossen bzw. laufend (goldene Markierung)
     steps: [
       { title: "Konzept", state: "Abgeschlossen", erreicht: true },
@@ -54,7 +54,7 @@ export const visitorContent = {
       { q: "Brauche ich eine App?", a: "Nein. ChroniPlay läuft im Browser – ohne Installation." },
       { q: "Was passiert mit meinen Daten?", a: "Kampagnen liegen in einem geschützten Spielbereich, den nur freigegebene Konten sehen. Inhalte der Spielleitung bleiben für Spieler verborgen. ChroniPlay läuft bei Cloudflare. Einzelheiten, etwa zur abschaltbaren Aktivitätsmessung, stehen in der Datenschutzerklärung.", links: [{ label: "Zur Datenschutzerklärung", href: "/datenschutz" }] },
       { q: "Ich habe mein Passwort vergessen. Was nun?", a: "Wende dich über den dir bekannten vertraulichen Kontaktweg an die Projektleitung. Nach einer Prüfung erhältst du einen Link zum Zurücksetzen, der 30 Minuten gültig ist. Bitte verschicke niemals Passwörter im Chat." },
-      { q: "Wo erfahre ich, was es Neues gibt?", a: "Im Entwicklertagebuch auf GitHub berichten wir regelmäßig über neue Funktionen. Kurze Updates erscheinen im Discord im Kanal #chroniplay-updates – dafür in #start-hier die Rolle ChroniPlay oder ChroniPlay-News wählen.", links: [{ label: "Entwicklertagebuch", href: "https://github.com/stenzelmaik-lang/chronik-von-kleve/discussions/categories/entwicklertagebuch" }, { label: "Discord", href: "https://discord.gg/y3n5JETXv3" }] },
+      { q: "Wo erfahre ich, was es Neues gibt?", a: "Im Entwicklertagebuch auf GitHub berichten wir regelmäßig über neue Funktionen. Kurze Updates erscheinen im Discord im Kanal #chroniplay-updates – dafür in #start-hier die Rolle ChroniPlay oder ChroniPlay-News wählen.", links: [{ label: "Entwicklertagebuch", href: "https://github.com/stenzelmaik-lang/Chroniplay/discussions/categories/entwicklertagebuch" }, { label: "Discord", href: "https://discord.gg/y3n5JETXv3" }] },
       { q: "Wie kann ich Feedback geben oder Fehler melden?", a: "Als Alpha-Spieler meldest du Fehler am besten direkt deiner Spielleitung – mit Seite, Zeitpunkt, deinen Schritten und einem Screenshot ohne Passwörter. Ideen und Wünsche sind im Discord im Forum #website-entwicklung willkommen." },
       { q: "Wer steckt hinter ChroniPlay?", a: "ChroniPlay wird von pan0ram entwickelt – Gamer, Streamer und leidenschaftlicher Weltenbauer. Seine Community trifft sich in der Weltenrast auf Discord." },
     ] as { q: string; a: string; links?: { label: string; href: string }[] }[],
@@ -74,9 +74,9 @@ export const visitorContent = {
       title: "Offen entwickelt auf GitHub",
       text: "Der Code von ChroniPlay ist öffentlich einsehbar. Im Entwicklertagebuch erzählen wir regelmäßig, was neu ist und woran wir gerade arbeiten.",
       diaryAction: "Zum Entwicklertagebuch",
-      diaryHref: "https://github.com/stenzelmaik-lang/chronik-von-kleve/discussions/categories/entwicklertagebuch",
+      diaryHref: "https://github.com/stenzelmaik-lang/Chroniplay/discussions/categories/entwicklertagebuch",
       repoAction: "Projekt auf GitHub",
-      repoHref: "https://github.com/stenzelmaik-lang/chronik-von-kleve",
+      repoHref: "https://github.com/stenzelmaik-lang/Chroniplay",
     },
   },
 };
