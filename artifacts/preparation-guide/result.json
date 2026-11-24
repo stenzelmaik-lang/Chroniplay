@@ -1,9 +1,0 @@
-{
-  "status": "passed",
-  "sessionId": "session-21fec4aa-b5cf-4db9-aacc-668131fd902a",
-  "sceneId": "scene-cb41a11a-8649-487a-bd1b-d619335a23e0",
-  "scope": "synthetic local only",
-  "steps": "4 session / 8 scene",
-  "invalidDraftPreserved": true,
-  "conflictProtected": true
-}

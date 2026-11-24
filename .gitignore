@@ -49,3 +49,6 @@ next-env.d.ts
 *.tsbuildinfo
 
 /.local-work/
+
+# Screenshots und Ergebnisse lokaler Browsertests
+/artifacts/
