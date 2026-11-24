@@ -1,4 +1,4 @@
-name: Project CI and W10 checks
+name: "CI · Grundprüfung"
 
 on:
   pull_request:
@@ -12,7 +12,7 @@ permissions:
 
 jobs:
   verify:
-    name: Frozen install, types, lint, tests, build
+    name: "Typen, Lint, Tests, Build, Server-Integration"
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
@@ -95,7 +95,7 @@ jobs:
         run: pnpm run test:integration:run
 
   shared-dice-windows:
-    name: Shared Dice test (Windows path semantics)
+    name: "Würfel unter Windows"
     runs-on: windows-latest
     timeout-minutes: 10
     steps:

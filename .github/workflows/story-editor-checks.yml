@@ -1,4 +1,4 @@
-name: Command Center – Story Editor checks
+name: "CI · Spielleitung (Vorbereitung)"
 
 on:
   push:
@@ -36,7 +36,7 @@ permissions:
 
 jobs:
   verify:
-    name: Typecheck, Lint, Tests, Build
+    name: "npm-Lockfile und Lint Vorbereitung"
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -45,22 +45,15 @@ jobs:
         with:
           node-version: "22.16.0"
           cache: npm
-      - name: Install locked dependencies
+      # Typen, Tests, Build und Server-Integration laufen bereits in "CI · Grundprüfung" (pnpm).
+      # Dieser Job prüft nur, was dort fehlt: dass package-lock.json zu package.json passt, und den Lint der Vorbereitung.
+      - name: npm-Lockfile installieren (npm ci)
         run: npm ci --include=dev --include=optional --no-audit --no-fund
-      - name: TypeScript
-        run: npm run typecheck
-      - name: ESLint (affected Story Editor files)
-        # Existing prototype code outside this PR has unresolved global lint errors.
+      - name: ESLint Vorbereitung und Nachrichten
         run: ./node_modules/.bin/eslint app/spielbereich/modules/story-workspace.tsx app/spielbereich/modules/preparation-guide.tsx app/spielbereich/modules/preparation-materials.tsx app/spielbereich/modules/preparation-npcs.tsx app/spielbereich/modules/preparation-catalog.ts app/spielbereich/modules/protected-image-gallery.tsx app/spielbereich/modules/rich-text.tsx app/spielbereich/modules/session-overview.tsx app/spielbereich/modules/preparation-panel.tsx app/spielbereich/modules/preparation-whispers.tsx app/spielbereich/modules/message-center.tsx app/spielbereich/modules/personal-message-body.tsx app/api/messages/route.ts app/api/files/route.ts domain/personal-message.ts server/personal-message-files.ts server/preparation-recipients.ts domain/preparation-guide.ts tests/story-preparation.test.mjs tests/preparation-guide-browser.mjs
-      - name: Unit and regression tests
-        run: npm test
-      - name: Production build
-        run: npm run build
-      - name: HTTP integration tests
-        run: npm run test:integration:run
 
   browser-smoke:
-    name: Isolated SL browser journey (desktop, mobile, HTML)
+    name: "Browser-Rundgang SL (Desktop, Handy)"
     # Independent from typecheck/build job so the isolated UI check runs concurrently.
     runs-on: ubuntu-24.04
     timeout-minutes: 30

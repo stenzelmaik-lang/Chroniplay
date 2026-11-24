@@ -1,4 +1,4 @@
-name: ChroniPlay – Entwicklertagebuch nach Discord
+name: "Entwicklertagebuch → Discord"
 
 on:
   discussion:
@@ -14,6 +14,7 @@ concurrency:
 
 jobs:
   send-approved-discussion:
+    name: "Freigegebenen Beitrag senden"
     if: >-
       github.event.label.name == 'discord-freigabe' &&
       github.actor == 'stenzelmaik-lang' &&
