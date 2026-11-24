@@ -76,6 +76,8 @@ test('top bar: speaking highlight is measured locally and never played back twic
  assert.match(hook,/createAnalyser\(\)/,'level meter per audio track');
  assert.ok(!/\.connect\((ctx|a\.ctx)\.destination\)/.test(hook),'analyser is never connected to the speakers');
  assert.match(hook,/customParticipantId/,'room participants map back to ChroniPlay members');
+ assert.match(hook,/modules:\{experimentalAudioPlayback:true\}/,'the SDK plays the other members\' voices; without it nobody hears anyone');
+ assert.match(hook,/'autoplayError'/,'blocked autoplay shows the "Ton einschalten" hint');
  const roster=readFileSync(new URL('../app/spielbereich/modules/spieltisch/participants.tsx',import.meta.url),'utf8');
  assert.match(roster,/data-speaking=\{talking\|\|undefined\}/,'avatar reads the speaking store itself');
  assert.match(roster,/' · im Sprachchat, stumm'/,'voice state is in the accessible name');
