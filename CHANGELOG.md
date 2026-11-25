@@ -6,7 +6,7 @@ Was sich auf chroniplay.cc geändert hat, die neueste Version zuerst. Versionssc
 - Versionsnummer 2.5.5 in `package.json`, Release-Nachweis für 2.5.5.
 
 ## [2.5.5] – 25.11.2026: Vision Engine
-Nachweis: `docs/releases/2026-11-25-v2.5.5-vision-engine.md` · Worker `7e61c20b` · keine Migration
+Nachweis: `docs/releases/2026-11-25-v2.5.5-vision-engine.md` · Tag `v2.5.5` · Worker `7e61c20b` · keine Migration
 - **Vision Engine:** Visionen treten wolkig aus lebendigem Nebel, ohne sichtbare Bildkanten, mit eigener Effektsprache je Visionstyp, frei stehender Schrift und Ton auf demselben Zeitplan (#112).
 - **Regie im Ersteller:** neue Visionen mit Live-Bühne, Brennpunkt und geschütztem Kern je Bild, Platz, Größe, Nachhall-Wort, Eintauchen und Schlusssatz. Bestehende Visionen bleiben unverändert („Regie einrichten“ auf Wunsch) (#112).
 - **Bilder getrennt:** Eine Vision zeigt nur ihre eigenen Bilder, alle anderen bleiben in der Galerie (#112).
