@@ -3,7 +3,11 @@
 Was sich auf chroniplay.cc geändert hat, die neueste Version zuerst. Versionsschema `A.M.N` (siehe `docs/VERSIONIERUNG.md`). Technische Nachweise stehen in `docs/releases/`.
 
 ## [Unveröffentlicht]
-- Versionsnummer 2.5.5 in `package.json`, Release-Nachweis für 2.5.5.
+- Versionsnummer 2.5.6 in `package.json`, Release-Nachweis für 2.5.6.
+
+## [2.5.6] – 25.11.2026: Regie-Werkbank für Visionen
+Nachweis: `docs/releases/2026-11-25-v2.5.6-vision-werkbank.md` · Worker `25383441` · keine Migration
+- **Regie-Werkbank im Ersteller:** Ablauf mit Eintauchen, Bildmomenten und Abschluss, Live-Bühne im echten Format (Desktop, Tablet, Handy) mit Zeitleiste, Visionstyp-Karten, Moment-Inspektor, Ton, Prüfung mit Lesbarkeitsmessung und „Als Spieler ansehen“ (#114).
 
 ## [2.5.5] – 25.11.2026: Vision Engine
 Nachweis: `docs/releases/2026-11-25-v2.5.5-vision-engine.md` · Tag `v2.5.5` · Worker `7e61c20b` · keine Migration
