@@ -3,7 +3,17 @@
 Was sich auf chroniplay.cc geändert hat, die neueste Version zuerst. Versionsschema `A.M.N` (siehe `docs/VERSIONIERUNG.md`). Technische Nachweise stehen in `docs/releases/`.
 
 ## [Unveröffentlicht]
-- Versionsnummer 2.5.3 in `package.json`, Release-Nachweis für 2.5.3.
+- Versionsnummer 2.5.5 in `package.json`, Release-Nachweis für 2.5.5.
+
+## [2.5.5] – 25.11.2026: Vision Engine
+Nachweis: `docs/releases/2026-11-25-v2.5.5-vision-engine.md` · Worker `7e61c20b` · keine Migration
+- **Vision Engine:** Visionen treten wolkig aus lebendigem Nebel, ohne sichtbare Bildkanten, mit eigener Effektsprache je Visionstyp, frei stehender Schrift und Ton auf demselben Zeitplan (#112).
+- **Regie im Ersteller:** neue Visionen mit Live-Bühne, Brennpunkt und geschütztem Kern je Bild, Platz, Größe, Nachhall-Wort, Eintauchen und Schlusssatz. Bestehende Visionen bleiben unverändert („Regie einrichten“ auf Wunsch) (#112).
+- **Bilder getrennt:** Eine Vision zeigt nur ihre eigenen Bilder, alle anderen bleiben in der Galerie (#112).
+
+## [2.5.4] – 25.11.2026: Profil
+Worker `d9257fa3` · Release durch ChatGPT, Nachweis folgt
+- **Profil modernisiert:** Spielerprofil, eigener Avatar, Profilmotive und kampagnenbezogene Moderation (#111).
 
 ## [2.5.3] – 24.11.2026: Rubikwürfel, Zuschauen, Spielbox
 Nachweis: `docs/releases/2026-11-24-v2.5.3-wuerfel-spielbox.md` · Tag `v2.5.3` · Worker `701370e4` · Migration `0020`
