@@ -5,7 +5,7 @@ import {stageRoom} from './live-stage';
 import {liveMembers,roomCrew} from './live-game';
 import {characterDetailProjection} from './character-projection';
 import {characterRecord} from './inventory';
-import {profileBanners,profilePlayStyles} from '@/domain/account-access';
+import {campaignProfilePresentation} from '@/domain/player-profile';
 import {publicCharacterCard} from '@/domain/live-participants';
 import type {LegacyRecordRow} from '@/domain/legacy';
 import {sharedImages} from '@/domain/player-gallery';
@@ -20,15 +20,9 @@ export async function participantContext(a:Actor,sessionId:string,memberId:strin
 export async function participantIdentity(a:Actor,memberId:string){
  const row=await database().prepare("SELECT COALESCE(u.display_name,m.name) AS name,p.avatar_file_id AS avatar,p.preferences FROM members m LEFT JOIN auth_member_links l ON l.member_id=m.id LEFT JOIN auth_users u ON u.id=l.auth_user_id AND u.status='active' LEFT JOIN auth_profiles p ON p.user_id=u.id WHERE m.id=?").bind(memberId).first<{name:string;avatar:string|null;preferences:string|null}>();
  const preferences=JSON.parse(row?.preferences||'{}')??{};
- const shared=Array.isArray(preferences.sharePlayerProfileCampaigns)&&preferences.sharePlayerProfileCampaigns.includes(a.campaignId);
  const activeCharacterId=preferences.activeCharacters?.[a.campaignId];
  return {name:row?.name||'',hasAvatar:!!row?.avatar,activeCharacterId:typeof activeCharacterId==='string'?activeCharacterId:null,
-  presentation:shared?{
-   pronouns:typeof preferences.pronouns==='string'?preferences.pronouns:'',
-   introduction:typeof preferences.introduction==='string'?preferences.introduction:'',
-   banner:profileBanners.find(banner=>banner===preferences.banner)??'fog',
-   playStyles:Array.isArray(preferences.playStyles)?profilePlayStyles.filter(style=>preferences.playStyles.includes(style)).slice(0,5):[],
-  }:null};
+  presentation:campaignProfilePresentation(preferences,a.campaignId)};
 }
 export async function participantCharacters(a:Actor,memberId:string,publicOnly=false){
  const rows=await database().prepare("SELECT r.* FROM records r JOIN entities e ON e.id=r.id AND e.campaign_id=r.campaign_id WHERE r.campaign_id=? AND r.owner_id=? AND r.kind='charaktere' AND e.canon_status<>'GM_SECRET' AND (?=1 OR (COALESCE(e.default_visibility,'')<>'sl_secret' AND (json_extract(r.body,'$.presentation.published')=1 OR json_extract(r.body,'$.profile.visibility.description')='group' OR json_extract(r.body,'$.profile.visibility.story')='group' OR json_extract(r.body,'$.profile.visibility.drive')='group' OR json_extract(r.body,'$.profile.visibility.allies')='group' OR EXISTS (SELECT 1 FROM json_each(r.body,'$.characterMedia') m WHERE json_extract(m.value,'$.shared')=1) OR (json_type(r.body,'$.presentation') IS NULL AND r.visibility='group' AND COALESCE(json_extract(r.body,'$.discovered'),1)<>0 AND COALESCE(json_extract(r.body,'$.content_unlocked'),1)<>0)))) ORDER BY r.created_at,r.id").bind(a.campaignId,memberId,!publicOnly&&(a.id===memberId||a.gm)?1:0).all<LegacyRecordRow>();

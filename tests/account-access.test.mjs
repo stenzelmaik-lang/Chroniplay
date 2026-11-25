@@ -3,6 +3,42 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {DatabaseSync} from 'node:sqlite';
 import {canInvite,profileInput,managementInput,acceptInput} from '../domain/account-access.ts';
+import {campaignProfilePresentation, illustratedProfileBanners, profileMotif, profileMotifCover, profilePlayStyles} from '../domain/player-profile.ts';
+
+test('Illustrated profile motifs resolve only to the seven packaged assets and retain legacy colors',()=>{
+  assert.equal(illustratedProfileBanners.length,7);
+  for(const id of illustratedProfileBanners){
+    const motif=profileMotif(id);
+    assert.ok(readFileSync('public'+motif.image).length>0);
+    assert.ok(profileMotifCover(id).includes(motif.image));
+  }
+  for(const previous of ['fog','neon','candle']) assert.equal(profileMotif(previous).image,undefined);
+  assert.equal(profileMotifCover('https://other.invalid/image'),profileMotifCover('fog'));
+});
+
+test('Profile accepts illustrated motifs, extended styles and pace while keeping review decisions server-only',()=>{
+  const base={version:1,displayName:'Tester',avatarFileId:null,preferences:{reducedMotion:false,compactView:false,
+    banner:'zeitwolf',playPace:'calm',playStyles:profilePlayStyles.slice(0,8),customPlayStyles:['  Mythen  entdecken  ']}};
+  assert.deepEqual(profileInput.parse(base).preferences.customPlayStyles,['Mythen entdecken']);
+  for (const customPlayStyles of [
+    ['Ermittlungen'],['leise Momente','Leise Momente'],['<script>'],['https://example.invalid'],['A\u202ebc'],['aa','bb','cc','dd'],
+  ]) assert.equal(profileInput.safeParse({...base,preferences:{...base.preferences,customPlayStyles}}).success,false);
+  assert.equal(profileInput.safeParse({...base,preferences:{...base.preferences,customPlayStyleReviews:[]}}).success,false);
+});
+
+test('Campaign projection hides private, pending, blocked and edited own styles',()=>{
+  const preferences={sharePlayerProfileCampaigns:['kleve','andere'],banner:'mondportal',playPace:'quick',
+    playStyles:['Ermittlungen'],customPlayStyles:['Leise Momente','Ruhige Szenen','Wiener Geschichten'],
+    customPlayStyleReviews:[{campaignId:'kleve',style:'Leise Momente',decision:'approved'},
+      {campaignId:'kleve',style:'Ruhige Szenen',decision:'blocked'},
+      {campaignId:'kleve',style:'Wiener Geschichte',decision:'approved'},
+      {campaignId:'andere',style:'Ruhige Szenen',decision:'approved'}]};
+  assert.deepEqual(campaignProfilePresentation(preferences,'kleve')?.playStyles,['Ermittlungen','Leise Momente']);
+  assert.deepEqual(campaignProfilePresentation(preferences,'andere')?.playStyles,['Ermittlungen','Ruhige Szenen']);
+  assert.equal(campaignProfilePresentation(preferences,'ungeteilt'),null);
+  assert.equal(campaignProfilePresentation(preferences,'kleve')?.banner,'mondportal');
+  assert.equal(campaignProfilePresentation(preferences,'kleve')?.playPace,'quick');
+});
 
 test('Only active campaign owners/GM can issue player invitations; GM is not platform admin',()=>{
   for(const role of ['campaign_owner','campaign_gm'])assert.equal(canInvite(role,'active'),true);

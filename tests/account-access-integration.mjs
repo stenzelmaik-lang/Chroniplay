@@ -69,6 +69,19 @@ export async function accountAccessIntegration({req,check,localSql,sqlQuote,base
   check((await req('/api/profile/avatar?id='+file.id,'b')).s===404,'PROFILE foreign query cannot select another users avatar');
   const bp=(await req('/api/profile','b')).d;
   check((await req('/api/profile','b','PATCH',{version:bp.version,displayName:bp.displayName,avatarFileId:file.id,preferences:bp.preferences})).s===403,'PROFILE another player cannot attach the private uploaded avatar');
+  const reviewPath='/api/profile/style-reviews',style='Leise Momente';
+  const proposal=(profile,shares)=>({...change,displayName:profile.displayName,version:profile.version,avatarFileId:profile.avatarFileId,
+    preferences:{...profile.preferences,banner:'zeitwolf',customPlayStyles:[style],playPace:'calm',sharePlayerProfileCampaigns:shares}});
+  const updateStyle=(who,decision)=>req(reviewPath,who,'PATCH',{memberId:'sprint1-a',style,decision});
+  let styleProfile=(await req('/api/profile','a')).d;
+  check((await req('/api/profile','a','PATCH',proposal(styleProfile,[]))).s===200,'STYLE a player can keep a private draft');
+  check(!(await req(reviewPath,'gm')).d.reviews.some(item=>item.memberId==='sprint1-a'),'STYLE moderator cannot read private styles');
+  styleProfile=(await req('/api/profile','a')).d;
+  check((await req('/api/profile','a','PATCH',proposal(styleProfile,['chronik-von-kleve']))).s===200,'STYLE submitting a shared style creates a pending review');
+  check((await req(reviewPath,'a')).s===403&&(await updateStyle('a','approved')).s===403,'STYLE players cannot read or write review decisions');
+  check((await req(reviewPath,'gm')).d.reviews.some(item=>item.memberId==='sprint1-a'&&item.style===style&&item.status==='pending'),'STYLE eligible moderator can read the pending style');
+  check((await updateStyle('gm','approved')).s===200&&(await req('/api/profile','a')).d.styleReviews[0]?.status==='approved','STYLE GM approval is scoped and visible to the owner');
+  check((await updateStyle('gm','blocked')).s===200&&(await req('/api/profile','a')).d.styleReviews[0]?.status==='blocked','STYLE GM can block an approved entry');
   const s1=(await call('/api/auth/sessions',login.cookie)).d.sessions;
   check(s1.filter(s=>s.current).length===1&&s1.every(s=>s.id&&!('session_hash' in s)),'SESSIONS exposes opaque public IDs and exactly one current session');
   const bSession=(await req('/api/auth/sessions','b')).d.sessions[0].id;

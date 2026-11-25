@@ -1,7 +1,8 @@
 import { env } from "cloudflare:workers";
 import { currentUser, rateAllowed, rateKey, recordFailure, verifyPassword } from "@/server/platform-auth";
 import { database, HttpError } from "@/server/database";
-import { profileBanners, profileInput, profilePlayStyles } from "@/domain/account-access";
+import { profileInput } from "@/domain/account-access";
+import { profileBanners, profilePlayPaces, readCustomPlayStyles, readProfilePlayStyles, readStyleReviews, styleReviewStatus } from "@/domain/player-profile";
 
 export async function account(request: Request) {
   const user = await currentUser(request);
@@ -29,6 +30,10 @@ export async function profile(request: Request) {
     accountRoles(u.memberId),
   ]);
   const preferences=JSON.parse(row?.preferences||'{}');
+  const customPlayStyles = readCustomPlayStyles(preferences.customPlayStyles);
+  const sharedCampaigns = memberships.results.filter(membership => membership.status === 'active' &&
+    Array.isArray(preferences.sharePlayerProfileCampaigns) && preferences.sharePlayerProfileCampaigns.includes(membership.id));
+  const reviews = readStyleReviews(preferences.customPlayStyleReviews);
   return { displayName:u.displayName, email:u.email, version:row!.version, avatarFileId:row?.avatar_file_id ?? null,
     preferences:{
       reducedMotion:preferences.reducedMotion===true,
@@ -38,16 +43,24 @@ export async function profile(request: Request) {
       ...(typeof preferences.realName==='string'?{realName:preferences.realName}:{}),
       ...(typeof preferences.pronouns==='string'?{pronouns:preferences.pronouns}:{}),
       ...(profileBanners.includes(preferences.banner)?{banner:preferences.banner}:{}),
-      ...(Array.isArray(preferences.playStyles)?{playStyles:profilePlayStyles.filter(style=>preferences.playStyles.includes(style)).slice(0,5)}:{}),
-      ...(Array.isArray(preferences.sharePlayerProfileCampaigns)?{sharePlayerProfileCampaigns:memberships.results.filter(membership=>membership.status==='active'&&preferences.sharePlayerProfileCampaigns.includes(membership.id)).map(membership=>membership.id)}:{}),
+      ...(Array.isArray(preferences.playStyles)?{playStyles:readProfilePlayStyles(preferences.playStyles)}:{}),
+      ...(Array.isArray(preferences.sharePlayerProfileCampaigns)?{sharePlayerProfileCampaigns:sharedCampaigns.map(membership=>membership.id)}:{}),
+      customPlayStyles,
+      playPace: profilePlayPaces.find(pace => pace === preferences.playPace) ?? null,
       ...(typeof preferences.introduction==='string'?{introduction:preferences.introduction}:{}),
     },
+    styleReviews: sharedCampaigns.flatMap(campaign => customPlayStyles.map(style => ({
+      campaignId: campaign.id, style, status: styleReviewStatus(reviews, campaign.id, style),
+    }))),
     campaigns:memberships.results, platformRoles, canManage:platformRoles.includes("platform_admin") || memberships.results.some(r => r.status==='active' && ['campaign_owner','campaign_gm'].includes(r.role)),
   };
 }
 export async function saveProfile(request:Request, value:unknown) {
   const u=await account(request), parsed=profileInput.safeParse(value);
-  if(!parsed.success) throw new HttpError(400,"Bitte Anzeigename, Profilbild und Einstellungen prüfen.");
+  if(!parsed.success) {
+    const customStyleInvalid = parsed.error.issues.some(issue => issue.path[0] === "preferences" && issue.path[1] === "customPlayStyles");
+    throw new HttpError(400, customStyleInvalid ? "Prüfe deine eigenen Spielstile. Erlaubt sind bis zu drei kurze, unterschiedliche Angaben ohne Links." : "Bitte Anzeigename, Profilbild und Einstellungen prüfen.");
+  }
   const d=parsed.data,db=database();
   if(d.preferences.sharePlayerProfileCampaigns?.length){
     const memberships=await db.prepare("SELECT campaign_id FROM campaign_memberships WHERE user_id=? AND status='active'").bind(u.memberId).all<{campaign_id:string}>();
