@@ -90,6 +90,8 @@ Alles liegt in `prototypes/vision-engine/` (Details in der dortigen `README.md`)
 
 ## Prüfgrenzen
 
+Zielplattform ist laut Besitzer (25.11.2026) hauptsächlich der PC. Handy, Tablet, Safari und Firefox sind nachrangig; das Handy-Layout bleibt als Rückfall erhalten.
+
 - **Bildrate nicht belastbar gemessen:** Der Browserbereich war während der Messungen verborgen; der Browser drosselt dann auf etwa 10 Bilder pro Sekunde. Eine einzelne Ablesung bei sichtbarem Bereich zeigte 60 fps. GPU- und CPU-Zeiten sind unabhängig davon gemessen.
 - Nur ein Rechner mit starker Grafikkarte. Keine Messung auf integrierter Grafik, Tablet oder echtem Handy. Formate nur emuliert, nur Chromium (kein Safari, kein Firefox).
 - **Ton nicht geprüft:** Die Prüfläufe starteten ohne Nutzergeste und deshalb stumm. Klang, Lautstärke und Schleifenübergänge muss ein Mensch anhören.
@@ -101,7 +103,7 @@ Alles liegt in `prototypes/vision-engine/` (Details in der dortigen `README.md`)
 ## Offen für die Abnahme und danach
 
 1. Visuelle Abnahme durch den Besitzer, am besten mit Ton und im Vollbild (`?play`).
-2. Messung auf einem schwächeren Gerät (integrierte Grafik, Handy).
+2. Bildrate bei sichtbarem Browser in Full HD messen (`?play&hud=1`, Taste P) und einmal auf einem PC oder Laptop mit integrierter Grafik.
 3. Entscheidung zur Integration: Engine als Bühne im bestehenden `VisionPlayer`, Zustellungs-API und Rechte bleiben unverändert; `direction` als optionales Schemafeld; Bildbestand je Vision im Galerieabschnitt „Visionen“.
 4. Für die Integration: Texturen nur für aktuelles und nächstes Bild laden (heute alle fünf, etwa 42 MB Grafikspeicher).
 
