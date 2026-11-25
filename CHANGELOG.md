@@ -3,7 +3,14 @@
 Was sich auf chroniplay.cc geändert hat, die neueste Version zuerst. Versionsschema `A.M.N` (siehe `docs/VERSIONIERUNG.md`). Technische Nachweise stehen in `docs/releases/`.
 
 ## [Unveröffentlicht]
-- Versionsnummer 2.5.2 in `package.json`, Release-Nachweise für 2.5.1 und 2.5.2.
+- Versionsnummer 2.5.3 in `package.json`, Release-Nachweis für 2.5.3.
+
+## [2.5.3] – 24.11.2026: Rubikwürfel, Zuschauen, Spielbox
+Nachweis: `docs/releases/2026-11-24-v2.5.3-wuerfel-spielbox.md` · Tag `v2.5.3` · Worker `701370e4` · Migration `0020`
+- **Rubikwürfel in der Spielpause:** alle 12 Drehungen vorwärts und rückwärts, Timer ab dem ersten Zug, Konfetti beim Lösen, eigene Bestenliste (#109).
+- **Zuschauen:** Am laufenden Spielabend lädst du andere ein, deinem Würfel live zuzusehen (#109).
+- **Spielbox:** öffentliche Seite `/spielbox` mit dem Würfel, ohne Anmeldung, Bestzeiten nur im eigenen Browser (#109).
+- **Visionenplayer:** filmische Bildblitze (#108).
 
 ## [2.5.2] – 24.11.2026: Voice-Ton
 Nachweis: `docs/releases/2026-11-24-v2.5.2-voice-ton.md` · Tag `v2.5.2` · Worker `2631adec`
