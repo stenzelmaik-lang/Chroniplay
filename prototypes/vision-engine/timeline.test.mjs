@@ -2,9 +2,9 @@
 // node --test prototypes/vision-engine/timeline.test.mjs
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {buildTimeline, frameAt, nextStop, echoIndices, readingMs, FLASH_MIN_GAP_MS, flashEnvelope} from './src/timeline.js';
-import {VISION_TYPES, typeById} from './src/presets.js';
-import {layoutMoment} from './src/layout.js';
+import {buildTimeline, frameAt, nextStop, echoIndices, readingMs, FLASH_MIN_GAP_MS, flashEnvelope} from '../../app/spielbereich/modules/vision-engine/timeline.js';
+import {VISION_TYPES, typeById} from '../../app/spielbereich/modules/vision-engine/presets.js';
+import {layoutMoment} from '../../app/spielbereich/modules/vision-engine/layout.js';
 import {defaultVision, toSceneWhisper} from './src/vision-default.js';
 
 const v = defaultVision();

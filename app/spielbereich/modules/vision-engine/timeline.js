@@ -63,7 +63,8 @@ export function buildTimeline(vision, opts = {}) {
   const overlap = reduced ? 0 : T.overlapMs;
   const imageHold = Math.max(2600, Math.round(3200 * f));
   const textEnter = reduced ? 700 : type.text.enterMs;
-  const moments = (vision.moments || []).filter(m => m && m.image);
+  // Bildmomente und reine Wortmomente (Text im Nebel, ohne Bild)
+  const moments = (vision.moments || []).filter(m => m && (m.image || (m.text || '').trim()));
   const n = moments.length;
   const texts = [], cues = [], stops = [], tm = [];
   const fogIn = reduced ? 900 : T.enterMs;
@@ -82,9 +83,23 @@ export function buildTimeline(vision, opts = {}) {
   }
   cursor = Math.max(cursor, fogIn);
 
-  let lastFlash = -Infinity;
+  let lastFlash = -Infinity, imageNo = 0;
   moments.forEach((m, i) => {
     const last = i === n - 1;
+    if (!m.image) {
+      const text = (m.text || '').trim(), echo = (m.echo || '').trim();
+      const r = readingMs(text, type, f, reduced);
+      const inAt = cursor, outAt = inAt + textEnter + r;
+      const contained = !!(echo && echoIndices(text, echo).length);
+      const echoOut = echo ? outAt + Math.max(1700, readingMs(echo, type, f, reduced) * 0.55) : 0;
+      texts.push({key: `m${i}`, role: 'fragment', text, inAt, outAt, echo: contained ? echo : '', echoOut: contained ? echoOut : 0, moment: i, place: 'center'});
+      if (echo && !contained) texts.push({key: `e${i}`, role: 'echo', text: echo, inAt: outAt, outAt: echoOut, echo: '', echoOut: 0, moment: i, place: 'center'});
+      tm.push({index: i, image: false, slot: -1, emergeStart: inAt, holdStart: inAt + textEnter, dissolveStart: outAt, dissolveEnd: outAt, emerge: textEnter, dissolveMs: 0, hold: r, flashAt: null, flashAmp: 0, escalation: 0, echoOut, last});
+      stops.push(inAt + textEnter, outAt);
+      cursor = outAt + 700 + (echo ? 500 : 0);
+      return;
+    }
+    const slot = imageNo++ % 2;
     const emergeStart = Math.max(0, cursor - (i > 0 ? overlap : 0));
     const holdStart = emergeStart + emerge;
     const text = (m.text || '').trim();
@@ -110,7 +125,7 @@ export function buildTimeline(vision, opts = {}) {
     }
     const escalation = type.escalate ? (n > 1 ? i / (n - 1) : 1) : 0;
     const flashAmp = flashCap * (type.escalate ? 0.7 + 0.3 * escalation : 1);
-    tm.push({index: i, slot: i % 2, emergeStart, holdStart, dissolveStart, dissolveEnd, emerge, dissolveMs, hold, flashAt, flashAmp, escalation, echoOut, last});
+    tm.push({index: i, image: true, slot, emergeStart, holdStart, dissolveStart, dissolveEnd, emerge, dissolveMs, hold, flashAt, flashAmp, escalation, echoOut, last});
 
     cues.push({t: Math.max(0, emergeStart - 250), type: 'swell', moment: i});
     if (flashAt !== null) cues.push({t: flashAt, type: 'impact', moment: i});
@@ -154,7 +169,7 @@ export function frameAt(tl, t) {
   };
   let visible = 0;
   for (const m of tl.moments) {
-    if (t < m.emergeStart || t > m.dissolveEnd) continue;
+    if (!m.image || t < m.emergeStart || t > m.dissolveEnd) continue;
     const reveal = ease.inOut(clamp01((t - m.emergeStart) / m.emerge));
     const dissolve = ease.in(clamp01((t - m.dissolveStart) / m.dissolveMs));
     const trans = Math.max(1 - reveal, dissolve);

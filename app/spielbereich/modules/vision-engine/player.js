@@ -31,15 +31,19 @@ export function loadBitmap(url) {
 }
 
 const TOOLS = `
-  <button type="button" class="v-btn v-next" data-act="next" aria-keyshortcuts="Space ArrowRight">Weiter ›</button>
+  <button type="button" class="v-btn v-next" data-act="next" data-hint="true" aria-keyshortcuts="Space ArrowRight">Weiter ›</button>
   <button type="button" class="v-btn" data-act="fulltext" aria-pressed="false">Text vollständig anzeigen</button>
   <button type="button" class="v-btn" data-act="effects" aria-pressed="false">Effekte ruhiger</button>
   <button type="button" class="v-btn" data-act="sound">Ton aus</button>
   <button type="button" class="v-btn" data-act="skip">Vision überspringen</button>`;
 
 export class VisionPlayer {
-  constructor(stage, {mode = 'play', onState = () => {}, onEnd = () => {}} = {}) {
-    this.stage = stage; this.mode = mode; this.onState = onState; this.onEnd = onEnd;
+  /**
+   * @param {HTMLElement} stage
+   * @param {{mode?: string, onState?: (state: any) => void, onEnd?: () => void, label?: string, badge?: string}} [options]
+   */
+  constructor(stage, {mode = 'play', onState = () => {}, onEnd = () => {}, label = 'Eine Vision', badge = ''} = {}) {
+    this.stage = stage; this.mode = mode; this.onState = onState; this.onEnd = onEnd; this.label = label; this.badge = badge;
     this.vision = null; this.moments = []; this.tl = null; this.t = 0; this.playing = false; this.rate = 1; this.ff = null;
     this.ended = false; this.exitAt = 0; this.ambient = 0; this.last = 0; this.layouts = []; this.dims = new Map();
     this.displayScale = 1; this.osReduced = false; this.ownReduced = false; this.autoQuality = true; this.hudOn = false;
@@ -64,8 +68,8 @@ export class VisionPlayer {
     this.ro = new ResizeObserver(() => this._layout());
     this.ro.observe(stage);
     this.placeOf = x => {
-      if (x.role === 'intro' || x.role === 'final') return isPortrait(this.view) ? 'center-portrait' : 'center';
-      return this.layouts[x.moment]?.textPlace || 'bottom';
+      if (x.role === 'intro' || x.role === 'final' || !this.layouts[x.moment]) return isPortrait(this.view) ? 'center-portrait' : 'center';
+      return this.layouts[x.moment].textPlace;
     };
     this._loop = this._loop.bind(this);
     this.raf = requestAnimationFrame(this._loop);
@@ -85,7 +89,7 @@ export class VisionPlayer {
       <div class="v-end" hidden><button type="button" class="v-btn v-btn--primary" data-act="ack">Ich habe alles gesehen</button><button type="button" class="v-btn" data-act="replay">Noch einmal</button></div>
       <div class="v-tools" role="toolbar" aria-label="Vision steuern">${TOOLS}<button type="button" class="v-btn" data-act="unmute" hidden>Ton einschalten</button></div>
       <pre class="v-hud" hidden></pre>
-      <p class="v-notice" hidden></p>`;
+      <p class="v-notice" hidden></p>${this.badge ? `<p class="v-badge">${this.badge}</p>` : ''}`;
     this.canvas = s.querySelector('.v-canvas');
     this.words = s.querySelector('.v-words');
     this.live = s.querySelector('.v-live');
@@ -102,7 +106,7 @@ export class VisionPlayer {
     });
     if (this.mode === 'play') {
       s.tabIndex = -1;
-      s.setAttribute('role', 'dialog'); s.setAttribute('aria-modal', 'true'); s.setAttribute('aria-label', 'Eine Vision');
+      s.setAttribute('role', 'dialog'); s.setAttribute('aria-modal', 'true'); s.setAttribute('aria-label', this.label);
       s.addEventListener('keydown', e => this._keys(e));
     }
     let idle;
@@ -169,10 +173,12 @@ export class VisionPlayer {
     const v = this.vision;
     if (!v) return;
     const first = !this.tl;
-    this.moments = (v.moments || []).filter(m => m && m.image);
+    this.moments = (v.moments || []).filter(m => m && (m.image || (m.text || '').trim()));
     const type = typeById(v.type);
     const typeChanged = this.type && this.type.id !== type.id;
     this.type = type;
+    this.stage.dataset.preset = type.id;
+    if (this.reduced) this.stage.dataset.reduced = 'true'; else delete this.stage.dataset.reduced;
     this.tl = buildTimeline(v, {reduced: this.reduced});
     this.renderer.setParams(shaderParams(type, {intensity: this.tl.intensity.factor, filter: v.filter ?? null, reduced: this.reduced}), first);
     this.renderer.setDiscrete({reveal: type.image.reveal, particleKind: type.particles.kind, additive: type.particles.additive, sweepDir: type.sweepDir, pulseHz: type.light.pulseHz});
@@ -239,6 +245,7 @@ export class VisionPlayer {
   seekMoment(i) { const m = this.tl?.moments[i]; if (m) this.seek(m.holdStart + Math.min(900, m.hold * 0.4)); }
   /** „Weiter“: spult organisch (sechsfach) bis zum nächsten Haltepunkt, statt hart zu schneiden. */
   next() {
+    this.toolsEl.querySelector('[data-act="next"]').removeAttribute('data-hint');
     if (!this.tl || this.ended) return;
     if (!this.playing) this.play();
     const target = nextStop(this.tl, this.t);
@@ -264,6 +271,7 @@ export class VisionPlayer {
     this._reducedChanged();
   }
   _reducedChanged() {
+    if (this.reduced) this.stage.dataset.reduced = 'true'; else delete this.stage.dataset.reduced;
     const b = this.toolsEl.querySelector('[data-act="effects"]');
     b.textContent = this.ownReduced ? 'Effekte wieder voll' : 'Effekte ruhiger';
     b.setAttribute('aria-pressed', String(this.ownReduced));
@@ -309,6 +317,8 @@ export class VisionPlayer {
       const q = this.perf.evaluate(this.renderer, now);
       if (q) { this.renderer.setQuality(q); this.bench?.qualityChanges.push({t: Math.round(this.t), to: q}); }
     }
+    // „Weiter“ leuchtet nur beim ersten Text
+    if (this.tl.moments[0] && this.t > this.tl.moments[0].dissolveStart) this.toolsEl.querySelector('[data-act="next"]').removeAttribute('data-hint');
     const showEnd = this.ended && !this.exitAt;
     if (this.endEl.hidden === showEnd) { this.endEl.hidden = !showEnd; if (showEnd && this.mode === 'play') this.endEl.querySelector('button').focus({preventScroll: true}); }
     this.toolsEl.querySelector('[data-act="next"]').hidden = this.ended;

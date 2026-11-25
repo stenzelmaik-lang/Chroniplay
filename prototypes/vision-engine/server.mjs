@@ -7,6 +7,8 @@ import {fileURLToPath} from 'node:url';
 
 const root = resolve(fileURLToPath(new URL('./', import.meta.url))); // ohne abschließenden Trenner
 const fonts = resolve(root, '../../public/fonts');
+// dieselbe Engine wie in der App (eine Quelle, kein Doppel)
+const engine = resolve(root, '../../app/spielbereich/modules/vision-engine');
 const port = Number(process.env.VISION_PORT || 5197);
 const types = {'.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.mjs': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.json': 'application/json; charset=utf-8',
   '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png', '.webp': 'image/webp', '.wav': 'audio/wav', '.mp3': 'audio/mpeg', '.ogg': 'audio/ogg', '.woff2': 'font/woff2', '.svg': 'image/svg+xml'};
@@ -25,6 +27,7 @@ http.createServer(async (req, res) => {
     let file;
     if (path === '/' || path === '/index.html') file = join(root, 'index.html');
     else if (path.startsWith('/fonts/')) file = inside(fonts, path.slice('/fonts/'.length));
+    else if (path.startsWith('/engine/')) file = inside(engine, path.slice('/engine/'.length));
     else file = inside(root, path);
     const ext = extname(file || '').toLowerCase();
     if (!file || !types[ext] || /server\.mjs$|\.ps1$/i.test(file)) { res.writeHead(404); return res.end('Nicht gefunden'); }

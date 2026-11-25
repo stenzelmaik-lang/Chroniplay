@@ -28,6 +28,9 @@ Nur 127.0.0.1, keine externen Aufrufe. Die Schriften kommen aus `public/fonts`.
 
 ## Aufbau
 
+Die Engine liegt seit der Integration in `app/spielbereich/modules/vision-engine/` und wird von App und Prototyp gemeinsam genutzt; der Prototyp-Server liefert sie unter `/engine/` aus. Integration: [docs/alpha-2/VISION-ENGINE-INTEGRATION.md](../../docs/alpha-2/VISION-ENGINE-INTEGRATION.md).
+
+
 | Datei | Aufgabe |
 | --- | --- |
 | `src/presets.js` | Die sechs Visionstypen als Daten: Nebel, Licht, Entstehung, Auflösung, Partikel, Typografie, Klang |

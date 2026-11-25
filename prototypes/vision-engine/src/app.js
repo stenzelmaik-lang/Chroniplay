@@ -3,7 +3,7 @@
  * Prüfparameter für ?play: type, tempo, intensity, reduced=1, quality=hoch|mittel|niedrig, hud=1, bench=1 (startet sofort, stumm).
  */
 import {Creator} from './creator.js';
-import {VisionPlayer} from './player.js';
+import {VisionPlayer} from '/engine/player.js';
 import {defaultVision} from './vision-default.js';
 
 const params = new URLSearchParams(location.search);

@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { isRichTextWithinLimit, sanitizeRichTextInput } from './location-rich-text.ts';
 import { sceneMaterialSchema, materialElementKind } from './material-system.ts';
 import { W10_ATTRIBUTE_KEYS, W10_ABILITY_KEYS } from './trait-ids.ts';
+import { visionDirectionSchema } from './vision-direction.ts';
 
 const id = z.string().min(1).max(100);
 const optionalId = z.string().max(100).default('');
@@ -60,6 +61,8 @@ export const sceneWhisperSchema=z.object({id:z.string().uuid(),kind:z.enum(['vis
   // reading tempo of a vision; arrival sound of a message (built-in fax/letter sound unless switched off or replaced)
   tempo:z.enum(['calm','normal','brisk']).optional(),
   sound:z.enum(['builtin','none']).optional(),
+  // Vision Engine: optionale, versionierte Regiespur (Brennpunkt, Kern, Platz, Größe, Texte je Bild, Eintauchen, Schlusssatz)
+  direction:visionDirectionSchema.optional(),
 }).strict();
 export type SceneWhisper=z.infer<typeof sceneWhisperSchema>;
 // Preparation has no execution flags. Only an explicit SL command creates a run.

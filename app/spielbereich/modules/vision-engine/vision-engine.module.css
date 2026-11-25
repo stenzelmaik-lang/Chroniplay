@@ -1,0 +1,50 @@
+/* Bühne der Vision Engine. Die Engine vergibt feste Klassennamen; sie sind hier unter .root gekapselt. */
+.root { position: absolute; inset: 0; overflow: hidden; background: #000; container-type: size; color: #f2e8d5; font-family: 'Spectral', Georgia, serif; isolation: isolate; outline: none; }
+.root :global([hidden]) { display: none !important; }
+.root :global(.sr-only) { position: absolute !important; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+.root :global(.v-canvas) { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.root :global(.v-words) { position: absolute; inset: 0; pointer-events: none; z-index: 1; }
+.root :global(.vw) { position: absolute; margin: 0; color: var(--vw-color, #f2e8d5); font-size: clamp(18px, calc(11px + 0.6cqw + 1cqh), 44px); line-height: 1.42; letter-spacing: 0.01em; text-wrap: balance; }
+.root :global(.vw .w) {
+  display: inline-block; will-change: opacity, transform;
+  text-shadow: calc(var(--ghost, 0) * 7px) calc(var(--ghost, 0) * -3px) 0 rgba(242, 232, 213, calc(var(--ghost, 0) * 0.28)),
+    0 0 2px rgba(0, 0, 0, 0.95), 0 0 12px rgba(0, 0, 0, 0.88), 0 0 34px rgba(0, 0, 0, 0.72), 0 0 64px var(--vw-glow, transparent);
+}
+.root :global(.vw .w.is-echo) { color: #fff6e3; letter-spacing: 0.06em; text-shadow: 0 0 2px rgba(0, 0, 0, 0.95), 0 0 14px rgba(0, 0, 0, 0.85), 0 0 26px var(--vw-glow, transparent), 0 0 70px var(--vw-glow, transparent); transition: letter-spacing 1.4s ease; }
+.root :global(.vw[data-place="left"]) { left: 6cqw; width: 32cqw; top: 50%; transform: translateY(-50%); text-align: left; }
+.root :global(.vw[data-place="right"]) { right: 6cqw; width: 32cqw; top: 50%; transform: translateY(-50%); text-align: left; }
+.root :global(.vw[data-place="bottom"]) { left: 50%; bottom: 8cqh; width: min(66cqw, 30em); transform: translateX(-50%); text-align: center; }
+.root :global(.vw[data-place="center"]) { left: 50%; top: 50%; width: min(64cqw, 22em); transform: translate(-50%, -50%); text-align: center; }
+.root :global(.vw[data-place="center-portrait"]) { left: 50%; top: 50%; width: 86cqw; transform: translate(-50%, -50%); text-align: center; }
+.root[data-portrait="1"] :global(.vw[data-place="bottom"]) { top: 63cqh; bottom: auto; width: 88cqw; }
+.root :global(.vw[data-role="echo"]) { font-size: clamp(22px, calc(14px + 0.9cqw + 1.5cqh), 64px); letter-spacing: 0.16em; }
+.root :global(.vw[data-role="final"]) { font-size: clamp(26px, calc(14px + 1.2cqw + 2cqh), 76px); letter-spacing: 0.035em; line-height: 1.25; }
+.root :global(.vw[data-role="intro"]) { letter-spacing: 0.04em; }
+.root[data-portrait="1"] :global(.vw[data-role="final"]) { font-size: clamp(26px, 9cqw, 44px); }
+
+.root :global(.v-btn) { font: 500 13px/1 'IBM Plex Sans', system-ui, sans-serif; letter-spacing: 0.02em; color: rgba(240, 232, 218, 0.88); background: rgba(8, 10, 12, 0.42); border: 1px solid rgba(240, 232, 218, 0.22); border-radius: 999px; padding: 10px 15px; cursor: pointer; backdrop-filter: blur(6px); transition: background .2s, border-color .2s, opacity .6s; }
+.root :global(.v-btn:hover) { background: rgba(30, 34, 38, 0.66); border-color: rgba(240, 232, 218, 0.4); }
+.root :global(.v-btn:focus-visible) { outline: 2px solid #e4c589; outline-offset: 2px; }
+.root :global(.v-btn--primary) { background: rgba(205, 166, 107, 0.92); color: #15110b; border-color: transparent; font-weight: 700; padding: 13px 22px; font-size: 14px; }
+.root :global(.v-btn--primary:hover) { background: #e0bb7e; }
+.root :global(.v-tools) { position: absolute; right: 2cqw; top: 2.2cqh; z-index: 3; display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; max-width: 76cqw; transition: opacity .7s; }
+.root:global(.is-idle) :global(.v-tools:not(:focus-within)) { opacity: 0; }
+.root[data-mode="embedded"] :global(.v-tools) { display: none; }
+.root[data-portrait="1"] :global(.v-tools) { left: 3cqw; right: 3cqw; justify-content: center; max-width: none; }
+.root :global(.v-next) { border-color: rgba(228, 197, 137, 0.5); color: #f3dfb4; }
+.root :global(.v-next[data-hint]) { box-shadow: 0 0 0 1px rgba(228, 197, 137, 0.5), 0 0 18px rgba(228, 197, 137, 0.35); }
+.root :global(.v-end) { position: absolute; left: 50%; bottom: 13cqh; transform: translateX(-50%); z-index: 3; display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; animation: vRise 1.6s ease both; }
+.root[data-portrait="1"] :global(.v-end) { bottom: 14cqh; width: 90cqw; }
+.root[data-mode="embedded"] :global(.v-end) { pointer-events: none; opacity: .75; }
+@keyframes vRise { from { opacity: 0; transform: translate(-50%, 10px); } to { opacity: 1; transform: translate(-50%, 0); } }
+.root :global(.v-fulltext) { position: absolute; inset: 8cqh 12cqw 12cqh; z-index: 4; display: grid; grid-template-rows: 1fr auto; gap: 14px; justify-items: center; }
+.root :global(.v-fulltext-body) { width: 100%; max-width: 38em; overflow: auto; padding: 3cqh 3cqw; background: rgba(4, 5, 7, 0.78); border-radius: 14px; backdrop-filter: blur(8px); font-size: clamp(17px, calc(10px + 0.5cqw + 0.8cqh), 26px); line-height: 1.6; }
+.root :global(.v-fulltext-body p) { margin: 0 0 0.9em; }
+.root[data-portrait="1"] :global(.v-fulltext) { inset: 6cqh 4cqw 16cqh; }
+.root :global(.v-hud) { position: absolute; left: 12px; top: 12px; z-index: 5; margin: 0; padding: 8px 10px; font: 12px/1.45 ui-monospace, Consolas, monospace; color: #cfe8d0; background: rgba(0, 0, 0, 0.6); border-radius: 6px; pointer-events: none; }
+.root :global(.v-notice) { position: absolute; left: 50%; top: 14px; transform: translateX(-50%); z-index: 5; margin: 0; padding: 6px 12px; font: 13px 'IBM Plex Sans', system-ui, sans-serif; background: rgba(0, 0, 0, 0.7); border-radius: 6px; }
+.root :global(.v-badge) { position: absolute; z-index: 6; left: max(16px, env(safe-area-inset-left, 0px)); top: max(14px, env(safe-area-inset-top, 0px)); margin: 0; padding: 6px 12px; border-radius: 999px; background: rgba(0, 0, 0, .55); border: 1px dashed rgba(255, 255, 255, .45); color: #fff; font: 12px/1.2 system-ui, sans-serif; letter-spacing: .04em; }
+@media (prefers-reduced-motion: reduce) { .root :global(.v-end) { animation: none; } }
+
+/* Eingebettete Vorschau im Ersteller */
+.preview { position: relative; width: 100%; aspect-ratio: 16 / 9; border-radius: 10px; overflow: hidden; box-shadow: 0 0 0 1px #2f3a42; background: #000; }

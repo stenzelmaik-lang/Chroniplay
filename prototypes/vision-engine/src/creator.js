@@ -5,9 +5,9 @@
  * Nachhall-Worte, Eintauchen und Schlusssatz, Intensität und Farbfilterstärke, Zeitleiste mit Sprungmarken,
  * Format-Vorschau (Desktop, Tablet, Handy), Prüfhinweise inklusive gemessener Lesbarkeit und Export ins Szenenformat.
  */
-import {VisionPlayer} from './player.js';
-import {VISION_TYPES, TEMPOS, INTENSITIES, SIZES, PLACES, typeById, tempoById} from './presets.js';
-import {buildTimeline, readingMs, echoIndices, FLASH_MIN_GAP_MS} from './timeline.js';
+import {VisionPlayer} from '/engine/player.js';
+import {VISION_TYPES, TEMPOS, INTENSITIES, SIZES, PLACES, typeById, tempoById} from '/engine/presets.js';
+import {buildTimeline, readingMs, echoIndices, FLASH_MIN_GAP_MS} from '/engine/timeline.js';
 import {defaultVision, toSceneWhisper} from './vision-default.js';
 
 const STORE = 'chroniplay-vision-prototype-v1';
@@ -477,7 +477,7 @@ export class Creator {
     const items = [];
     const ok = (t) => items.push(['ok', t]), warn = t => items.push(['warn', t]), info = t => items.push(['info', t]);
     if (!v.moments.length) warn('Noch kein Bild. Eine Vision ohne Bild bleibt reine Typografie im Nebel.');
-    tl.duration > 150000 ? warn(`Gesamtdauer ${clock(tl.duration)}. Lange Visionen verlieren Spannung; „Weiter“ steht Spielern immer offen.`) : ok(`Gesamtdauer ${clock(tl.duration)} bei Tempo „${tempoById(v.tempo).label}“.`);
+    if (tl.duration > 150000) warn(`Gesamtdauer ${clock(tl.duration)}. Lange Visionen verlieren Spannung; „Weiter“ steht Spielern immer offen.`); else ok(`Gesamtdauer ${clock(tl.duration)} bei Tempo „${tempoById(v.tempo).label}“.`);
     v.moments.forEach((m, i) => {
       const n = String(i + 2).padStart(2, '0');
       if ((m.text || '').length > 220) warn(`Moment ${n}: langer Text (${m.text.length} Zeichen). Lieber kürzen oder auf zwei Momente verteilen.`);
