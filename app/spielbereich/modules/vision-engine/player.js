@@ -345,6 +345,17 @@ export class VisionPlayer {
     ].join('\n');
   }
 
+  /** Zeichnet den Zustand zu Zeitpunkt t sofort (Text und Bild), ohne auf das nächste Animationsbild zu warten. Für Prüfungen. */
+  renderAt(t) {
+    if (!this.tl || !this.view) return;
+    this.seek(t);
+    const f = frameAt(this.tl, this.t);
+    f.slots = f.slots.map(sl => (sl ? {...sl, imageKey: this.moments[sl.moment]?.image, layout: this.layouts[sl.moment]} : null));
+    f.textShade = this.text.update(this.t, f.texts, this.tl.textExit, this.placeOf);
+    this.lastFrame = f;
+    this.renderer.render(f, this.ambient, 0);
+  }
+
   /** Lesbarkeit: Kontrast der aktuell vollständig sichtbaren Worte gegen den gerenderten Hintergrund (WCAG-Formel). */
   measureContrast() {
     if (!this.renderer.sampleLuminance || !this.lastFrame) return [];

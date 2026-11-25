@@ -10,11 +10,11 @@ import {RichTextEditor,RichTextView} from './rich-text';
 import type {PreparationFile} from './protected-image-gallery';
 import {PreparationUpload} from './preparation-upload';
 import {WhisperStaging} from './prepared-whisper-staging';
-import {VisionDirectionEditor} from './vision-direction-editor';
+import {VisionWorkbench} from './vision-workbench';
 import {directionFromEntry} from '@/domain/vision-direction-convert';
 import {directionFragments} from '@/domain/vision-direction';
 import styles from './prepared-whispers.module.css';
-import dirStyles from './vision-direction-editor.module.css';
+import wbStyles from './vision-workbench.module.css';
 
 /** Applies a change to the newest state of one entry; used after an upload, when the editor may have moved on meanwhile. */
 export type LatestPatch=(file:PreparationFile,patch:(w:SceneWhisper)=>Partial<SceneWhisper>)=>void;
@@ -52,21 +52,21 @@ export function PreparedWhispers({scene,players,files,onChange,onUploaded}:{scen
    <label>Titel<input maxLength={160} value={current.title} onChange={e=>update({title:e.target.value})}/></label>
    <fieldset className={styles.recipients}><legend>Nur für diese Spieler</legend>{players.map(p=><label key={p.id}><input type="checkbox" disabled={current.recipientIds.length>=20&&!current.recipientIds.includes(p.id)} checked={current.recipientIds.includes(p.id)} onChange={()=>update({recipientIds:current.recipientIds.includes(p.id)?current.recipientIds.filter(id=>id!==p.id):[...current.recipientIds,p.id]})}/><span><strong>{p.character?.name||p.name}</strong>{p.character&&<small>{p.name}</small>}</span></label>)}{!players.length&&<p>Keine aktiven Spieler verfügbar.</p>}{current.recipientIds.filter(id=>!players.some(p=>p.id===id)).map(id=><button type="button" key={id} onClick={()=>update({recipientIds:current.recipientIds.filter(v=>v!==id)})}>Nicht verfügbaren Empfänger entfernen</button>)}</fieldset>
    <p className={styles.hint}>{current.kind==='vision'?'Vorgesehene Empfänger. In der Regie kannst du beim Auslösen auch einzelne Spieler oder die ganze Gruppe wählen.':'Vorgesehene Empfänger. Die Botschaft erscheint bei ihnen als Fax oder Brief neben dem Spieltisch.'}</p>
-   <WhisperStaging current={current} files={files} update={update} onUpload={(file,patch)=>attach(current.id,file,patch)}/>
+   {!directed&&<WhisperStaging current={current} files={files} update={update} onUpload={(file,patch)=>attach(current.id,file,patch)}/>}
    {current.kind==='vision'&&(directed
-    ?<VisionDirectionEditor current={current} files={files} update={update}/>
-    :<div className={dirStyles.setup}><p>Diese Vision verteilt Bilder und Texte noch automatisch. Mit der Regie legst du je Bild Text, Brennpunkt, Platz und Größe fest und siehst alles live.</p><button type="button" onClick={()=>{const direction=directionFromEntry(current);update({direction,fragments:directionFragments(direction,current.fileIds)});}}><Clapperboard size={15}/> Regie einrichten</button></div>)}
+    ?<VisionWorkbench current={current} files={files} update={update} onUpload={(file,patch)=>attach(current.id,file,patch)}/>
+    :<div className={wbStyles.setup}><p>Diese Vision verteilt Bilder und Texte noch automatisch. Mit der Regie legst du je Bild Text, Brennpunkt, Platz und Größe fest und siehst alles live.</p><button type="button" onClick={()=>{const direction=directionFromEntry(current);update({direction,fragments:directionFragments(direction,current.fileIds)});}}><Clapperboard size={15}/> Regie einrichten</button></div>)}
    {!directed&&<RichTextEditor value={current.text} onChange={text=>update({text})} label={current.kind==='vision'?'Text der Vision':'Text des Briefs'} maximumPlainLength={authoringTextMax} placeholder="Was soll dieser Spieler erfahren?" files={sectionImages} compactTools preparationTools inlineGallery={false}/>}
-   <section className={styles.media} aria-label={'Bilder aus der Galerie '+mediaSectionLabel[section]}>
+   {!directed&&<section className={styles.media} aria-label={'Bilder aus der Galerie '+mediaSectionLabel[section]}>
     <h4>{current.kind==='vision'?'Bilder dieser Vision':'Beilagen dieser Botschaft'} <small>Nur diese Bilder erscheinen. Alle anderen bleiben in der Galerie „{mediaSectionLabel[section]}“.</small></h4>
     {!directed&&(ownImages.length?<ul className={styles.mediaGrid}>{ownImages.map(f=><li key={f.id}><button type="button" aria-pressed={true} aria-label={'Bild abwählen: '+f.name} onClick={()=>toggleImage(f.id)}><img src={'/api/files?id='+encodeURIComponent(f.id)+'&size=thumb'} alt="" loading="lazy"/><span>{f.name}</span></button></li>)}</ul>
      :<p className={styles.hint}>{current.kind==='vision'?'Noch keine Bilder in dieser Vision.':'Noch keine Beilagen.'} Lade sie hier hoch oder übernimm sie aus der Galerie.</p>)}
     <PreparationUpload kind="image" section={section} label="Bild hochladen" onUploaded={f=>attach(current.id,f,w=>w.fileIds.includes(f.id)||w.fileIds.length>=20?{}:{fileIds:[...w.fileIds,f.id]})}/>
-    <details className={dirStyles.gallery}><summary>Galerie „{mediaSectionLabel[section]}“ · weitere Bilder ({galleryImages.length})</summary>
+    <details className={wbStyles.gallery}><summary>Galerie „{mediaSectionLabel[section]}“ · weitere Bilder ({galleryImages.length})</summary>
      <p className={styles.hint}>Bilder anderer Einträge bleiben hier. Sie erscheinen erst nach „Bild verwenden“ in diesem Eintrag.</p>
      {galleryImages.length?<ul className={styles.mediaGrid}>{galleryImages.map(f=><li key={f.id}><button type="button" aria-pressed={false} disabled={current.fileIds.length>=20} aria-label={'Bild verwenden: '+f.name} onClick={()=>toggleImage(f.id)}><img src={'/api/files?id='+encodeURIComponent(f.id)+'&size=thumb'} alt="" loading="lazy"/><span>{f.name}</span></button></li>)}</ul>:<p className={styles.hint}>Keine weiteren Bilder in der Galerie.</p>}
     </details>
-   </section>
+   </section>}
    {!directed&&!!current.fileIds.length&&<><p className={styles.hint}>{current.kind==='vision'?'Reihenfolge, in der die Bilder erscheinen:':'Beilagen dieser Botschaft:'}</p><ol className={styles.attachments}>{current.fileIds.map(id=>{const f=files.find(f=>f.id===id);return <li key={id}><span>{f?.name||'Bild nicht verfügbar'}{f&&f.section!==section&&<small> · aus der allgemeinen Galerie</small>}</span><button type="button" aria-label={'Bild entfernen: '+(f?.name||id)} onClick={()=>setImages(current.fileIds.filter(v=>v!==id))}><X size={15}/></button></li>;})}</ol></>}
    <div className={styles.actions}><button type="button" aria-expanded={preview} onClick={()=>setPreview(!preview)}><Eye size={16}/> Inhalt ansehen</button></div>
    {preview&&<article className={styles.preview}><h3>{current.title}</h3><p>Empfänger: {current.recipientIds.length?current.recipientIds.map(label).join(', '):'Noch niemand'}</p><RichTextView value={current.text} readable flowing/>{current.fileIds.map(id=><PreviewImage key={id} id={id}/>)}</article>}
