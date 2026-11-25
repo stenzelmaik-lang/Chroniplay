@@ -45,7 +45,7 @@ function previewOf(w:SceneWhisper,id:string,createdAt:string):PlayerDelivery{
  const images=[...new Set([...w.fileIds,...richTextFileIds(w.text)])].slice(0,20);
  return {id,kind:w.kind,preset:presetById(w.preset).id,layout:(w.layout||'fax') as MessageLayoutId,sender:w.sender||'',
   fragments:w.kind==='vision'?visionFragments(w.fragments,richTextToPlainText(w.text)):[],html:w.text,images,audio:!!w.audioFileId,audioFileId:w.audioFileId||null,
-  tempo:tempoById(w.tempo).id,arrivalSound:arrivalSoundOf(w.kind,w.layout||'fax',w.sound,w.audioFileId),createdAt,seen:true};
+  tempo:tempoById(w.tempo).id,arrivalSound:arrivalSoundOf(w.kind,w.layout||'fax',w.sound,w.audioFileId),createdAt,seen:true,...(w.kind==='vision'&&w.direction?{direction:w.direction}:{})};
 }
 export async function previewForViewer(a:Actor,sessionId:string):Promise<TablePreview|undefined>{
  if(!a.gm)return undefined;
@@ -125,7 +125,7 @@ export async function changeDeliveries(a:Actor,c:DeliveryCommand){
   if(w.kind==='letter'&&!plain.trim()&&!imageFileIds.length)throw new HttpError(400,'Diese Botschaft ist noch leer.');
   const stamp=new Date().toISOString();
   const run:DeliveryRun={id:crypto.randomUUID(),whisperId:w.id,sceneId:scene.id,sceneVersion:scene.version,kind:w.kind,preset:presetById(w.preset).id,layout:(w.layout||'fax') as MessageLayoutId,
-   title:w.title,sender:w.sender||'',fragments,html:w.text,imageFileIds,audioFileId:w.audioFileId||null,...(w.kind==='vision'?{tempo:tempoById(w.tempo).id}:{sound:w.sound||'builtin'}),recipients,createdAt:stamp,createdBy:a.id,withdrawnAt:null,receipts:{}};
+   title:w.title,sender:w.sender||'',fragments,html:w.text,imageFileIds,audioFileId:w.audioFileId||null,...(w.kind==='vision'?{tempo:tempoById(w.tempo).id,...(w.direction?{direction:w.direction}:{})}:{sound:w.sound||'builtin'}),recipients,createdAt:stamp,createdBy:a.id,withdrawnAt:null,receipts:{}};
   const state=await mutate(k,s=>{
    if(s.requests.includes(c.requestId))return s; // double click, retry or a late duplicate: nothing new
    if(s.runs.length>=MAX_RUNS)throw new HttpError(409,`Höchstens ${MAX_RUNS} Zustellungen je Spielabend.`);

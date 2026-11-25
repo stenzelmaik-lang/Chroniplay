@@ -40,7 +40,7 @@ export function DeliveryStage({deliveries,sessionId,recipientName}:{deliveries:P
 export function previewDelivery(w:SceneWhisper):PlayerDelivery{
  const images=[...new Set([...w.fileIds,...richTextFileIds(w.text)])].slice(0,20);
  return {id:'00000000-0000-4000-8000-'+w.id.replace(/-/g,'').slice(0,12).padEnd(12,'0'),kind:w.kind,preset:presetById(w.preset).id,layout:w.layout||'fax',sender:w.sender||'',
-  fragments:w.kind==='vision'?visionFragments(w.fragments,richTextToPlainText(w.text)):[],html:w.text,images,audio:!!w.audioFileId,audioFileId:w.audioFileId||null,tempo:tempoById(w.tempo).id,arrivalSound:arrivalSoundOf(w.kind,w.layout||'fax',w.sound,w.audioFileId),createdAt:new Date().toISOString(),seen:true};
+  fragments:w.kind==='vision'?visionFragments(w.fragments,richTextToPlainText(w.text)):[],html:w.text,images,audio:!!w.audioFileId,audioFileId:w.audioFileId||null,tempo:tempoById(w.tempo).id,arrivalSound:arrivalSoundOf(w.kind,w.layout||'fax',w.sound,w.audioFileId),createdAt:new Date().toISOString(),seen:true,...(w.kind==='vision'&&w.direction?{direction:w.direction}:{})};
 }
 
 /** GM preview of a prepared vision or message. Only local rendering with the GM's own file access; no delivery, no receipt. */

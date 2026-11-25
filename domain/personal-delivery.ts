@@ -2,8 +2,9 @@
  * Visions & personal messages, Alpha 2.0 ("NextGen").
  * Preparation lives in the scene document (`whispers`); every trigger creates a separate delivery run with its own
  * per-recipient receipts. Presets and layouts are data: a new look is a new entry here plus its CSS, not new logic.
- * Leaf module without imports.
+ * Leaf module; only a type import of the optional direction (Vision Engine).
  */
+import type {VisionDirection} from './vision-direction.ts';
 
 /** Vision presets. `motion` and the timing values steer the player; colours and effects live in the CSS per preset. */
 export const VISION_PRESETS = [
@@ -85,6 +86,8 @@ export type DeliveryRun = {
   fragments: string[]; html: string; imageFileIds: string[]; audioFileId: string | null;
   /** optional: runs created before these options existed read as normal tempo and built-in sound */
   tempo?: VisionTempoId; sound?: 'builtin' | 'none';
+  /** Vision Engine: copy of the entry's optional direction at trigger time */
+  direction?: VisionDirection;
   recipients: string[]; createdAt: string; createdBy: string; withdrawnAt: string | null;
   receipts: Record<string, Receipt>;
 };
@@ -109,14 +112,14 @@ export function resolveRecipients(choice: RecipientChoice, prepared: readonly st
 
 /** What a recipient gets: only own, active runs, without internal title, other recipients or scene origin. */
 /** `images` are file ids of this delivery; they open only through the recipient-checked delivery asset route. */
-export type PlayerDelivery = { id: string; kind: 'vision' | 'letter'; preset: VisionPresetId; layout: MessageLayoutId; sender: string; fragments: string[]; html: string; images: string[]; audio: boolean; audioFileId: string | null; tempo: VisionTempoId; arrivalSound: 'fax' | 'letter' | null; createdAt: string; seen: boolean };
+export type PlayerDelivery = { id: string; kind: 'vision' | 'letter'; preset: VisionPresetId; layout: MessageLayoutId; sender: string; fragments: string[]; html: string; images: string[]; audio: boolean; audioFileId: string | null; tempo: VisionTempoId; arrivalSound: 'fax' | 'letter' | null; createdAt: string; seen: boolean; direction?: VisionDirection };
 /** A message plays its built-in sound unless the GM switched it off or chose an own sound. Visions use only own sounds. */
 export const arrivalSoundOf = (kind: string, layout: string, sound: string | undefined, audioFileId: string | null | undefined): 'fax' | 'letter' | null =>
   kind === 'letter' && sound !== 'none' && !audioFileId ? (layout === 'letter' ? 'letter' : 'fax') : null;
 export function playerDeliveries(runs: readonly DeliveryRun[], memberId: string): PlayerDelivery[] {
   return runs.filter(r => r.recipients.includes(memberId) && !r.withdrawnAt && !r.receipts[memberId]?.ackAt)
     .sort((x, y) => x.createdAt.localeCompare(y.createdAt) || x.id.localeCompare(y.id))
-    .map(r => ({ id: r.id, kind: r.kind, preset: r.preset, layout: r.layout, sender: r.sender, fragments: r.fragments, html: r.html, images: [...r.imageFileIds], audio: !!r.audioFileId, audioFileId: r.audioFileId, tempo: tempoById(r.tempo).id, arrivalSound: arrivalSoundOf(r.kind, r.layout, r.sound, r.audioFileId), createdAt: r.createdAt, seen: !!r.receipts[memberId]?.seenAt }));
+    .map(r => ({ id: r.id, kind: r.kind, preset: r.preset, layout: r.layout, sender: r.sender, fragments: r.fragments, html: r.html, images: [...r.imageFileIds], audio: !!r.audioFileId, audioFileId: r.audioFileId, tempo: tempoById(r.tempo).id, arrivalSound: arrivalSoundOf(r.kind, r.layout, r.sound, r.audioFileId), createdAt: r.createdAt, seen: !!r.receipts[memberId]?.seenAt, ...(r.kind === 'vision' && r.direction ? {direction: r.direction} : {}) }));
 }
 
 /** Short document number for the fax header, derived from the run id. */

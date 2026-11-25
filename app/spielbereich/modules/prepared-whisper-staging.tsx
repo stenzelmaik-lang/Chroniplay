@@ -56,7 +56,7 @@ export function WhisperStaging({current,files,update,onUpload}:{current:SceneWhi
   <button type="button" className={styles.previewButton} onClick={()=>setPreview(true)}><Play size={15}/> Vorschau abspielen</button>
   <p className={styles.hint}>Die Vorschau läuft nur bei dir. Sie stellt nichts zu und erzeugt keinen Eintrag.</p>
   <details open={more} onToggle={e=>setMore((e.target as HTMLDetailsElement).open)}><summary>Weitere Möglichkeiten</summary>
-   {current.kind==='vision'&&<div className={styles.fragments}><p className={styles.hint}>Textabschnitte erscheinen nacheinander. Ohne eigene Abschnitte werden die Absätze des Textes verwendet.</p>
+   {current.kind==='vision'&&!current.direction&&<div className={styles.fragments}><p className={styles.hint}>Textabschnitte erscheinen nacheinander. Ohne eigene Abschnitte werden die Absätze des Textes verwendet.</p>
     {fragments.map((f,i)=><div key={i} className={styles.fragment}><label>Abschnitt {i+1}<textarea maxLength={MAX_FRAGMENT_CHARS} rows={2} value={f} onChange={e=>setFragment(i,e.target.value)}/></label><button type="button" aria-label={'Abschnitt '+(i+1)+' entfernen'} onClick={()=>update({fragments:fragments.filter((_,k)=>k!==i)})}><X size={14}/></button></div>)}
     <button type="button" disabled={fragments.length>=MAX_FRAGMENTS} onClick={()=>update({fragments:[...fragments,'']})}><Plus size={14}/> Abschnitt hinzufügen</button>
    </div>}
