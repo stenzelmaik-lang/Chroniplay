@@ -3,7 +3,8 @@
 import {FormEvent,useCallback,useEffect,useState} from 'react';
 import {FEEDBACK_KINDS,FEEDBACK_AREAS,FEEDBACK_STATUSES,FEEDBACK_SEVERITIES,kindLabels,areaLabels,statusLabels,isCritical,type FeedbackKind} from '@/domain/feedback';
 import {accountApi} from './account-ui';
-import styles from './account.module.css';
+import {ProfileStyleReviews} from './profile-style-reviews';
+import styles from './profile.module.css';
 
 type Own={id:string;kind:string;area:string;title:string;description:string;status:string;reply:string;createdAt:string;updatedAt:string};
 type Inbox=Own&{steps:string;expected:string;actual:string;page:string;appVersion:string;browser:string;severity:string|null;operatorNote:string;version:number;reporter:{id:string;name:string}};
@@ -34,7 +35,7 @@ export function FeedbackSection(){
   catch(e){setError((e as Error).message);}finally{setBusy(false);}
  }
 
- return <section id="feedback" className={styles.card} aria-label="Feedback und Fehler melden">
+ return <>{operator&&<ProfileStyleReviews/>}<section className={styles.card} aria-label="Feedback und Fehler melden">
   <div className={styles.heading}><div><h2>Feedback & Fehler melden</h2><small>Deine Meldung sieht nur die Spielleitung. Nichts davon wird automatisch veröffentlicht.</small></div></div>
   {error&&<p role="alert" className={styles.error}>{error}</p>}{notice&&<p role="status" className={styles.success}>{notice}</p>}
   <form onSubmit={submit}>
@@ -74,5 +75,5 @@ export function FeedbackSection(){
     <label>Antwort an die meldende Person<textarea defaultValue={r.reply} maxLength={2000} rows={2} onBlur={e=>{if(e.target.value!==r.reply)void update(r,{reply:e.target.value});}}/></label>
    </div></article>)}</div>
   </details>}
- </section>;
+ </section></>;
 }

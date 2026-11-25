@@ -1,8 +1,7 @@
 import { z } from "zod";
+import { customPlayStylesInput, profileBanners, profilePlayPaces, profilePlayStyles, PROFILE_STYLE_LIMIT } from "./player-profile.ts";
 
-export const profileBanners = ["neon", "fog", "candle"] as const;
 export const headerNameModes = ["account", "character"] as const;
-export const profilePlayStyles = ["Ermittlungen", "Intrigen", "Charakterdrama", "Horror", "Taktik", "Improvisation"] as const;
 
 export const profileInput = z.object({
   version: z.number().int().min(1),
@@ -18,7 +17,9 @@ export const profileInput = z.object({
     pronouns: z.string().trim().max(40).optional(),
     banner: z.enum(profileBanners).optional(),
     sharePlayerProfileCampaigns: z.array(z.string().min(1).max(160)).max(100).refine(values=>new Set(values).size===values.length).optional(),
-    playStyles: z.array(z.enum(profilePlayStyles)).max(5).refine(values=>new Set(values).size===values.length).optional(),
+    playStyles: z.array(z.enum(profilePlayStyles)).max(PROFILE_STYLE_LIMIT).refine(values=>new Set(values).size===values.length).optional(),
+    customPlayStyles: customPlayStylesInput.optional(),
+    playPace: z.enum(profilePlayPaces).nullable().optional(),
   }).strict(),
 }).strict();
 export const passwordInput = z.object({

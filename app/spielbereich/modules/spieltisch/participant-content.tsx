@@ -4,6 +4,7 @@ import {lazy,Suspense,useCallback,useEffect,useState} from 'react';
 import type {Actor} from '@/domain/types';
 import type {CharacterDetailProjection} from '../character';
 import type {SharedProfile} from '@/domain/character-profile';
+import {profileMotifCover,profilePaceLabels} from '@/domain/player-profile';
 import {api} from '../api-client';
 import {RichTextView} from '../rich-text';
 import {CharacterReadOnly} from './character-readonly';
@@ -12,7 +13,7 @@ import styles from './participants.module.css';
 const Inventory=lazy(()=>import('../inventory').then(m=>({default:m.InventoryPanel})));
 const Messages=lazy(()=>import('../message-center').then(m=>({default:m.MessageCenter})));
 const Notebook=lazy(()=>import('../notebook/notebook').then(m=>({default:m.Notebook})));
-type Data={member?:{id:string;name:string;avatar:string|null;presentation?:{pronouns?:string;banner?:string;introduction?:string;playStyles?:string[]}|null};own?:boolean;characters:{id:string;name:string}[];character?:{id:string;name:string;portrait:string|null;profile?:SharedProfile;descriptions:{kind:string;content:string}[];tagline?:string;introduction?:string;gallery?:{url:string;caption?:string}[]}|null;selectedCharacter?:string|null;projection?:CharacterDetailProjection};
+type Data={member?:{id:string;name:string;avatar:string|null;presentation?:{pronouns?:string;banner?:string;introduction?:string;playStyles?:string[];playPace?:keyof typeof profilePaceLabels|null}|null};own?:boolean;characters:{id:string;name:string}[];character?:{id:string;name:string;portrait:string|null;profile?:SharedProfile;descriptions:{kind:string;content:string}[];tagline?:string;introduction?:string;gallery?:{url:string;caption?:string}[]}|null;selectedCharacter?:string|null;projection?:CharacterDetailProjection};
 export type ParticipantAction='profile'|'gallery'|'sheet'|'inventory'|'messages'|'notebook';
 export function ParticipantContent({a,sessionId,memberId,action,initialCharacterId,liveCharacters}:{a:Actor;sessionId:string;memberId:string;action:ParticipantAction;initialCharacterId?:string;liveCharacters?:TableCharacter[]}){
  const [data,setData]=useState<Data|null>(null),[characterId,setCharacterId]=useState<string|null>(null),[tab,setTab]=useState<'human'|'character'>('character'),[error,setError]=useState(''),[reload,setReload]=useState(0);
@@ -61,13 +62,14 @@ export function ParticipantContent({a,sessionId,memberId,action,initialCharacter
      {character.profile?.allies&&<div className={styles.figureText}><h4>Verbündete & Kontakte</h4><p className={styles.preserve}>{character.profile.allies}</p></div>}
     </section>:<p>Für diesen Teilnehmer ist noch kein Charakter freigegeben.</p>}
    </>:<section className={styles.figureCard} aria-label="Spielervorstellung">
-    <header data-banner={profile?.banner??'fog'}>
+    <header data-banner={profile?.banner??'fog'} style={{background:profileMotifCover(profile?.banner)}}>
      {person?.avatar&&<img className={styles.playerPortrait} src={person.avatar} alt=""/>}
      <div><p className={styles.caption}>Spielerprofil</p><h3>{person?.name}</h3>{profile?.pronouns&&<small>{profile.pronouns}</small>}</div>
     </header>
     <div className={styles.figureText}>
      {profile?.introduction?<p>{profile.introduction}</p>:<p>Für diese Runde ist keine Vorstellung hinterlegt.</p>}
      {!!profile?.playStyles?.length&&<ul className={styles.playerTraits}>{profile.playStyles.map(style=><li key={style}>{style}</li>)}</ul>}
+     {profile?.playPace&&<p>Spieltempo · {profilePaceLabels[profile.playPace]}</p>}
     </div>
    </section>}
   </>;

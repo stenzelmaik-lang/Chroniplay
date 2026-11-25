@@ -56,9 +56,6 @@
 .figureHero{position:absolute;inset:0;z-index:-2;width:100%;height:100%;object-fit:cover;object-position:center top}
 .figureCard>header h3{margin:5px 0;color:#f1dbad;font:clamp(25px,5vw,38px)/1.1 Georgia,serif}
 .figureCard>header p{margin:0;white-space:pre-wrap}
-.figureCard>header[data-banner=fog]{background:linear-gradient(115deg,#142126,#354745,#17242a)}
-.figureCard>header[data-banner=neon]{background:linear-gradient(115deg,#241a35,#43253c,#182938)}
-.figureCard>header[data-banner=candle]{background:radial-gradient(ellipse at 75% 15%,#6a4427,#302225 65%,#181a25)}
 .playerPortrait{width:56px;height:56px;object-fit:cover;border-radius:50%;border:1px solid #d5ba81}
 .figureText,.figureGallery{padding:16px 18px}
 .figureText h4,.figureGallery h4{margin:0 0 8px;color:#ead6ad;font:20px Georgia,serif}
