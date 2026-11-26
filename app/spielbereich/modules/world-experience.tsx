@@ -88,8 +88,11 @@ export function WorldExperience({
   embeddedLabel,
   onDossierBack,
   previewViewerId,
+  playerOnly = false,
 }: {
   a: Actor;
+  /** Player area ("Schauplätze"): the SL sees what the group sees, without SL tools; SL work lives in the Command Center. */
+  playerOnly?: boolean;
   dataScope: string;
   /** Supplying this projection renders the real dossier in a CMS preview without loading a second layout. */
   projectionOverride?: PlaceProjection | null;
@@ -98,7 +101,8 @@ export function WorldExperience({
   previewViewerId?:string;
 }) {
   const embeddedDossier = projectionOverride !== undefined;
-  const [view, setView] = useState<"player" | "sl">(a.gm ? "sl" : "player");
+  const [view, setView] = useState<"player" | "sl">(a.gm && !playerOnly ? "sl" : "player");
+  const slTools = a.gm && !playerOnly;
   const target = a.gm ? "group" : "player";
   const activeHubKey = hubKey(view, target);
   const scopedHubKey = `${dataScope}\u0000${activeHubKey}`;
@@ -463,7 +467,7 @@ export function WorldExperience({
       <span className={styles.stateIcon}><Shield size={19} /></span>
       <div><p className={styles.kicker}>SPIELWELT · ZUGRIFF</p><h1>{detail ? "Der Ort ist gerade nicht verfügbar." : "Die Ortsdaten sind gerade nicht verfügbar."}</h1><p>{visibleError}</p></div>
       <button className={styles.secondaryButton} onClick={() => window.location.reload()} type="button">Erneut versuchen</button>
-      {a.gm && view === "player" && <button className={styles.secondaryButton} onClick={() => setView("sl")} type="button">SL-Dossier öffnen</button>}
+      {slTools && view === "player" && <button className={styles.secondaryButton} onClick={() => setView("sl")} type="button">SL-Dossier öffnen</button>}
     </section>;
   }
 
@@ -487,11 +491,11 @@ export function WorldExperience({
       </div>
       <div className={styles.introRight}>
       <p>{showingDossier ? embeddedLabel || (view === "sl" ? "Internes Ortswissen, nach Bereichen und Kapiteln." : "Ein Ort, wie dein Charakter ihn kennt.") : view === "sl" ? "Alle angelegten Orte der Chronik." : "Orte, die deinem Charakter bekannt sind."}</p>
-        {a.gm && !embeddedDossier && <div className={styles.viewSwitch} role="group" aria-label="Ortsansicht wählen">
+        {slTools && !embeddedDossier && <div className={styles.viewSwitch} role="group" aria-label="Ortsansicht wählen">
           <button type="button" aria-pressed={view === "player"} className={view === "player" ? styles.switchActive : ""} onClick={() => { setOverlay(null); setView("player"); }}><Eye size={14} aria-hidden="true"/>{showingDossier?"Spielerstand ansehen":"Spieleransicht"}</button>
           <button type="button" aria-pressed={view === "sl"} className={view === "sl" ? styles.switchActive : ""} onClick={() => { if(view === "player")setActiveDossierId(activeArea || selectedId); setOverlay(null); setView("sl"); }}><Shield size={14} aria-hidden="true"/>{showingDossier ? "SL-Dossier" : "SL-Ortsbestand"}</button>
         </div>}
-        {a.gm && !embeddedDossier && view === "player" && <span className={styles.previewBadge}><Eye size={13} />Gruppenprojektion</span>}
+        {slTools && !embeddedDossier && view === "player" && <span className={styles.previewBadge}><Eye size={13} />Gruppenprojektion</span>}
       </div>
     </header>
 
