@@ -1,6 +1,7 @@
 import type { SceneSummary } from './story-scene.ts';
 import type { PreparedSession } from './story-preparation.ts';
 import { orderedSessionScenes } from './session-overview.ts';
+import { boardStatus, boardStatuses, type BoardStatus } from './storyboard-blocks.ts';
 
 /** Storyboard (Kommandozentrum → Spielabend vorbereiten): Chronik → Buch → Spielabend → Szene.
  * Pure helpers only; nothing here persists or changes a status. Readiness is derived from the
@@ -64,24 +65,36 @@ export function eveningProgress(sessionId: string, session: PreparedSession['doc
   return out;
 }
 
+/** Storyboard 2.0: the status the SL set, else the derived readiness. Deferred scenes stay in the evening but count apart. */
+export function sceneStatus(scene: Pick<SceneSummary, 'preparation' | 'board'>): BoardStatus {
+  return boardStatus(scene.board, sceneReadiness(scene));
+}
+export type EveningStatusProgress = { total: number } & Record<BoardStatus, number>;
+export function eveningStatusProgress(sessionId: string, session: PreparedSession['document'], scenes: SceneSummary[]): EveningStatusProgress {
+  const out = { total: 0, ...Object.fromEntries(boardStatuses.map(key => [key, 0])) } as EveningStatusProgress;
+  for (const scene of orderedSessionScenes(sessionId, session, scenes)) { out.total++; out[sceneStatus(scene)]++; }
+  return out;
+}
+
 /** Guided entry. Each step is a suggestion derived from the data; the SL may skip any of them. */
 export type GuideStepId = 'book' | 'evening' | 'sketch' | 'elaborate' | 'ready';
 export const storyboardGuide: { id: GuideStepId; label: string; hint: string }[] = [
   { id: 'book', label: 'Buch wählen', hint: 'Wähle das Buch oder die Kampagne, an der du arbeitest, oder lege ein neues an.' },
   { id: 'evening', label: 'Spielabend anlegen', hint: 'Ein Spielabend bündelt die Szenen, die du an einem Abend spielen willst.' },
-  { id: 'sketch', label: 'Szenen skizzieren', hint: 'Halte jede Szene zuerst als grobe Idee fest – ein Titel und ein Satz reichen.' },
-  { id: 'elaborate', label: 'Ausarbeiten', hint: 'Öffne eine Szene und arbeite ihre acht Bereiche aus – von der Erzählung bis zu den SL-Notizen. Leere Bereiche darfst du überspringen.' },
-  { id: 'ready', label: 'Spielbereit', hint: 'Alle Szenen haben Vorlesetext und Vorbereitung. Gespielt wird über die Live-Regie.' },
+  { id: 'sketch', label: 'Szenen skizzieren', hint: 'Halte jede Szene zuerst als grobe Idee fest – ein Titel und ein Satz reichen. Nicht jeder Eintrag muss eine volle Szene sein: Übergang, Ereignis oder Notiz gehen auch.' },
+  { id: 'elaborate', label: 'Ausarbeiten', hint: 'Öffne eine Szene und arbeite sie in der Gliederung links durch. Gold kommt am Tisch an, Silber ist nur für dich. Leere Bereiche darfst du überspringen.' },
+  { id: 'ready', label: 'Spielbereit', hint: 'Alle Szenen sind spielbereit oder zurückgestellt. Gespielt wird über die Live-Regie.' },
 ];
 
-export function guideState(input: { bookId: string; eveningId: string; progress: EveningProgress | null }): Record<GuideStepId, boolean> {
-  const p = input.progress;
+/** Deferred scenes (Storyboard 2.0) neither block "Ausarbeiten" nor "Spielbereit". */
+export function guideState(input: { bookId: string; eveningId: string; progress: { total: number; idea: number; ready: number; deferred?: number } | null }): Record<GuideStepId, boolean> {
+  const p = input.progress, deferred = p?.deferred || 0;
   return {
     book: !!input.bookId,
     evening: !!input.eveningId,
     sketch: !!p && p.total > 0,
     elaborate: !!p && p.total > 0 && p.idea === 0,
-    ready: !!p && p.total > 0 && p.ready === p.total,
+    ready: !!p && p.ready > 0 && p.ready + deferred === p.total,
   };
 }
 

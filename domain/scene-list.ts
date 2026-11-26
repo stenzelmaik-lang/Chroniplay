@@ -29,6 +29,7 @@ export function summarizeSceneRow(row: SceneListRow, { search = true }: { search
     id: row.id, title: d.title, archived: d.archived, storyId: d.storyId, placeId: d.placeId, version: row.version, updatedAt: row.updated_at, runs: state.data.runs,
     preparation: scenePreparation(d), parentId: d.parentId, sessionIds: d.sessionIds, favorite: d.favorite, pinned: d.pinned,
     elements: d.elements.map(({ id, title, kind }) => ({ id, title, kind })),
-    searchText: search ? [plain(d.narration), ...d.elements.map(e => e.title + ' ' + plain(e.text))].filter(Boolean).join(' ') : '',
+    ...(d.board ? { board: d.board } : {}),
+    searchText: search ? [d.board?.premise || '', plain(d.narration), ...d.elements.map(e => e.title + ' ' + plain(e.text))].filter(Boolean).join(' ') : '',
   };
 }

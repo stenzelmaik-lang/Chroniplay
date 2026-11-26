@@ -51,11 +51,23 @@ export type StoryView = StoryDocument & { id: string; version: number; updatedAt
 export type StoryHistory = { id: string; version: number; createdAt: string; document: StoryDocument };
 export const emptyStory = (): StoryDocument => ({ title: 'Neuer Handlungsstrang', summary:'',status:'draft',favorite:false,pinned:false, sections: { core: '', background: '', secrets: '', clues: '', consequences: '', notes: '' }, references: [], possibilities: [] });
 export type CommandReference = { id: string; title: string; type: string; summary: string; imagePrimary?: string };
-export type MomentView = { id: string; text: string; sessionId: string; storyId: string; sceneId: string; runId: string; references: string[]; occurredAt: string };
+/** Storyboard 2.0, Phase 4: what a moment records. `note` is the classic free note; `decision` a decision of the round;
+ * `skipped` marks a planned scene that was left out this evening (no run). Older moments are notes. */
+export const momentKinds = ['note', 'decision', 'skipped', 'event'] as const;
+export type MomentKind = typeof momentKinds[number];
+export const momentKindNames: Record<MomentKind, string> = { note: 'Notiz', decision: 'Entscheidung', skipped: 'Übersprungen', event: 'Ereignis' };
+/** Szene 2.0, Etappe 4: event log. What happened with a prepared event of the scene (never automatic). */
+export const eventStates = ['triggered', 'postponed', 'skipped', 'discarded'] as const;
+export type EventState = typeof eventStates[number];
+export const eventStateNames: Record<EventState, string> = { triggered: 'Ausgelöst', postponed: 'Verschoben', skipped: 'Übersprungen', discarded: 'Verworfen' };
+export type MomentView = { id: string; kind: MomentKind; text: string; sessionId: string; storyId: string; sceneId: string; runId: string; references: string[]; occurredAt: string; eventId?: string; eventState?: EventState };
 export const momentSchema = z.object({
   clientRequestId: z.string().uuid(), text: z.string().trim().min(1).max(3000),
   sessionId: contextId.min(1), storyId: contextId, sceneId: contextId.default(''), runId: z.union([z.string().uuid(), z.literal('')]).default(''), references: z.array(contextId.min(1)).max(15),
-}).strict();
+  kind: z.enum(momentKinds).default('note'),
+  eventId: z.string().uuid().optional(), eventState: z.enum(eventStates).optional(),
+}).strict().refine(m => m.kind !== 'skipped' || !!m.sceneId && !m.runId, 'Eine übersprungene Szene braucht die Szene und keinen Szenenlauf.')
+  .refine(m => m.kind === 'event' ? !!m.sceneId && !!m.eventId && !!m.eventState : !m.eventId && !m.eventState, 'Ein Ereignis-Eintrag braucht Szene, Ereignis und Zustand; andere Momente tragen keine Ereignisdaten.');
 export const commandSyncSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('request-focus') }).strict(),
   z.object({ type: z.literal('focus'), characterId: contextId.optional(), sessionId: contextId.optional(), storyId: contextId.optional(), placeId: contextId.optional(), sceneId: contextId.optional() }).strict(),

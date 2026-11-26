@@ -1,0 +1,406 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Szene 2.0 – Entwurf</title>
+<!-- Klickbarer Entwurf der SZENENVORBEREITUNG (nicht der Regie) (Konzept docs/szene-2-konzept.md). Keine Verbindung zu ChroniPlay-Daten,
+     nichts wird gespeichert. Lädt referenzfall.local.js (nur lokal), sonst das neutrale Beispiel. -->
+<style>
+:root{
+  --cp-bg:#0d1316;--cp-surface-1:#111b1f;--cp-surface-2:#16242a;--cp-surface-3:#1c2e35;--cp-line:#2c3d43;--cp-line-strong:#3e5359;
+  --cp-text:#ece5d8;--cp-text-muted:#aba89e;--cp-text-faint:#8c948f;
+  --cp-gold:#d6b36f;--cp-gold-strong:#e4c589;--cp-gold-line:#d6b36f73;--cp-gold-wash:#d6b36f14;
+  --cp-blood:#9e2b2f;--cp-blood-text:#e8908a;--cp-focus:#e4c589;
+  --cp-font-title:'Spectral',Georgia,'Times New Roman',serif;--cp-font-text:'IBM Plex Sans',Arial,Helvetica,sans-serif;
+  --cp-radius:2px;--cp-corner:10px;--cp-duration:180ms;--cp-ease:cubic-bezier(.2,.7,.2,1);
+  --sl:#7f9db0;--sl-wash:#7f9db01a;--ok:#7fbf9a;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--cp-bg);color:var(--cp-text);font:15px/1.55 var(--cp-font-text)}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--cp-focus);outline-offset:2px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.app{display:grid;grid-template-rows:auto 1fr;min-height:100vh}
+/* Kopf */
+.head{display:grid;grid-template-columns:1fr auto;gap:10px 24px;align-items:end;padding:14px 22px 16px;border-bottom:1px solid var(--cp-line);background:linear-gradient(var(--cp-surface-1),var(--cp-bg))}
+.crumbs{display:flex;flex-wrap:wrap;gap:6px;font-size:12px;letter-spacing:.06em;color:var(--cp-text-faint)}
+.crumbs span+span::before{content:"›";margin-right:6px;color:var(--cp-line-strong)}
+.title{margin:2px 0 0;font:400 32px/1.15 var(--cp-font-title);color:var(--cp-text)}
+.title input{width:100%;background:none;border:0;border-bottom:1px solid transparent;font:inherit;padding:0}
+.title input:hover,.title input:focus{border-bottom-color:var(--cp-gold-line)}
+.meta{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+.tag{display:inline-flex;align-items:center;gap:6px;padding:3px 9px;border:1px solid var(--cp-line);border-radius:var(--cp-radius);font-size:12px;color:var(--cp-text-muted)}
+.tag b{font-weight:500;color:var(--cp-text)}
+.tag.src{border-color:var(--cp-gold-line);color:var(--cp-gold)}
+.actions{display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end}
+.btn{display:inline-flex;align-items:center;gap:7px;padding:8px 14px;border:1px solid var(--cp-line-strong);border-radius:var(--cp-radius);background:var(--cp-surface-1)}
+.btn:hover{border-color:var(--cp-gold)}
+.btn.primary{border-color:var(--cp-gold);background:var(--cp-gold-wash);color:var(--cp-gold-strong)}
+.btn.small{padding:5px 10px;font-size:13px}
+.saved{font-size:12px;color:var(--cp-text-faint);align-self:center}
+/* Arbeitsfläche */
+.work{display:grid;grid-template-columns:240px minmax(0,1fr) 300px;min-height:0}
+.nav{border-right:1px solid var(--cp-line);padding:14px 10px;overflow:auto;background:var(--cp-surface-1)}
+.nav h3{margin:14px 10px 6px;font:500 11px/1 var(--cp-font-text);letter-spacing:var(--tracking,.14em);text-transform:uppercase;color:var(--cp-gold)}
+.nav h3:first-child{margin-top:4px}
+.nav button{display:grid;grid-template-columns:1fr auto;align-items:center;width:100%;padding:8px 10px;border:0;border-left:2px solid transparent;background:none;text-align:left;color:var(--cp-text-muted)}
+.nav button:hover{color:var(--cp-text);background:var(--cp-surface-2)}
+.nav button[aria-current=true]{color:var(--cp-text);border-left-color:var(--cp-gold);background:var(--cp-gold-wash)}
+.nav .count{font-size:12px;color:var(--cp-text-faint)}
+.nav .count[data-empty]{color:var(--cp-line-strong)}
+.main{padding:22px 28px 60px;overflow:auto;min-width:0}
+.section-head{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:10px;padding-bottom:12px;margin-bottom:18px;border-bottom:1px solid var(--cp-gold-line)}
+.section-head h2{margin:0;font:400 26px/1.15 var(--cp-font-title)}
+.section-head p{margin:4px 0 0;max-width:68ch;color:var(--cp-text-muted)}
+.regie-hint{display:flex;gap:8px;margin:0 0 18px;padding:9px 12px;border-left:2px solid var(--cp-gold);background:var(--cp-gold-wash);font-size:13px;color:var(--cp-text-muted)}
+.regie-hint b{color:var(--cp-gold);font-weight:500;white-space:nowrap}
+.grid{display:grid;gap:14px}
+.cols-2{grid-template-columns:repeat(auto-fit,minmax(300px,1fr))}
+.card{position:relative;padding:16px 18px;border:1px solid var(--cp-line);border-radius:var(--cp-radius);background:var(--cp-surface-1)}
+.card::before,.card::after{content:"";position:absolute;width:var(--cp-corner);height:var(--cp-corner);border-color:var(--cp-gold-line);border-style:solid;pointer-events:none}
+.card::before{top:-1px;left:-1px;border-width:1px 0 0 1px}
+.card::after{bottom:-1px;right:-1px;border-width:0 1px 1px 0}
+.card h4{margin:0 0 8px;font:500 18px/1.25 var(--cp-font-title)}
+.card .sub{margin:-4px 0 10px;font-size:12px;letter-spacing:.06em;color:var(--cp-text-faint)}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.spread{justify-content:space-between}
+.field{display:grid;gap:4px;margin:0 0 10px}
+.field>span{font-size:12px;color:var(--cp-text-faint)}
+.field input,.field textarea,.field select,.quick input,.quick select{width:100%;padding:8px 10px;border:1px solid var(--cp-line);border-radius:var(--cp-radius);background:var(--cp-bg);resize:vertical}
+.read{font:400 17px/1.7 var(--cp-font-title);color:var(--cp-text)}
+.sl{display:flex;gap:8px;margin-top:10px;padding:9px 12px;border-left:2px solid var(--sl);background:var(--sl-wash);font-size:13.5px;color:#c7d4dc}
+.sl b{color:var(--sl);font-weight:500;white-space:nowrap}
+.chip{display:inline-flex;align-items:center;gap:5px;padding:2px 9px;border:1px solid var(--cp-line-strong);border-radius:var(--cp-radius);background:var(--cp-surface-2);font-size:12.5px;color:var(--cp-text-muted)}
+button.chip:hover{border-color:var(--cp-gold);color:var(--cp-text)}
+.chip.gold{border-color:var(--cp-gold-line);color:var(--cp-gold)}
+.chip.blood{border-color:#9e2b2f80;color:var(--cp-blood-text)}
+.chip.sl{border-color:#7f9db080;color:var(--sl);display:inline-flex;margin:0;padding:2px 9px;background:var(--cp-surface-2)}
+.seg{display:inline-flex;border:1px solid var(--cp-line);border-radius:var(--cp-radius);overflow:hidden}
+.seg button{padding:5px 10px;border:0;border-right:1px solid var(--cp-line);background:none;font-size:12.5px;color:var(--cp-text-muted)}
+.seg button:last-child{border-right:0}
+.seg button[aria-pressed=true]{background:var(--cp-gold-wash);color:var(--cp-gold-strong)}
+.passage{display:grid;grid-template-columns:36px minmax(0,1fr);gap:12px}
+.passage .no{font:400 22px/1 var(--cp-font-title);color:var(--cp-gold);padding-top:3px}
+.mood-cue{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:10px;font-size:13px;color:var(--cp-text-faint)}
+.mood-cue select{padding:4px 8px;border:1px solid var(--cp-line);background:var(--cp-bg);border-radius:var(--cp-radius)}
+.thumb{display:grid;place-items:center;aspect-ratio:3/1;margin-bottom:10px;border:1px solid var(--cp-line);background:repeating-linear-gradient(135deg,#16242a 0 12px,#132027 12px 24px);font-size:12px;color:var(--cp-text-faint);text-align:center;padding:8px}
+.cols-3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.col h5{margin:0 0 8px;font:500 12px/1 var(--cp-font-text);letter-spacing:.12em;text-transform:uppercase}
+.col[data-l=known] h5{color:var(--ok)}.col[data-l=discoverable] h5{color:var(--cp-gold)}.col[data-l=gm] h5{color:var(--cp-blood-text)}
+.insight{padding:10px 12px;margin-bottom:8px;border:1px solid var(--cp-line);border-left:3px solid var(--cp-line-strong);background:var(--cp-surface-1)}
+.col[data-l=known] .insight{border-left-color:var(--ok)}.col[data-l=discoverable] .insight{border-left-color:var(--cp-gold)}.col[data-l=gm] .insight{border-left-color:var(--cp-blood)}
+.insight strong{display:block;font-weight:500}
+.insight small{display:block;margin:3px 0 8px;color:var(--cp-text-faint)}
+.when{font:500 15px/1.4 var(--cp-font-text)}
+.then{margin:6px 0 10px;color:var(--cp-text-muted)}
+.outcomes{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;margin:8px 0;font-size:13.5px}
+.outcomes dt{color:var(--cp-text-faint)}.outcomes dd{margin:0}
+.profile{font-size:11.5px;letter-spacing:.06em;color:var(--cp-text-faint)}
+.empty{padding:18px;border:1px dashed var(--cp-line-strong);color:var(--cp-text-faint);text-align:center}
+.quick{display:grid;grid-template-columns:150px 1fr 150px auto;gap:8px;margin-bottom:14px}
+.note{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;padding:10px 12px;border-bottom:1px solid var(--cp-line)}
+/* Bibliothek */
+.lib{border-left:1px solid var(--cp-line);padding:14px;overflow:auto;background:var(--cp-surface-1)}
+.lib h3{margin:0 0 10px;font:400 19px/1.2 var(--cp-font-title)}
+.lib p{margin:0 0 12px;font-size:12.5px;color:var(--cp-text-faint)}
+.lib .tabs{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px}
+.lib .tabs button{padding:4px 9px;border:1px solid var(--cp-line);background:none;font-size:12.5px;color:var(--cp-text-muted);border-radius:var(--cp-radius)}
+.lib .tabs button[aria-pressed=true]{border-color:var(--cp-gold);color:var(--cp-gold-strong)}
+.lib input{width:100%;padding:7px 10px;margin-bottom:10px;border:1px solid var(--cp-line);background:var(--cp-bg);border-radius:var(--cp-radius)}
+.lib ul{list-style:none;margin:0;padding:0}
+.lib li{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 0;border-bottom:1px solid var(--cp-line);font-size:13.5px}
+.lib li .in{font-size:11.5px;color:var(--ok)}
+/* Dialoge */
+dialog{width:min(1100px,94vw);max-height:90vh;padding:0;border:1px solid var(--cp-gold-line);background:var(--cp-bg);color:var(--cp-text)}
+dialog::backdrop{background:#000a}
+.dlg-head{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:14px 18px;border-bottom:1px solid var(--cp-line)}
+.dlg-head h3{margin:0;font:400 22px/1.2 var(--cp-font-title)}
+.dlg-body{padding:18px;overflow:auto;max-height:calc(90vh - 64px)}
+.table-view{max-width:720px;margin:0 auto;padding:28px;background:#0a0f12;border:1px solid var(--cp-line)}
+.table-view .read{font-size:18px}
+.locked{display:flex;gap:8px;align-items:center;margin:10px 0;padding:8px 12px;border:1px dashed var(--cp-line-strong);font-size:13px;color:var(--cp-text-faint)}
+.regie{display:grid;grid-template-columns:220px minmax(0,1fr) 260px;gap:14px}
+.regie .pane{border:1px solid var(--cp-line);background:var(--cp-surface-1);padding:12px}
+.regie .pane h5{margin:0 0 8px;font:500 11px/1 var(--cp-font-text);letter-spacing:.12em;text-transform:uppercase;color:var(--cp-gold)}
+.regie .step{display:block;width:100%;margin-bottom:4px;padding:6px 8px;border:1px solid transparent;background:none;text-align:left;font-size:13px;color:var(--cp-text-muted)}
+.regie .step[aria-current=true]{border-color:var(--cp-gold-line);background:var(--cp-gold-wash);color:var(--cp-text)}
+.timer{font:400 34px/1 var(--cp-font-title);color:var(--cp-gold-strong);letter-spacing:.04em}
+.toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);padding:9px 16px;border:1px solid var(--cp-gold-line);background:var(--cp-surface-2);font-size:13.5px;opacity:0;transition:opacity var(--cp-duration) var(--cp-ease);pointer-events:none}
+.toast[data-on]{opacity:1}
+.drawer-toggle{display:none}
+@media (max-width:1100px){.work{grid-template-columns:200px minmax(0,1fr)}.lib{position:fixed;top:0;right:0;bottom:0;width:min(340px,90vw);z-index:5;transform:translateX(100%);transition:transform var(--cp-duration) var(--cp-ease)}.lib[data-open]{transform:none}.drawer-toggle{display:inline-flex}.regie{grid-template-columns:1fr}}
+@media (max-width:720px){.head{grid-template-columns:1fr;padding:12px 16px}.actions{justify-content:flex-start}.work{grid-template-columns:1fr}.nav{display:flex;overflow-x:auto;gap:4px;padding:8px;border-right:0;border-bottom:1px solid var(--cp-line)}.nav h3{display:none}.nav button{flex:0 0 auto;width:auto;border-left:0;border-bottom:2px solid transparent;gap:6px}.nav button[aria-current=true]{border-bottom-color:var(--cp-gold)}.main{padding:16px}.cols-3{grid-template-columns:1fr}.quick{grid-template-columns:1fr}.title{font-size:26px}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="head">
+    <div>
+      <div class="crumbs" id="crumbs"></div>
+      <h1 class="title"><label><span class="sr">Szenentitel</span><input id="title"></label></h1>
+      <div class="meta" id="meta"></div>
+    </div>
+    <div class="actions">
+      <span class="saved" id="saved">Entwurf · nichts wird gespeichert</span>
+      <button class="btn drawer-toggle" id="libToggle" type="button">Bibliothek</button>
+      <button class="btn primary" type="button" id="btnTable">Spieltisch-Vorschau</button>
+    </div>
+  </header>
+  <div class="work">
+    <nav class="nav" id="nav" aria-label="Bereiche der Szene"></nav>
+    <main class="main" id="main" tabindex="-1"></main>
+    <aside class="lib" id="lib" aria-label="Bibliothek der Welt"></aside>
+  </div>
+</div>
+<dialog id="dlg"><div class="dlg-head"><h3 id="dlgTitle"></h3><button class="btn small" type="button" id="dlgClose">Schließen</button></div><div class="dlg-body" id="dlgBody"></div></dialog>
+<div class="toast" id="toast" role="status"></div>
+
+<script src="referenzfall.local.js" onerror="this.remove()"></script>
+<script src="beispiel.js"></script>
+<script>
+const D = structuredClone(window.SZENE_DATEN);
+const $ = s => document.querySelector(s);
+const esc = v => String(v ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const uid = p => p + Math.random().toString(36).slice(2, 8);
+let area = 'ueberblick', libTab = 'npc', libQuery = '';
+
+const AREAS = [
+  { g: 'Rahmen', id: 'ueberblick', name: 'Überblick', n: () => Object.values(D.ueberblick).filter(v => Array.isArray(v) ? v.length : v).length },
+  { g: 'Rahmen', id: 'schauplaetze', name: 'Schauplätze', n: () => D.schauplaetze.length },
+  { g: 'Rahmen', id: 'beteiligte', name: 'Beteiligte', n: () => D.beteiligte.length },
+  { g: 'Erzählen', id: 'erzaehlung', name: 'Erzählung', n: () => D.abschnitte.length },
+  { g: 'Erzählen', id: 'atmosphaere', name: 'Atmosphäre', n: () => D.stimmungen.length },
+  { g: 'Möglichkeiten', id: 'interaktionen', name: 'Interaktionen', n: () => D.interaktionen.length },
+  { g: 'Möglichkeiten', id: 'material', name: 'Material', n: () => D.material.length },
+  { g: 'Möglichkeiten', id: 'proben', name: 'Proben', n: () => D.proben.length },
+  { g: 'Möglichkeiten', id: 'erkenntnisse', name: 'Erkenntnisse & Geheimnisse', n: () => D.erkenntnisse.length },
+  { g: 'Möglichkeiten', id: 'visionen', name: 'Visionen', n: () => D.visionen.length },
+  { g: 'Möglichkeiten', id: 'ereignisse', name: 'Ereignisse', n: () => D.ereignisse.length },
+  { g: 'Abschluss', id: 'ausgaenge', name: 'Ausgänge', n: () => D.ausgaenge.length },
+  { g: 'Abschluss', id: 'notizen', name: 'Notizen', n: () => D.notizen.length },
+];
+const REGIE = {
+  ueberblick: 'Nichts – der Überblick ist nur für dich.',
+  schauplaetze: 'Du schaltest den Ort über die Karte unten frei; die Spieler sehen seine Infos. Einmal freigeschaltet, bleibt er dauerhaft im Wiki sichtbar.',
+  beteiligte: 'Das Figurenbild liegt auf dem Tisch („ist vor Ort“). Rechts im Slider erscheint die Charakterkarte wie im Wiki – plus dein Zusatz für diese Szene. Die SL-Rolle siehst nur du.',
+  erzaehlung: 'Nichts – die Erzählung liest du vor. Nur die Stimmung kann beim Abschnitt wechseln, wenn du es markierst.',
+  atmosphaere: 'Die Stimmung liegt auf dem Tisch: Bild, Klang und Effekte zusammen.',
+  interaktionen: 'Läuft zwischen dir und den Spielern. Verknüpftes Material, Erkenntnisse, Proben und Ereignisse hast du griffbereit.',
+  material: 'Du spielst es aus – an eine Person, eine Teilgruppe oder alle. Manches können Spieler einstecken. Jedes Material gibt es nur einmal.',
+  proben: 'Die Würfel sind vorbereitet: Der Spieler wählt in seinem Bogen Attribut und Fähigkeit, daraus entsteht der Würfelpool, gewürfelt wird gegen deine Schwierigkeit.',
+  erkenntnisse: 'Nur für bestimmte Spieler – wenn du sie als entdeckt markierst. Vorbereitet ist nicht entdeckt.',
+  visionen: 'Für alle oder bestimmte Spieler – einmal kurz.',
+  ereignisse: 'Global; kann über längere Zeit laufen – auch über Szenen und Abende.',
+  ausgaenge: 'Nichts – du entscheidest, wohin es geht.',
+  notizen: 'Nichts – Notizen sind nur für dich.',
+};
+const HOW = { open: 'Offen sichtbar', search: 'Durch Untersuchung', handover: 'Übergeben von', other: 'Sonstig' };
+const LEVEL = { known: 'Bekannt', discoverable: 'Entdeckbar', gm: 'Nur SL' };
+
+function toast(text) { const t = $('#toast'); t.textContent = text; t.dataset.on = ''; clearTimeout(toast.t); toast.t = setTimeout(() => delete t.dataset.on, 2200); }
+function touched() { $('#saved').textContent = 'Geändert · ' + new Date().toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }) + ' (Entwurf, nicht gespeichert)'; renderNav(); }
+
+function renderHead() {
+  $('#crumbs').innerHTML = D.pfad.map(p => `<span>${esc(p)}</span>`).join('');
+  $('#title').value = D.titel;
+  $('#meta').innerHTML = `<span class="tag">Typ <b>${esc(D.typ)}</b></span><span class="tag">Stand <b>${esc(D.status)}</b></span><span class="tag">Dauer <b>${esc(D.dauer)} Min.</b></span><span class="tag">Regelprofil <b>V20 · Hausregeln</b></span><span class="tag src">${esc(D.quelle)}</span>`;
+}
+function renderNav() {
+  let html = '', group = '';
+  for (const a of AREAS) {
+    if (a.g !== group) { group = a.g; html += `<h3>${esc(group)}</h3>`; }
+    const n = a.n();
+    html += `<button type="button" data-area="${a.id}" aria-current="${area === a.id}"><span>${esc(a.name)}</span><span class="count" ${n ? '' : 'data-empty'}>${n || '–'}</span></button>`;
+  }
+  $('#nav').innerHTML = html;
+}
+const head = (title, text) => `<div class="section-head"><div><h2>${esc(title)}</h2><p>${esc(text)}</p></div></div><p class="regie-hint"><b>Am Spieltisch:</b> ${esc(REGIE[area])}</p>`;
+const npcName = id => D.beteiligte.find(n => n.id === id)?.name || '';
+const link = (kind, id, label) => `<button class="chip" type="button" data-jump="${kind}" data-id="${id}">${esc(label)}</button>`;
+
+const VIEWS = {
+  ueberblick() {
+    const u = D.ueberblick;
+    return head('Überblick', 'Worum geht es in dieser Szene, und wo steht sie in der Geschichte?') + `<div class="grid cols-2">
+      <div class="card"><label class="field"><span>Ausgangssituation</span><textarea rows="4" data-bind="ueberblick.situation">${esc(u.situation)}</textarea></label>
+      <label class="field"><span>Zweck in der Geschichte</span><textarea rows="3" data-bind="ueberblick.zweck">${esc(u.zweck)}</textarea></label></div>
+      <div class="card"><label class="field"><span>Voraussetzungen</span><textarea rows="3" data-bind="ueberblick.voraussetzungen">${esc(u.voraussetzungen)}</textarea></label>
+      <label class="field"><span>Grundton</span><input data-bind="ueberblick.grundton" value="${esc(u.grundton)}"></label>
+      <div class="field"><span>Ende</span><div class="seg">${['offen', 'fest'].map(e => `<button type="button" data-ende="${e}" aria-pressed="${u.ende === e}">${e === 'offen' ? 'Offen – entsteht im Spiel' : 'Fester Ausgang'}</button>`).join('')}</div></div></div>
+      <div class="card"><h4>Mögliche Einstiege</h4>${u.einstiege.map(e => `<div class="row spread" style="padding:6px 0;border-bottom:1px solid var(--cp-line)"><span>${esc(e)}</span></div>`).join('')}
+      <form class="row" data-add="einstieg" style="margin-top:10px"><input class="sr-none" name="t" placeholder="Weiterer Einstieg …" style="flex:1;padding:7px 10px;border:1px solid var(--cp-line);background:var(--cp-bg)"><button class="btn small" type="submit">Hinzufügen</button></form></div>
+    </div>`;
+  },
+  schauplaetze() {
+    return head('Schauplätze', 'Welche Orte und Räume der Welt nutzt diese Szene? Kein Ort, mehrere oder „im Spiel bestimmt“ sind möglich.') +
+      (D.schauplaetze.length ? `<div class="grid cols-2">${D.schauplaetze.map(p => `<div class="card"><div class="sub">Aus der Ortsverwaltung</div><h4>${esc(p.name)}</h4>
+      <label class="field"><span>In dieser Szene</span><textarea rows="2" data-list="schauplaetze" data-id="${p.id}" data-key="notiz">${esc(p.notiz)}</textarea></label>
+      <label class="chip ${p.frei !== false ? 'gold' : ''}" style="margin-bottom:10px"><input type="checkbox" data-check="schauplaetze" data-id="${p.id}" data-key="frei" ${p.frei !== false ? 'checked' : ''}> In dieser Szene freischaltbar – danach dauerhaft im Wiki</label>
+      <div class="row"><button class="chip" type="button" data-toast="Öffnet den Ort in der Ortsverwaltung (separater Bereich).">Ort öffnen</button><button class="chip" type="button" data-remove="schauplaetze" data-id="${p.id}">Entfernen</button></div></div>`).join('')}</div>` : `<div class="empty">Noch kein Schauplatz. Ziehe einen Ort aus der Bibliothek rechts.</div>`) +
+      `<p class="profile" style="margin-top:12px">Ortsdaten bleiben in der Ortsverwaltung. Die Szene ergänzt nur ihren Zusammenhang.</p>`;
+  },
+  beteiligte() {
+    const f = (n, k, label, rows = 2) => `<label class="field"><span>${label}</span><textarea rows="${rows}" data-list="beteiligte" data-id="${n.id}" data-key="${k}">${esc(n[k])}</textarea></label>`;
+    return head('Beteiligte', 'NSCs aus der Welt und ihre Rolle in genau dieser Szene. Biografie und Charakterbogen bleiben in der NSC-Akte.') +
+      (D.beteiligte.length ? D.beteiligte.map(n => `<div class="card" style="margin-bottom:14px"><div class="row spread"><div><div class="sub">NSC-Akte · ${esc(n.bild)}</div><h4>${esc(n.name)}</h4></div>
+      <div class="row"><button class="chip" type="button" data-toast="Öffnet die NSC-Akte im NSC-Bereich.">Akte öffnen</button><button class="chip" type="button" data-toast="Charakterbogen: wird später im NSC-Bereich nach Regelprofil angelegt.">Charakterbogen – später</button></div></div>
+      <div class="grid cols-2">${f(n, 'warum', 'Warum ist er/sie hier?')}${f(n, 'will', 'Was will er/sie erreichen?')}${f(n, 'weiss', 'Was weiß er/sie?', 3)}${f(n, 'verschweigt', 'Was verschweigt er/sie?', 3)}${f(n, 'reaktion', 'Wie reagiert er/sie?', 3)}<div>${f(n, 'eingreifen', 'Greift ein, wenn …')}${f(n, 'geht', 'Verlässt die Szene, wenn …')}</div></div>
+      <label class="field" style="margin-top:6px"><span>Zusatz für die Spieler-Karte in dieser Szene <span class="chip gold">sehen Spieler im Slider</span></span><textarea rows="2" data-list="beteiligte" data-id="${n.id}" data-key="karte" placeholder="Was die Spieler hier zusätzlich über die Figur erfahren – unabhängig von der Wiki-Karte …">${esc(n.karte || '')}</textarea></label>
+      <p class="profile" style="margin:-4px 0 10px">Alle Felder darüber sind deine SL-Rolle und erscheinen nie am Tisch.</p>
+      ${n.saetze.length ? `<div class="sl"><b>Dialoghilfen</b><span>${n.saetze.map(esc).join('<br>')}</span></div>` : ''}</div>`).join('') : `<div class="empty">Noch niemand beteiligt. Füge NSCs aus der Bibliothek hinzu.</div>`);
+  },
+  erzaehlung() {
+    const moods = D.stimmungen;
+    return head('Erzählung', 'Abschnitte in der Reihenfolge, in der du sie wahrscheinlich brauchst. Regiehinweise sind nur für dich.') +
+      D.abschnitte.map((a, i) => `<div class="card passage" style="margin-bottom:14px"><span class="no">${String(i + 1).padStart(2, '0')}</span><div>
+      <div class="row spread"><input value="${esc(a.titel)}" data-list="abschnitte" data-id="${a.id}" data-key="titel" style="flex:1;background:none;border:0;font:500 18px/1.3 var(--cp-font-title)">
+      <span class="row"><button class="chip" type="button" data-move="-1" data-id="${a.id}" ${i ? '' : 'disabled'} aria-label="Nach oben">↑</button><button class="chip" type="button" data-move="1" data-id="${a.id}" ${i < D.abschnitte.length - 1 ? '' : 'disabled'} aria-label="Nach unten">↓</button></span></div>
+      <div class="read">${esc(a.text)}</div>
+      <div class="sl"><b>Regie · nur SL</b><span>${esc(a.regie)}</span></div>
+      <div class="mood-cue"><label>Stimmung beim Aufruf <select data-mood="${a.id}"><option value="">bleibt wie sie ist</option>${moods.map(m => `<option value="${m.id}" ${a.stimmung === m.id ? 'selected' : ''}>wechselt zu „${esc(m.name)}“</option>`).join('')}</select></label>
+      <span class="chip sl">wird vorgelesen, nicht ausgespielt</span></div></div></div>`).join('') +
+      `<form class="card row" data-add="abschnitt"><input name="t" placeholder="Titel des neuen Abschnitts …" style="flex:1;padding:8px 10px;border:1px solid var(--cp-line);background:var(--cp-bg)"><button class="btn small" type="submit">Abschnitt hinzufügen</button></form>`;
+  },
+  atmosphaere() {
+    return head('Atmosphäre', 'Benannte Stimmungen aus Bild, Klang und Effekten. Eine gilt für die ganze Szene; Abschnitte können gezielt wechseln.') +
+      `<div class="grid cols-2">${D.stimmungen.map(m => `<div class="card"><div class="thumb">${esc(m.bild)}</div><div class="row spread"><h4>${esc(m.name)}</h4>
+      <label class="chip ${m.standard ? 'gold' : ''}"><input type="radio" name="std" data-std="${m.id}" ${m.standard ? 'checked' : ''}> Szenenstandard</label></div>
+      <dl class="outcomes"><dt>Klang</dt><dd>${esc(m.ton)}</dd><dt>Effekte</dt><dd>${m.effekte.length ? m.effekte.map(esc).join(', ') : '–'}</dd>
+      <dt>Genutzt von</dt><dd>${D.abschnitte.filter(a => a.stimmung === m.id).map(a => esc(a.titel)).join(', ') || '–'}</dd></dl></div>`).join('')}</div>`;
+  },
+  interaktionen() {
+    const name = (list, id, key = 'titel') => D[list].find(x => x.id === id)?.[key] || '?';
+    return head('Interaktionen', 'Mögliche Berührungspunkte mit der Welt – ohne feste Reihenfolge. Leer lassen ist ausdrücklich erlaubt.') +
+      (D.interaktionen.length ? `<div class="grid cols-2">${D.interaktionen.map(i => `<div class="card"><div class="when">Wenn ${esc(i.wenn.replace(/^Wenn\s+/i, ''))} …</div><div class="then">… dann ${esc(i.dann)}</div>
+      <div class="row">${i.material.map(id => link('material', id, 'Material: ' + name('material', id, 'name'))).join('')}${i.erkenntnisse.map(id => link('erkenntnisse', id, 'Erkenntnis: ' + name('erkenntnisse', id))).join('')}${i.proben.map(id => link('proben', id, 'Probe: ' + name('proben', id))).join('')}${i.ereignisse.map(id => link('ereignisse', id, 'Ereignis: ' + name('ereignisse', id))).join('')}</div></div>`).join('')}</div>` : `<div class="empty">Keine vorbereiteten Interaktionen – freies Spiel.</div>`) +
+      `<form class="card row" data-add="interaktion" style="margin-top:14px"><input name="t" placeholder="Wenn die Spieler … (z. B. die Tür öffnen)" style="flex:1;padding:8px 10px;border:1px solid var(--cp-line);background:var(--cp-bg)"><button class="btn small" type="submit">Interaktion hinzufügen</button></form>`;
+  },
+  material() {
+    return head('Material', 'Materialien aus der Bibliothek und wie sie ins Spiel kommen. Dasselbe Material kann in mehreren Szenen verwendet werden – ohne Kopie.') +
+      `<div class="grid cols-2">${D.material.map(m => `<div class="card"><div class="thumb">${esc(m.art)} · ${esc(m.name)}</div><div class="row spread"><h4>${esc(m.name)}</h4><span class="chip">${m.inSzenen > 1 ? 'in ' + m.inSzenen + ' Szenen' : 'nur hier'}</span></div>
+      <div class="row" style="margin-bottom:10px"><label class="chip ${m.einsteckbar ? 'gold' : ''}"><input type="checkbox" data-check="material" data-id="${m.id}" data-key="einsteckbar" ${m.einsteckbar ? 'checked' : ''}> Spieler können es einstecken</label><span class="chip">gibt es nur einmal</span></div>
+      <div class="field"><span>Wie kommt es ins Spiel?</span><div class="seg">${Object.entries(HOW).map(([k, v]) => `<button type="button" data-how="${k}" data-id="${m.id}" aria-pressed="${m.wie === k}">${v}</button>`).join('')}</div></div>
+      ${m.wie === 'handover' ? `<label class="field"><span>Übergeben von</span><select data-list="material" data-id="${m.id}" data-key="von"><option value="">–</option>${D.beteiligte.map(n => `<option value="${n.id}" ${m.von === n.id ? 'selected' : ''}>${esc(n.name)}</option>`).join('')}</select></label>` : ''}
+      <label class="field"><span>Wann, warum, unter welchen Umständen?</span><textarea rows="2" data-list="material" data-id="${m.id}" data-key="bedingung">${esc(m.bedingung)}</textarea></label>
+      <div class="row"><button class="chip" type="button" data-preview="${m.id}">Vorschau</button><button class="chip" type="button" data-toast="Bearbeitet das Material in der Seitenleiste – ohne Fensterwechsel.">Material bearbeiten</button></div></div>`).join('')}</div>`;
+  },
+  proben() {
+    return head('Proben', 'Mögliche regeltechnische Situationen. Die Mechanik liefert das Regelprofil der Kampagne – nicht jede Interaktion braucht eine Probe.') + `<p class="locked">Jetzt nur vorbereiten: Schwierigkeit, vorgeschlagene Werte, Folgen. Das volle Probensystem mit festen Charakterbögen kommt in einem eigenen, späteren Schritt.</p>` +
+      `<div class="grid cols-2">${D.proben.map(p => `<div class="card"><div class="profile">Regelprofil V20 · Hausregeln</div><h4>${esc(p.titel)}</h4>
+      <div class="row"><span class="chip gold">${esc(p.werte)}</span><span class="chip">SG ${esc(p.sg)}</span></div>
+      <dl class="outcomes"><dt>Erfolg</dt><dd>${esc(p.folgen.erfolg)}</dd><dt>Misserfolg</dt><dd>${esc(p.folgen.misserfolg)}</dd><dt>Patzer</dt><dd>${esc(p.folgen.patzer)}</dd></dl>
+      ${p.hinweis ? `<div class="sl"><b>Hinweis</b><span>${esc(p.hinweis)}</span></div>` : ''}</div>`).join('')}</div>`;
+  },
+  erkenntnisse() {
+    const col = l => `<div class="col" data-l="${l}"><h5>${LEVEL[l]}</h5>${D.erkenntnisse.filter(e => e.stufe === l).map(e => `<div class="insight"><strong>${esc(e.titel)}</strong><small>${esc(e.fund)}${e.akte ? ' · ' + esc(e.akte) : ''}</small>
+      <div class="seg">${Object.entries(LEVEL).map(([k, v]) => `<button type="button" data-level="${k}" data-id="${e.id}" aria-pressed="${e.stufe === k}">${v}</button>`).join('')}</div></div>`).join('') || '<div class="empty">–</div>'}</div>`;
+    return head('Erkenntnisse & Geheimnisse', 'Was die Runde erfahren kann – und was nur du weißt. Eine vorbereitete Erkenntnis ist noch keine entdeckte.') +
+      `<div class="cols-3">${col('known')}${col('discoverable')}${col('gm')}</div><p class="locked">Wer was tatsächlich entdeckt hat, entsteht erst am Tisch und steht im Spielverlauf – nie hier.</p>`;
+  },
+  visionen() {
+    return head('Visionen', 'Vorbereitete Erlebnisse aus der Vision Engine. Eine Vision gehört zur Szene, muss aber nicht ausgespielt werden.') +
+      `<div class="grid cols-2">${D.visionen.map(v => `<div class="card"><div class="thumb">Vision Engine · ${v.bilder} Bilder</div><h4>${esc(v.titel)}</h4>
+      <div class="sl"><b>Bedingung</b><span>${esc(v.bedingung)}</span></div>
+      <div class="row" style="margin-top:10px"><span class="chip gold">Empfänger: ${v.empfaenger === 'einzeln' ? 'nur einzeln' : esc(v.empfaenger)}</span><button class="chip" type="button" data-toast="Öffnet die SL-Vorschau der Vision Engine. Die Vorschau stellt nichts zu.">Vorschau</button><button class="chip" type="button" data-toast="Öffnet die Regie-Werkbank der Vision.">Bearbeiten</button></div></div>`).join('')}</div>`;
+  },
+  ereignisse() {
+    return head('Ereignisse', 'Was eintreten kann, aber nicht muss. Am Tisch löst du es selbst aus, verschiebst, überspringst oder verwirfst es.') +
+      `<div class="grid cols-2">${D.ereignisse.map(e => `<div class="card"><h4>${esc(e.titel)}</h4><dl class="outcomes"><dt>Auslöser</dt><dd>${esc(e.ausloeser)}</dd><dt>Wirkung</dt><dd>${esc(e.wirkung)}</dd>
+      <dt>Timer</dt><dd>${e.timer ? esc(e.timer) + ' Min. – startest du in der Regie' : '–'}</dd></dl><div class="row"><span class="chip blood">nur manuell</span></div></div>`).join('')}</div>`;
+  },
+  ausgaenge() {
+    return head('Ausgänge', 'Mögliche Folgeszenen und Wege. Kein fester Ausgang ist ausdrücklich erlaubt – die Entscheidung fällt im Spiel.') +
+      `<div class="grid">${D.ausgaenge.map(x => `<div class="card row spread"><div><div class="sub">${esc(x.art)}</div><h4 style="margin:0">→ ${esc(x.ziel)}</h4></div><span class="chip">${esc(x.bedingung)}</span></div>`).join('')}</div>`;
+  },
+  notizen() {
+    return head('Notizen', 'Vorbereitete Gedanken und spontane Einfälle – mit Bezug zu Szene, Figur, Ort, Abend oder Kampagne. Dasselbe Notizsystem nutzt die Regie.') +
+      `<form class="quick" data-add="notiz"><select name="a"><option>Hinweis</option><option>Offene Frage</option><option>Idee</option><option>Versprechen</option><option>Erinnerung</option></select>
+      <input name="t" placeholder="Notiz …" required><select name="b"><option>Szene</option>${D.beteiligte.map(n => `<option>Figur: ${esc(n.name)}</option>`).join('')}<option>Spielabend</option><option>Kampagne</option></select><button class="btn small" type="submit">Notieren</button></form>
+      <div class="card" style="padding:0">${D.notizen.map(n => `<div class="note"><span class="chip ${n.art === 'Offene Frage' ? 'gold' : ''}">${esc(n.art)}</span><span>${esc(n.text)}</span><span class="profile">${esc(n.bezug)}</span></div>`).join('')}</div>`;
+  },
+};
+
+function renderMain() { $('#main').innerHTML = VIEWS[area](); }
+function renderLib() {
+  const tabs = { npc: 'NSCs', orte: 'Orte', material: 'Material', akten: 'Akten' };
+  const used = { npc: D.beteiligte.map(n => n.name), orte: D.schauplaetze.map(p => p.name), material: D.material.map(m => m.name), akten: D.erkenntnisse.map(e => e.akte).filter(Boolean) };
+  const items = D.bibliothek[libTab].filter(x => x.toLowerCase().includes(libQuery.toLowerCase()));
+  $('#lib').innerHTML = `<h3>Bibliothek der Welt</h3><p>Zuordnen statt kopieren. Die Daten bleiben in ihrem Bereich.</p>
+    <div class="tabs">${Object.entries(tabs).map(([k, v]) => `<button type="button" data-libtab="${k}" aria-pressed="${libTab === k}">${v}</button>`).join('')}</div>
+    <label><span class="sr">Suchen</span><input id="libSearch" placeholder="Suchen …" value="${esc(libQuery)}"></label>
+    <ul>${items.map(x => `<li><span>${esc(x)}</span>${used[libTab].includes(x) ? '<span class="in">in der Szene</span>' : `<button class="chip" type="button" data-assign="${esc(x)}">Zuordnen</button>`}</li>`).join('') || '<li>Nichts gefunden.</li>'}</ul>`;
+}
+function render() { renderHead(); renderNav(); renderMain(); renderLib(); }
+
+function setPath(path, value) { const [a, b] = path.split('.'); D[a][b] = value; }
+function find(list, id) { return D[list].find(x => x.id === id); }
+
+document.addEventListener('click', e => {
+  const t = e.target.closest('button,[data-std]'); if (!t) return;
+  const d = t.dataset;
+  if (d.area) { area = d.area; renderNav(); renderMain(); $('#main').focus(); return; }
+  if (d.jump) { area = d.jump; renderNav(); renderMain(); toast('Gesprungen zu ' + AREAS.find(a => a.id === d.jump).name); return; }
+  if (d.toast) { toast(d.toast); return; }
+  if (d.ende) { D.ueberblick.ende = d.ende; touched(); renderMain(); return; }
+  if (d.move) { const i = D.abschnitte.findIndex(a => a.id === d.id), j = i + Number(d.move); [D.abschnitte[i], D.abschnitte[j]] = [D.abschnitte[j], D.abschnitte[i]]; touched(); renderMain(); return; }
+  if (d.how) { find('material', d.id).wie = d.how; touched(); renderMain(); return; }
+  if (d.level) { find('erkenntnisse', d.id).stufe = d.level; touched(); renderMain(); toast('Stufe geändert – entdeckt wird erst am Tisch.'); return; }
+  if (d.remove) { D[d.remove] = D[d.remove].filter(x => x.id !== d.id); touched(); renderMain(); renderLib(); return; }
+  if (d.preview) { const m = find('material', d.preview); openDialog('Vorschau · ' + m.name, `<div class="table-view"><div class="thumb" style="aspect-ratio:4/3">${esc(m.art)} · ${esc(m.name)}</div><p class="profile">So würde das Material am Spieltisch erscheinen – mit dem Öffnungseffekt aus Spielmaterial 3.0. Ausgespielt wird nur in der Regie.</p></div>`); return; }
+  if (d.libtab) { libTab = d.libtab; renderLib(); return; }
+  if (d.assign) { assign(d.assign); return; }
+});
+function assign(name) {
+  if (libTab === 'npc') { D.beteiligte.push({ id: uid('n'), name, bild: 'Bild aus der NSC-Akte', warum: '', will: '', weiss: '', verschweigt: '', reaktion: '', eingreifen: '', geht: '', saetze: [] }); area = 'beteiligte'; }
+  if (libTab === 'orte') { D.schauplaetze.push({ id: uid('p'), name, notiz: '' }); area = 'schauplaetze'; }
+  if (libTab === 'material') { D.material.push({ id: uid('m'), name, art: 'Material', wie: 'open', bedingung: '', von: null, inSzenen: 2 }); area = 'material'; }
+  if (libTab === 'akten') { D.erkenntnisse.push({ id: uid('e'), titel: name.replace(/^\w+:\s*/, ''), stufe: 'discoverable', fund: 'Fundweg ergänzen …', akte: name }); area = 'erkenntnisse'; }
+  touched(); renderMain(); renderLib(); toast('„' + name + '“ zugeordnet – keine Kopie, nur ein Verweis.');
+}
+document.addEventListener('input', e => {
+  const t = e.target, d = t.dataset;
+  if (t.id === 'title') { D.titel = t.value; touched(); return; }
+  if (t.id === 'libSearch') { libQuery = t.value; const pos = t.selectionStart; renderLib(); const s = $('#libSearch'); s.focus(); s.setSelectionRange(pos, pos); return; }
+  if (d.bind) { setPath(d.bind, t.value); touched(); return; }
+  if (d.list) { find(d.list, d.id)[d.key] = t.value || (d.key === 'von' ? null : ''); touched(); }
+});
+document.addEventListener('change', e => {
+  const t = e.target, d = t.dataset;
+  if (d.mood !== undefined) { find('abschnitte', d.mood).stimmung = t.value || null; touched(); toast(t.value ? 'Stimmung wechselt bei diesem Abschnitt.' : 'Stimmung bleibt bei diesem Abschnitt, wie sie ist.'); return; }
+  if (d.std) { D.stimmungen.forEach(m => m.standard = m.id === d.std); touched(); renderMain(); return; }
+  if (d.check) { find(d.check, d.id)[d.key] = t.checked; touched(); renderMain(); return; }
+  if (d.list && t.tagName === 'SELECT') { find(d.list, d.id)[d.key] = t.value || null; touched(); }
+});
+document.addEventListener('submit', e => {
+  const f = e.target.closest('form[data-add]'); if (!f) return; e.preventDefault();
+  const v = (f.elements.t?.value || '').trim(); if (!v) return;
+  const kind = f.dataset.add;
+  if (kind === 'einstieg') D.ueberblick.einstiege.push(v);
+  if (kind === 'abschnitt') D.abschnitte.push({ id: uid('a'), titel: v, text: 'Vorlesetext schreiben …', regie: 'Regiehinweis (nur SL) …', stimmung: null });
+  if (kind === 'interaktion') D.interaktionen.push({ id: uid('i'), wenn: v, dann: 'beschreiben, was dann passiert …', material: [], erkenntnisse: [], proben: [], ereignisse: [] });
+  if (kind === 'notiz') D.notizen.unshift({ id: uid('no'), art: f.elements.a.value, text: v, bezug: f.elements.b.value });
+  touched(); renderMain(); toast('Hinzugefügt (nur im Entwurf).');
+});
+
+function openDialog(title, body) { $('#dlgTitle').textContent = title; $('#dlgBody').innerHTML = body; $('#dlg').showModal(); }
+$('#dlgClose').onclick = () => $('#dlg').close();
+$('#libToggle').onclick = () => { const l = $('#lib'); if (l.hasAttribute('data-open')) l.removeAttribute('data-open'); else l.setAttribute('data-open', ''); };
+$('#btnTable').onclick = () => {
+  const known = D.erkenntnisse.filter(e => e.stufe !== 'gm');
+  openDialog('Spieltisch-Vorschau', `<div class="table-view"><p class="profile">Was die Spieler aus dieser Szene sehen können – jeweils erst, wenn du es in der Regie ausspielst. Die Erzählung liest du vor; sie erscheint hier nicht.</p>
+    <h4 class="sub">Figuren vor Ort</h4><div class="row">${D.beteiligte.map(n => `<span class="chip gold">${esc(n.name)}</span>`).join('') || '–'}</div>
+    ${D.beteiligte.filter(n => n.karte).map(n => `<p class="profile">Karte ${esc(n.name)} · Zusatz: ${esc(n.karte)}</p>`).join('')}
+    <h4 class="sub" style="margin-top:14px">Orte zum Freischalten</h4><div class="row">${D.schauplaetze.filter(p => p.frei !== false).map(p => `<span class="chip">${esc(p.name)}</span>`).join('') || '–'}</div>
+    <h4 class="sub" style="margin-top:14px">Stimmungen</h4><div class="row">${D.stimmungen.map(m => `<span class="chip">${esc(m.name)}</span>`).join('')}</div>
+    <h4 class="sub" style="margin-top:14px">Material</h4><div class="row">${D.material.map(m => `<span class="chip">${esc(m.name)}${m.einsteckbar ? ' · einsteckbar' : ''}</span>`).join('')}</div>
+    <h4 class="sub" style="margin-top:14px">Erkenntnisse (nur für die, die sie entdecken)</h4><div class="row">${known.map(k => `<span class="chip">${esc(k.titel)}</span>`).join('') || '–'}</div>
+    <h4 class="sub" style="margin-top:14px">Visionen (einmal kurz)</h4><div class="row">${D.visionen.map(v => `<span class="chip">${esc(v.titel)}</span>`).join('') || '–'}</div>
+    <div class="locked">Nie am Tisch: Erzähltext, Regiehinweise, SL-Rollen, Geheimnisse, Proben-Folgen, Notizen.</div></div>`);
+};
+render();
+</script>
+</body>
+</html>

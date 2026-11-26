@@ -10,7 +10,9 @@ export async function POST(req: Request) {
     if (d.storyId) await readStory(db, a, d.storyId);
     if (d.sceneId) {
       const scene = await readScene(db,a,d.sceneId);
-      if (!d.runId || !scene.state.runs.some(r => r.id === d.runId && r.sessionId === d.sessionId)) throw new HttpError(400,'Wähle den tatsächlich gespielten Szenenlauf.');
+      // A skipped scene has no run by definition; every other moment about a scene belongs to a run of this evening.
+      if (d.kind !== 'skipped' && (!d.runId || !scene.state.runs.some(r => r.id === d.runId && r.sessionId === d.sessionId))) throw new HttpError(400,'Wähle den tatsächlich gespielten Szenenlauf.');
+      if (d.kind === 'event' && !scene.document.events?.some(e => e.id === d.eventId)) throw new HttpError(400,'Dieses Ereignis ist in der Szene nicht vorbereitet.');
       if (d.storyId !== scene.document.storyId) throw new HttpError(400,'Der Handlungsstrang passt nicht zur gespielten Szene.');
     } else if (d.runId) throw new HttpError(400,'Der Szenenlauf benötigt eine Szene.');
     await validateCommandReferences(db, a, d.references);
