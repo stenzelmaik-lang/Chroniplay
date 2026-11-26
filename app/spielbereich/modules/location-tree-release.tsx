@@ -3,6 +3,7 @@
 import {useState} from 'react';
 import type {PlaceProjection} from '@/domain/location-types';
 import {api} from './api-client';
+import { useLocationDialog } from './location-dialog';
 
 type Entry={id:string;title:string;parentId:string|null;level:string;lifecycle:string;visibility?:string};
 type Release=NonNullable<PlaceProjection['location']['slGroupReleases']>[number];
@@ -10,6 +11,7 @@ type Release=NonNullable<PlaceProjection['location']['slGroupReleases']>[number]
 export function LocationTreeRelease({placeId,nodes,disabled,onPublished}:{
  placeId:string;nodes:Entry[];disabled:boolean;onPublished:()=>Promise<void>;
 }){
+  const dlg=useLocationDialog();
  const [plan,setPlan]=useState<Release[]|null>(null),[selected,setSelected]=useState<string[]>([]);
  const [knowledge,setKnowledge]=useState<'rumored'|'known'|'visited'|'investigated'>('known');
  const [busy,setBusy]=useState(false),[message,setMessage]=useState(''),[error,setError]=useState('');
@@ -29,7 +31,7 @@ export function LocationTreeRelease({placeId,nodes,disabled,onPublished}:{
    const row=available(id);
    return row?.approvedRevisionId?[{entityId:id,revisionId:row.approvedRevisionId,expectedReleaseVersion:row.version}]:[];
   });
-  if(entries.length!==selected.length||!entries.length||!window.confirm('Die '+entries.length+' ausgewählten Einträge gemeinsam für die Runde freigeben?'))return;
+  if(entries.length!==selected.length||!entries.length||!await dlg.ask('Die '+entries.length+' ausgewählten Einträge gemeinsam für die Runde freigeben?'))return;
   setBusy(true);setError('');
   try{
    await api('/api/cms/releases','POST',{action:'publish-tree',placeId,entries,discoveryState:knowledge});
@@ -38,7 +40,7 @@ export function LocationTreeRelease({placeId,nodes,disabled,onPublished}:{
   }catch(e){setError(e instanceof Error?e.message:'Die Ortsfreigabe ist fehlgeschlagen.');}
   finally{setBusy(false);}
  }
- return <section aria-label="Gemeinsame Ortsfreigabe">
+ return <section aria-label="Gemeinsame Ortsfreigabe">{dlg.dialog}
   <h3>Ort mit Bereichen und Räumen freigeben</h3>
   <p>Wähle die genehmigten Fassungen aus. Geheime Einträge und Hinweise bleiben getrennt.</p>
   <button className="button" type="button" disabled={disabled||busy} onClick={()=>void prepare()}>Freigabeliste laden</button>

@@ -671,3 +671,10 @@
 .mapLibreMarker[data-map-risk=neutral],.atlasMarker[data-map-risk=neutral]{color:#f2cd85}
 .mapLibreMarker[data-map-risk=dangerous],.atlasMarker[data-map-risk=dangerous]{color:#ffad61}
 .mapLibreMarker[data-map-risk=hostile],.atlasMarker[data-map-risk=hostile]{color:#ff737a}
+
+/* Orte icons: what the players know, the state of a place */
+:is(.discoveryTag,.roomStatus,.cardStatus,.cardStatusInline,.kicker,.previewTopline,.areaContext)>svg{flex:none;margin-right:6px;vertical-align:-2px;color:var(--gold,#d6b36f)}
+:is(.discoveryTag,.roomStatus,.areaContext){display:inline-flex;flex-direction:row;align-items:center;gap:6px}
+:is(.discoveryTag,.roomStatus,.areaContext)>svg{margin-right:0;vertical-align:0}
+.roomWorldState{display:inline-flex;align-items:center;gap:5px;margin-left:10px;padding-left:10px;border-left:1px solid currentColor;font-style:normal}
+.roomWorldState>svg{color:var(--gold,#d6b36f)}

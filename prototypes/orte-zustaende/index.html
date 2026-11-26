@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Orte · Zustände und Erkenntnisse (Vorlage)</title>
+<style>
+/* Prototype only: static, no data. Nacht palette (teal-grey + gold), no purple, no paper look. */
+:root{--bg:#0b1316;--panel:#111b1f;--panel2:#16242a;--line:#2b3a40;--line2:#3e5359;--ink:#e9e6df;--mute:#a7aeb0;--gold:#d6b36f;--silver:#c6cfd2;--ember:#b5563a;--serif:Georgia,"Times New Roman",serif}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.55 system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:1080px;margin:0 auto;padding:28px 18px 60px}
+h1{font:400 30px/1.2 var(--serif);margin:0 0 6px}
+h2{font:400 22px/1.25 var(--serif);margin:36px 0 6px}
+.lead{color:var(--mute);margin:0 0 18px;max-width:70ch}
+.note{font-size:13px;color:var(--mute)}
+/* ---------- A: five states, subtle ---------- */
+.states{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+.place{position:relative;overflow:hidden;min-height:150px;border:1px solid var(--line);border-radius:6px;background:linear-gradient(160deg,#18292f,#0c1518);padding:14px}
+.place::before{content:"";position:absolute;inset:0;background:radial-gradient(120% 80% at 80% 0%,rgba(214,179,111,.08),transparent 60%);pointer-events:none}
+.place small{display:block;font-size:11px;letter-spacing:.08em;color:var(--mute);text-transform:uppercase}
+.place strong{display:block;font:400 19px/1.2 var(--serif);margin:4px 0 8px}
+.place p{margin:0;font-size:13.5px;color:var(--silver)}
+.badge{display:inline-flex;align-items:center;gap:6px;margin-top:10px;padding:3px 9px;border:1px solid var(--line2);border-radius:999px;font-size:12px;color:var(--silver)}
+.badge svg{width:13px;height:13px;stroke:var(--gold);fill:none;stroke-width:1.6}
+/* offen: no effect, only a gold edge */
+.s-offen{border-top:2px solid var(--gold)}
+/* verändert: one warm line that drifts slowly */
+.s-veraendert::after{content:"";position:absolute;left:-30%;right:-30%;bottom:10px;height:1px;background:linear-gradient(90deg,transparent,rgba(214,179,111,.55),transparent);animation:drift 9s ease-in-out infinite;pointer-events:none}
+@keyframes drift{0%,100%{transform:translateX(-8%)}50%{transform:translateX(8%)}}
+/* geschlossen: fine diagonal hatch and a lock mark */
+.s-geschlossen::before{background:repeating-linear-gradient(-45deg,rgba(198,207,210,.06) 0 1px,transparent 1px 9px)}
+.s-geschlossen{filter:saturate(.7)}
+/* zerstört: a crack and a faint ember glow at the foot, pulsing slowly */
+.s-zerstoert .crack{position:absolute;right:-6px;top:-6px;width:150px;height:150px;opacity:.5;pointer-events:none}
+.s-zerstoert::after{content:"";position:absolute;left:0;right:0;bottom:0;height:45%;background:radial-gradient(60% 100% at 50% 100%,rgba(181,86,58,.28),transparent 70%);animation:glow 5s ease-in-out infinite;pointer-events:none}
+@keyframes glow{0%,100%{opacity:.55}50%{opacity:.9}}
+.stamp{position:absolute;right:12px;bottom:12px;transform:rotate(-6deg);border:1px solid rgba(181,86,58,.7);color:#e0a497;padding:2px 8px;font:600 11px/1.4 system-ui;letter-spacing:.16em;border-radius:3px}
+/* verlassen: a little dust, drifting very slowly */
+.s-verlassen .dust{position:absolute;inset:0;pointer-events:none;background:radial-gradient(circle,rgba(198,207,210,.18) 1px,transparent 1.5px) 0 0/34px 34px;animation:dust 40s linear infinite;opacity:.5}
+@keyframes dust{to{background-position:40px 60px}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important}}
+/* ---------- B: lower area as cards ---------- */
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px}
+.card{perspective:900px;min-height:170px}
+.card-inner{position:relative;width:100%;height:100%;min-height:170px;transition:transform .7s cubic-bezier(.2,.7,.2,1);transform-style:preserve-3d}
+.card.flipped .card-inner{transform:rotateY(180deg)}
+.face{position:absolute;inset:0;backface-visibility:hidden;border:1px solid var(--line);border-radius:6px;background:var(--panel2);padding:14px;display:flex;flex-direction:column;gap:6px}
+.face.back{transform:rotateY(180deg);background:#0e181c}
+.face small{font-size:11px;letter-spacing:.08em;color:var(--mute);text-transform:uppercase}
+.face strong{font:400 18px/1.25 var(--serif)}
+.face p{margin:0;font-size:13.5px;color:var(--silver)}
+.flip{margin-top:auto;align-self:flex-start;background:none;border:1px solid var(--line2);color:var(--silver);border-radius:4px;padding:5px 10px;font:13px system-ui;cursor:pointer}
+.flip:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+/* gesperrt: sealed, dashed edge, unlock condition shown plainly */
+.card.locked .face{border-style:dashed;border-color:var(--line2);background:repeating-linear-gradient(135deg,#101b1f 0 10px,#0d1619 10px 20px)}
+.card.locked .face strong{color:var(--mute)}
+.unlock{font-size:12.5px;color:var(--gold)}
+/* erspielt: a small gold mark, not a loud badge */
+.won{position:absolute;right:12px;top:12px;font-size:11px;color:var(--gold);letter-spacing:.06em}
+/* ---------- C: table flyer ---------- */
+.table{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:14px;align-items:start}
+.flyer{border:1px solid var(--line2);border-radius:6px;background:linear-gradient(180deg,#14242a,#0e1a1e);overflow:hidden}
+.flyer .img{height:120px;background:linear-gradient(160deg,#1b3038,#0a1215);position:relative}
+.flyer .img::after{content:"Bild des Ortes";position:absolute;left:12px;bottom:8px;font-size:11px;color:var(--mute);letter-spacing:.06em}
+.flyer .body{padding:14px 14px 16px}
+.flyer h3{margin:0 0 2px;font:400 22px/1.2 var(--serif)}
+.flyer .sub{font-size:12px;color:var(--mute);margin-bottom:12px;letter-spacing:.04em}
+.flyer h4{margin:12px 0 4px;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--gold)}
+.flyer p{margin:0;font-size:13.5px;color:var(--silver)}
+.flyer .more{margin-top:14px;padding-top:10px;border-top:1px solid var(--line);font-size:12.5px;color:var(--mute)}
+.table-note{font-size:13px;color:var(--mute);max-width:36ch}
+@media (max-width:760px){.table{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<main>
+<h1>Orte: Zustände und Erkenntnisse</h1>
+<p class="lead">Vorlage ohne Daten. Die Effekte sind bewusst leise: Sie zeigen einen Zustand, ohne den Text zu stören. Bei „Reduzierte Bewegung“ im System bleibt nur das Standbild.</p>
+
+<h2>A · Zustände im Wiki</h2>
+<p class="note">Oben im Ortskopf. Jeder Zustand hat eine eigene, sehr zurückhaltende Gestaltung.</p>
+<div class="states">
+  <div class="place s-offen"><small>Zustand</small><strong>Offen</strong><p>Normal zugänglich. Keine Effekte.</p><span class="badge"><svg viewBox="0 0 16 16"><path d="M3 13V4l5-2 5 2v9"/><path d="M6 13V9h4v4"/></svg>Offen</span></div>
+  <div class="place s-veraendert"><small>Zustand</small><strong>Verändert</strong><p>Etwas hat sich gedreht. Eine warme Linie zieht langsam vorbei.</p><span class="badge"><svg viewBox="0 0 16 16"><path d="M8 2v4M8 10v4M2 8h4M10 8h4"/></svg>Verändert</span></div>
+  <div class="place s-geschlossen"><small>Zustand</small><strong>Geschlossen</strong><p>Versperrt. Ein feines Schraffurmuster, gedämpfte Farben.</p><span class="badge"><svg viewBox="0 0 16 16"><rect x="4" y="7" width="8" height="6"/><path d="M6 7V5a2 2 0 0 1 4 0v2"/></svg>Geschlossen</span></div>
+  <div class="place s-zerstoert">
+    <svg class="crack" viewBox="0 0 150 150" aria-hidden="true"><path d="M150 0 L118 34 L126 60 L98 82 L108 118 L84 150" stroke="rgba(181,86,58,.8)" fill="none" stroke-width="1.2"/><path d="M118 34 L144 46" stroke="rgba(181,86,58,.6)" fill="none" stroke-width="1"/><path d="M98 82 L72 90" stroke="rgba(181,86,58,.5)" fill="none" stroke-width="1"/></svg>
+    <small>Zustand</small><strong>Zerstört</strong><p>Der Ort ist verloren. Riss, Glut am Fuß, ein Stempel.</p><span class="badge"><svg viewBox="0 0 16 16"><path d="M8 2l2 4 4 1-3 3 1 4-4-2-4 2 1-4-3-3 4-1z"/></svg>Zerstört</span><span class="stamp">ZERSTÖRT</span></div>
+  <div class="place s-verlassen"><div class="dust"></div><small>Zustand</small><strong>Verlassen</strong><p>Niemand mehr da. Staub, Stille, verblasste Schrift.</p><span class="badge"><svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="5"/></svg>Verlassen</span></div>
+</div>
+
+<h2>B · Erkenntnisse statt Liste</h2>
+<p class="note">Untere Hälfte der Vorschau. Karten lassen sich umdrehen (Klick auf „Umdrehen“). Gesperrte Karten nennen die Bedingung, unter der sie sich öffnen.</p>
+<div class="cards">
+  <div class="card" id="c1"><div class="card-inner">
+    <div class="face"><small>Hinweis · erspielt</small><strong>Der Schlüssel im Rinnstein</strong><p>Eine Metallplatte mit eingeritzter Zahl. Passt zur Tür im Hinterhof.</p><span class="won">erspielt</span><button class="flip" onclick="flip('c1')">Umdrehen</button></div>
+    <div class="face back"><small>Rückseite · SL-Notiz für Spieler</small><strong>Was du weißt</strong><p>Die Zahl gehört zum Personalflur. Du hast sie am Dienstag gesehen.</p><button class="flip" onclick="flip('c1')">Zurück</button></div>
+  </div></div>
+  <div class="card locked"><div class="card-inner">
+    <div class="face"><small>Geheimnis · gesperrt</small><strong>Unter der Bühne</strong><p>Hier liegt etwas, das nicht verzeichnet ist.</p><span class="unlock">Öffnet sich mit dem Meilenstein „Der Rundgang“.</span></div>
+  </div></div>
+  <div class="card"><div class="card-inner">
+    <div class="face"><small>Erkenntnis · bekannt</small><strong>Der Türsteher zahlt bar</strong><p>Keine Belege, aber man sieht es jeden Freitag.</p><button class="flip" onclick="flip('c3')">Umdrehen</button></div>
+    <div class="face back"><small>Rückseite</small><strong>Fragen bleiben offen</strong><p>Wer bezahlt ihn, und wofür?</p><button class="flip" onclick="flip('c3')">Zurück</button></div>
+  </div></div>
+</div>
+
+<h2>C · Der Ort am Spieltisch (Schieber, rechts)</h2>
+<p class="note">Erscheint nach Karte, dann Ort. Wie ein Faltblatt vom Ortsbüro, ohne Papieroptik. Mehr steht nur im Wiki.</p>
+<div class="table">
+  <aside class="flyer" aria-label="Ortsübersicht am Tisch">
+    <div class="img"></div>
+    <div class="body">
+      <h3>Electric Taberna</h3>
+      <div class="sub">Innenstadt · Kavarinerstraße 30</div>
+      <h4>Dein Eindruck</h4>
+      <p>Oben lebendige Bar, darunter kontrollierte Schatten. Ein Ort, an dem jedes Gespräch Gewicht bekommt.</p>
+      <h4>Einordnung</h4>
+      <p>Gebiet Innenstadt. Zustand: offen.</p>
+      <h4>Bekannte Atmosphäre</h4>
+      <p>Neon, Field-Recordings und Werkbanktische prägen den sichtbaren Gästebereich.</p>
+      <div class="more">Mehr im Wiki öffnen →</div>
+    </div>
+  </aside>
+  <p class="table-note">Der Schieber zeigt nur die Kurzfassung. Bild, Eindruck, Einordnung und bekannte Atmosphäre. Erkenntnisse und Zustände mit Effekten stehen im Wiki.</p>
+</div>
+</main>
+<script>
+function flip(id){document.getElementById(id).classList.toggle('flipped');}
+</script>
+</body>
+</html>
