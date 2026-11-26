@@ -18,6 +18,9 @@ export const npcProfileSchema=z.object({
   npc_status:z.string().max(200).optional(), location_note:z.string().max(200).optional(),
   image_primary:image.optional(), image_secondary:image.optional(), field_visibility:npcFieldVisibilitySchema.optional(),
   hero_zoom:z.number().min(1).max(2.5).optional(),hero_position:z.number().min(0).max(100).optional(),hero_mist:z.number().min(0).max(100).optional(),
+  // Öffentliche Welt: SL flag "Auf der Website zeigen". Not a profile field (no field release); the website still
+  // requires the released file and name, see server/public-world.ts.
+  show_on_website:z.boolean().optional(),
 }).strict();
 export const npcSLKinds=['sl_secrets','sl_agenda','sl_playstyle'] as const;
 export const isNPCSLKind=(kind:string)=>npcSLKinds.includes(kind as typeof npcSLKinds[number]);

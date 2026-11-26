@@ -1,6 +1,7 @@
 import {loadPersistedLocation} from "@/server/location-repository";
 import {locationPublicKey} from "@/domain/location-public-key";
 import {unlockMilestoneOf} from "@/domain/location-milestones";
+import {isMarkedForWebsite,websiteFlagKeys} from "@/domain/public-world";
 import { z } from "zod";
 import { actor,database,failure,HttpError,input,json,sameOrigin } from "@/server/access";
 import { isPlayerSafeCanon } from "@/domain/location-cms";
@@ -45,7 +46,7 @@ export async function GET(req:Request){
     });
     const group=await loadPersistedLocation(db,a,root.entity_id,'player','group');
     const known=new Map<string,string>();if(group){const l=group.location;if(!l.navigationOnly)known.set(root.entity_id,l.discovery);for(const area of l.areas){if(!area.redacted&&area.dossierHref)known.set(new URL(area.dossierHref,'https://chroniplay.invalid').searchParams.get('eintrag')!,area.discovery);for(const room of area.rooms)if(room.dossierHref)known.set(new URL(room.dossierHref,'https://chroniplay.invalid').searchParams.get('eintrag')!,room.discovery);}for(const info of l.knownInformation)if(info.dossierHref)known.set(new URL(info.dossierHref,'https://chroniplay.invalid').searchParams.get('eintrag')!,'known');}
-    return json({location:{id:root.entity_id,title:String(parse(root.attributes).title||root.entity_title||"")},nodes:visible.map(row=>({id:row.entity_id,locationId:row.location_id,parentId:row.parent_id,level:row.level,position:row.position,revision:row.revision,groupDiscovery:known.get(row.entity_id)||known.get(locationPublicKey(row.entity_id))||"hidden",groupPublication:row.group_publication||"draft",lifecycle:parse(row.attributes).lifecycle||"active",title:String(parse(row.attributes).title||row.title||""),visibility:isGmOnlyLocationNode({attributes:row.attributes})?"gm":"player",unlockMilestone:unlockMilestoneOf(parse(row.attributes))}))});
+    return json({location:{id:root.entity_id,title:String(parse(root.attributes).title||root.entity_title||"")},nodes:visible.map(row=>({id:row.entity_id,locationId:row.location_id,parentId:row.parent_id,level:row.level,position:row.position,revision:row.revision,groupDiscovery:known.get(row.entity_id)||known.get(locationPublicKey(row.entity_id))||"hidden",groupPublication:row.group_publication||"draft",lifecycle:parse(row.attributes).lifecycle||"active",title:String(parse(row.attributes).title||row.title||""),visibility:isGmOnlyLocationNode({attributes:row.attributes})?"gm":"player",unlockMilestone:unlockMilestoneOf(parse(row.attributes)),...(row.level==="location"?{showOnWebsite:isMarkedForWebsite(parse(row.attributes),websiteFlagKeys.place)}:{})}))});
   }catch(error){return failure(error,req);}
 }
 

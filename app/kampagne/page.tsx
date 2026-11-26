@@ -50,9 +50,10 @@ export default async function KampagnePage() {
             <section><h2>Mein Charakter</h2><p>{preview.character?.title ?? (preview.characterCount ? "Noch kein aktiver Charakter gewählt. Wähle ihn im Spielerbereich." : "Noch kein eigener Charakter vorhanden. Du kannst ihn im Spielerbereich anlegen.")}</p></section>
             <section><h2>Nächster Spielabend</h2>{nextDate ? <p><strong>{preview.nextSession?.title}</strong><br /><time dateTime={nextDate}>{new Date(nextDate).toLocaleString("de-DE", { timeZone: "Europe/Berlin", dateStyle: "full", timeStyle: "short" })} Uhr</time></p> : <p>Noch kein Spielabend festgelegt. Termine findest du im Spielerbereich.</p>}</section>
           </div>
-          <div className="campaign-page__actions"><Link className="button button--primary" href="/spielbereich">Mein Spielerbereich</Link>{member?.gm && <Link className="button" href="/sl/command-center?bereich=sitzung">Vorbereiten</Link>}</div>
+          <div className="campaign-page__actions"><Link className="button button--primary" href="/spielbereich">Mein Spielerbereich</Link>{member?.gm && <Link className="button" href="/sl/command-center?bereich=sitzung">Vorbereiten</Link>}<Link className="button" href="/kampagne/welt">Die Welt</Link></div>
         </> : <>
           <p>Vampire: The Masquerade V20 bildet den Rahmen der ersten Kampagne. Die Chronik befindet sich in geschlossener Alpha; der Spielbereich ist nur für freigegebene Konten vorgesehen.</p>
+          <Link className="campaign-page__world" href="/kampagne/welt"><span className="campaign-page__world-kicker">Frei zugänglich</span><strong>Die Welt</strong><span>Orte, Persönlichkeiten und Chronik, freigegeben von der Spielleitung.</span></Link>
           <div className="campaign-page__actions"><Link className="button button--primary" href={user ? "/profil" : "/anmelden"}>{user ? "Kontostatus ansehen" : "Zur geschlossenen Alpha"}</Link><Link className="button" href="/#start">Zur ChroniPlay-Startseite</Link></div>
         </>}
       </div>
