@@ -258,3 +258,5 @@ export function MaterialWorkbench({elements,onChange,files,onFilesChange,players
  </section>;
 }
 export {fileOrigin};
+/** Szene 2.0, Etappe 3: the same editor for one library material (storyboard material area). */
+export {Editor as MaterialEditor,Card as MaterialCard,presented as presentedMaterial};

@@ -95,3 +95,6 @@
 .content :global(.cp-align-right), .editable :global(.cp-align-right) { text-align: right; }
 .content blockquote, .editable blockquote { margin: .6em 0; padding: .2em 0 .2em 1em; border-left: 2px solid #c6a36c; color: #d8d0c1; font-style: italic; }
 .content hr, .editable hr { border: 0; border-top: 1px solid rgba(205,166,107,.35); margin: 1em 0; }
+
+/* Orte: the text area roughly doubles in height for source editors */
+.sourceEditor .editable, .sourceEditor > textarea { min-height: 300px; }

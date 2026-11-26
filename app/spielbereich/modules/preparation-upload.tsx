@@ -27,7 +27,7 @@ export function PreparationUpload({kind,onUploaded,label,section}:{kind:keyof ty
 export function SceneBackdropPicker({fileId,files,onChange,onUploaded}:{fileId:string;files:PreparationFile[];onChange:(fileId:string)=>void;onUploaded:(file:PreparationFile)=>void}){
  const file=files.find(f=>f.id===fileId);
  return <section className={s.backdropPicker} aria-label="Szenenbild / Bühnenhintergrund">
-  <header><h3>Szenenbild / Bühnenhintergrund</h3><p>Erscheint für die ganze Runde als Schauplatz, sobald du die Szene am Spieltisch auf den Tisch bringst. Fotos für Polaroids bereitest du unter „Interaktionen & Spielmaterial“ vor.</p></header>
+  <header><h3>Bühnenbild</h3><p>Liegt für die ganze Runde auf dem Tisch, sobald die Regie diese Stimmung zeigt.</p></header>
   {fileId?file?<img src={'/api/files?id='+encodeURIComponent(file.id)} alt={'Szenenbild: '+file.name}/>:<p className={s.backdropMissing}><ImageOff size={16} aria-hidden="true"/> Das verknüpfte Bild ist derzeit nicht verfügbar.</p>:<p>Noch kein Szenenbild – am Tisch bleibt die Standardbühne.</p>}
   <div className={s.backdropActions}>
    <ProtectedImageGallery label={fileId?'Anderes Bild wählen':'Vorhandenes Bild wählen'} files={files} selected={fileId} onSelect={onChange}/>
