@@ -31,10 +31,11 @@ try{
   // One click opens the Regie in its own tab; a second click focuses it instead of opening another.
   const opened=gm.waitForEvent('page');await sl.getByRole('button',{name:'Regie im zweiten Fenster'}).click();const regie=await opened;
   regie.setDefaultTimeout(15000);regie.on('pageerror',e=>errors.push(name+' Regie: '+e.message));
-  await regie.waitForURL(/\/sl\/regie/);await regie.getByRole('heading',{name:/Texte zum Vorlesen/}).waitFor();
+  await regie.waitForURL(/\/sl\/regie/);await regie.getByRole('heading',{name:/^Erzählung$/}).waitFor();
   await sl.getByRole('button',{name:'Regie im zweiten Fenster'}).click();await regie.waitForTimeout(400);
   assert.equal(gm.pages().length,2,'The remembered Regie tab is reused');
-  for(const column of ['Materialbibliothek','Texte zum Vorlesen','Tonaufnahmen · Kassette','NPCs der Szene'])assert.ok(await regie.getByRole('heading',{name:column,exact:true}).isVisible(),name+': column '+column);
+  // The studio shows one area at a time: open each area of the current layout and check its heading.
+  for(const [group,tab,heading] of [['Interaktion','Spontanmaterialien','Spontanmaterialien'],['Szene führen','Erzählung','Erzählung'],['Stimmung','Tonaufnahmen','Tonaufnahmen · Kassette'],['Proben & NPCs','Szenen-NPCs','NPCs der Szene']]){await regie.getByRole('navigation',{name:'Arbeitsansichten der Regie'}).getByRole('button',{name:group}).click();await regie.getByRole('navigation',{name:'Werkzeuge: '+group}).getByRole('button',{name:tab,exact:true}).click();assert.ok(await regie.getByRole('heading',{name:heading,exact:true}).isVisible(),name+': area '+heading);}
   await noHorizontalScroll(regie,name+' Regie');
   pass(name+': Regie opens from the table in a remembered tab, live tiles visible');
 
@@ -53,7 +54,7 @@ try{
   pass(name+': pager reaches A only, animated, read state survives reload');
 
   // Weather for the whole round; reduced motion keeps it still.
-  await regie.getByRole('button',{name:'Regen'}).click();await regie.getByRole('button',{name:'Nebel'}).click();
+  await regie.getByRole('navigation',{name:'Arbeitsansichten der Regie'}).getByRole('button',{name:'Stimmung'}).click();await regie.getByRole('navigation',{name:'Werkzeuge: Stimmung'}).getByRole('button',{name:'Effekte',exact:true}).click();await regie.getByRole('button',{name:'Regen'}).click();await regie.getByRole('button',{name:'Nebel'}).click();
   for(const p of [pa,pb,sl])await p.locator('[data-effect=rain]').waitFor({state:'attached'});
   await pb.locator('[data-effect=fog]').waitFor({state:'attached'});
   assert.equal(await pb.locator('[data-effect=rain] span').first().evaluate(e=>getComputedStyle(e).animationName),'none','Reduced motion: no rain animation');
@@ -90,7 +91,7 @@ try{
 
   // Reset for the next viewport.
   await regie.getByRole('button',{name:'Musik stoppen'}).click();
-  await regie.getByRole('button',{name:'Regen'}).click();await regie.getByRole('button',{name:'Nebel'}).click();
+  await regie.getByRole('navigation',{name:'Arbeitsansichten der Regie'}).getByRole('button',{name:'Stimmung'}).click();await regie.getByRole('navigation',{name:'Werkzeuge: Stimmung'}).getByRole('button',{name:'Effekte',exact:true}).click();await regie.getByRole('button',{name:'Regen'}).click();await regie.getByRole('button',{name:'Nebel'}).click();
   await pa.locator('[data-effect]').first().waitFor({state:'detached'});
   await regie.getByRole('button',{name:'Pager zurückziehen'}).first().click();
   await Promise.all([gm,a,b].map(c=>c.close()));
@@ -98,7 +99,7 @@ try{
  // Player on a phone: pager and music fit in 375 px.
  phase='375';
  const [gm,a]=await Promise.all([account('command-gm',{viewport:{width:1440,height:900}}),account('command-a',mobile)]);
- const regie=await gm.newPage();regie.setDefaultTimeout(15000);await regie.goto(base+'/sl/regie');await regie.getByRole('heading',{name:/Texte zum Vorlesen/}).waitFor();
+ const regie=await gm.newPage();regie.setDefaultTimeout(15000);await regie.goto(base+'/sl/regie');await regie.getByRole('heading',{name:/^Erzählung$/}).waitFor();
  const pa=await table(a,'375 A');
  const text='Treffpunkt Tor 3 – mobil '+Date.now();
  await regie.getByRole('group',{name:'Empfänger: Pager'}).getByRole('button',{name:nameA}).click();

@@ -56,7 +56,7 @@ try{
  for(const config of viewports){
   const {name,...options}=config;phase=name;
   const [gm,a,b]=await Promise.all([account('command-gm',{viewport:{width:1440,height:900}}),account('command-a',options),account('command-b',options)]);
-  const regie=watch(await gm.newPage(),'Regie');await regie.goto(base+'/sl/regie');await regie.getByRole('heading',{name:/Texte zum Vorlesen/}).waitFor();
+  const regie=watch(await gm.newPage(),'Regie');await regie.goto(base+'/sl/regie');await regie.getByRole('heading',{name:/^Erzählung$/}).waitFor();
   const [pa,pb]=await Promise.all([table(a,'A'),table(b,'B')]);
   await pa.mouse.click(5,5);await pb.mouse.click(5,5);// both have interacted with the page: sound is allowed
 
@@ -82,6 +82,7 @@ try{
   await key(pa,'back').click();await key(pa,'back').click();
   assert.match(await device(pa).locator('[data-view=home]').textContent(),/2\s*NEUE MELDUNGEN/,name+': the counter drops at once');
   await folded(pa);assert.equal(await badge(pa).textContent(),'2',name+': badge drops at once');
+  await regie.getByRole('button',{name:/^Pager.*Alt P/}).click();// the spontaneous pager pane lists the sent messages
   await regie.getByRole('list',{name:'Gesendete Pager'}).locator('li',{hasText:t1}).getByText('Gelesen: '+nameA).waitFor();
   const shared=await gmPager(t1);assert.deepEqual(shared.reads.map(x=>x.id),['command-a'],name+': read stored on the server for A only');assert.equal(shared.acks,undefined,name+': reading is not acknowledging');
   await folded(pb);assert.equal(await badge(pb).textContent(),'1',name+': B still has its own unread copy');

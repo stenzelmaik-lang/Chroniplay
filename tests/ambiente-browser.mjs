@@ -58,7 +58,7 @@ try{
   await stage({action:'youtube',video:null});await stage({action:'activateScene',sceneId:second.id});
   const [gm,a,b]=await Promise.all([account('command-gm',options),account('command-a',options),account('command-b',{...options,reducedMotion:'reduce'},true)]);
   const [sl,pa,pb]=await Promise.all([table(gm,'SL'),table(a,'A'),table(b,'B')]);
-  const regie=watch(await gm.newPage(),'Regie');await regie.goto(base+'/sl/regie');await regie.getByRole('heading',{name:/Texte zum Vorlesen/}).waitFor();
+  const regie=watch(await gm.newPage(),'Regie');await regie.goto(base+'/sl/regie');await regie.getByRole('heading',{name:/^Erzählung$/}).waitFor();
   // Scene start with automatic playlist: the GM starts the first scene from the Regie window.
   await regie.getByLabel('Szene in der Regie').selectOption(first.id);
   await regie.locator('header').getByRole('button',{name:'Szene starten'}).first().click();
