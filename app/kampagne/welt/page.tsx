@@ -21,7 +21,7 @@ export const metadata: Metadata = {
 const worldStateLabels: Record<string, string> = { changed: "Verändert", inaccessible: "Unzugänglich", destroyed: "Zerstört", abandoned: "Verlassen" };
 const dateFormat = new Intl.DateTimeFormat("de-DE", { dateStyle: "long", timeZone: "UTC" });
 const dateLabel = (date: string) => date ? dateFormat.format(new Date(date + "T00:00:00Z")) : "Ohne Datum";
-const initials = (name: string) => name.split(/\s+/).filter(Boolean).slice(0, 2).map(word => word[0]?.toUpperCase() ?? "").join("");
+const initials = (name: string) => name.split(/\s+/).filter(word => /^\p{L}/u.test(word)).slice(0, 2).map(word => word[0].toUpperCase()).join("");
 
 function Empty({ text }: { text: string }) {
   return <p className={styles.sectionEmpty}>{text}</p>;

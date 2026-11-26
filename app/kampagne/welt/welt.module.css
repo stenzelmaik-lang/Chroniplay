@@ -62,4 +62,4 @@
 .notice{padding:clamp(48px,7vw,90px) max(16px,7vw);border-top:1px solid var(--line)}
 .notice p{max-width:620px;margin:0;color:var(--muted);font-size:17px;line-height:1.6}
 .sectionEmpty{max-width:620px;margin:0;padding:18px;border:1px dashed var(--line);border-radius:8px;color:var(--muted);font-size:15px}
-@media (max-width:760px){.bar{padding:0 16px}.brand img{width:124px}.hero{min-height:300px}.sectionNav{padding:10px 16px}.timeline{padding-left:18px}.event::before{left:-26px}.cardBody{padding:16px}}
+@media (max-width:760px){.bar{padding:0 16px}.brand img{width:124px}.hero{min-height:300px}.sectionNav{gap:6px;padding:10px 16px}.sectionNav a{gap:6px;padding:0 10px;font-size:13px}.sectionNav svg{display:none}.timeline{padding-left:18px}.event::before{left:-26px}.cardBody{padding:16px}}
