@@ -678,3 +678,43 @@
 :is(.discoveryTag,.roomStatus,.areaContext)>svg{margin-right:0;vertical-align:0}
 .roomWorldState{display:inline-flex;align-items:center;gap:5px;margin-left:10px;padding-left:10px;border-left:1px solid currentColor;font-style:normal}
 .roomWorldState>svg{color:var(--gold,#d6b36f)}
+
+/* Orte, A: state of a place in the header. Deliberately quiet: it marks the state without disturbing the text
+   (owner, 26.11.2026). Layer -1 sits above the image (-3) and the veil (-2), below the text. */
+.stateEffect { position: absolute; z-index: -1; inset: 0; pointer-events: none; }
+.stateEffect[data-state="changed"]::after { content: ""; position: absolute; left: -20%; right: -20%; top: 64%; height: 1px; background: linear-gradient(90deg, transparent, rgba(222,170,98,.6), transparent); animation: stateSweep 10s ease-in-out infinite; }
+@keyframes stateSweep { 0%, 100% { transform: translateX(-10%); opacity: .25; } 50% { transform: translateX(10%); opacity: .7; } }
+.locationHero[data-world-state="inaccessible"] .locationHeroImage { filter: saturate(.4) brightness(.62); }
+.stateEffect[data-state="inaccessible"] { background: repeating-linear-gradient(135deg, rgba(220,214,200,.055) 0 1px, transparent 1px 9px); }
+.stateEffect[data-state="destroyed"] { background: radial-gradient(120% 42% at 72% 110%, rgba(214,104,58,.24), transparent 62%); animation: stateEmber 7s ease-in-out infinite; }
+@keyframes stateEmber { 0%, 100% { opacity: .7; } 50% { opacity: 1; } }
+.stateCrack { position: absolute; top: 0; right: 8%; width: min(120px, 16vw); height: 46%; fill: none; stroke: rgba(240,226,200,.34); stroke-width: 1.2; vector-effect: non-scaling-stroke; }
+.stateStamp { position: absolute; right: calc(8% + 14px); top: calc(46% + 12px); padding: 3px 10px; border: 1px solid rgba(214,104,58,.7); border-radius: 3px; color: rgba(236,150,110,.92); font: 600 12px/1.4 system-ui, sans-serif; letter-spacing: .14em; text-transform: uppercase; transform: rotate(-7deg); }
+.locationHero[data-world-state="abandoned"] .locationHeroImage { filter: saturate(.55) sepia(.18) brightness(.66); }
+.stateEffect[data-state="abandoned"] { background-image: radial-gradient(rgba(230,220,200,.09) 1px, transparent 1.5px); background-size: 22px 22px; }
+.locationHero[data-world-state="abandoned"] .heroContent h1 { opacity: .8; }
+.stateChip { display: inline-flex; align-items: center; gap: 7px; margin: 0 0 12px; padding: 4px 11px; border: 1px solid rgba(205,166,107,.38); border-radius: 999px; background: rgba(10,16,18,.6); color: #e6d7b8; font-size: 13px; }
+.stateChip > svg { flex: none; }
+.stateChip[data-state="destroyed"] { border-color: rgba(214,104,58,.62); color: #f0b393; }
+.stateChip[data-state="inaccessible"] { border-color: rgba(214,210,200,.36); color: #d8d3c8; }
+@media (prefers-reduced-motion: reduce) { .stateEffect, .stateEffect::after { animation: none !important; } }
+:global(.user-reduced-motion) .stateEffect, :global(.user-reduced-motion) .stateEffect::after { animation: none !important; }
+
+/* Orte, B: known information as cards. Turning shows the text; "Ganz lesen" opens the existing reader with media. */
+.informationCards { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 250px), 1fr)); gap: 14px; }
+.infoCard { display: grid; grid-template-rows: 1fr auto; min-height: 200px; border: 1px solid rgba(190,177,143,.2); border-radius: 6px; background: linear-gradient(180deg, rgba(24,33,37,.92), rgba(15,21,24,.96)); perspective: 1200px; }
+.infoCardInner { position: relative; transform-style: preserve-3d; transition: transform .5s ease; }
+.infoCard[data-turned] .infoCardInner { transform: rotateY(180deg); }
+.infoCardFront, .infoCardBack { padding: 16px 16px 6px; backface-visibility: hidden; -webkit-backface-visibility: hidden; }
+.infoCardBack { position: absolute; inset: 0; transform: rotateY(180deg); overflow: auto; }
+.infoKicker { display: flex; align-items: center; gap: 6px; margin: 0 0 7px; color: #cda66b; font-size: 12px; letter-spacing: .04em; }
+.infoCard h3 { margin: 0 0 8px; color: #f1eadb; font: normal 19px/1.25 Georgia, "Times New Roman", serif; overflow-wrap: anywhere; }
+.infoTeaser { margin: 0; color: #c9c1b0; font-size: 14px; line-height: 1.55; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.infoBackText { color: #ddd5c4; font-size: 14px; line-height: 1.6; white-space: pre-line; overflow-wrap: anywhere; }
+.infoCardActions { display: flex; flex-wrap: wrap; gap: 8px; padding: 10px 16px 14px; }
+.infoCardActions button { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 12px; border: 1px solid rgba(205,166,107,.32); border-radius: 4px; background: rgba(12,18,20,.6); color: #ecdcbb; font-size: 13px; cursor: pointer; }
+.infoCardActions button:hover { border-color: rgba(205,166,107,.6); }
+.infoCardActions button:focus-visible { outline: 2px solid #e0c58c; outline-offset: 2px; }
+.infoCardActions button[aria-pressed="true"] { background: rgba(205,166,107,.14); }
+@media (prefers-reduced-motion: reduce) { .infoCardInner { transition: none; } }
+:global(.user-reduced-motion) .infoCardInner { transition: none; }
