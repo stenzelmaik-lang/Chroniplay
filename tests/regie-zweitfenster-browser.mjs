@@ -54,7 +54,7 @@ try{
   pass(name+': pager reaches A only, animated, read state survives reload');
 
   // Weather for the whole round; reduced motion keeps it still.
-  await regie.getByRole('navigation',{name:'Arbeitsansichten der Regie'}).getByRole('button',{name:'Stimmung'}).click();await regie.getByRole('navigation',{name:'Werkzeuge: Stimmung'}).getByRole('button',{name:'Effekte',exact:true}).click();await regie.getByRole('button',{name:'Regen'}).click();await regie.getByRole('button',{name:'Nebel'}).click();
+  await regie.getByRole('navigation',{name:'Arbeitsansichten der Regie'}).getByRole('button',{name:'Stimmung'}).click();await regie.getByRole('navigation',{name:'Werkzeuge: Stimmung'}).getByRole('button',{name:'Effekte',exact:true}).click();await regie.locator('#regie-bereich-effects').getByRole('button',{name:'Regen',exact:true}).click();await regie.locator('#regie-bereich-effects').getByRole('button',{name:'Nebel',exact:true}).click();
   for(const p of [pa,pb,sl])await p.locator('[data-effect=rain]').waitFor({state:'attached'});
   await pb.locator('[data-effect=fog]').waitFor({state:'attached'});
   assert.equal(await pb.locator('[data-effect=rain] span').first().evaluate(e=>getComputedStyle(e).animationName),'none','Reduced motion: no rain animation');
@@ -72,6 +72,7 @@ try{
   pass(name+': background music for all, personal volume');
 
   // Narration from the text column for B only; the scene choice follows into the table drawer.
+  await regie.getByRole('navigation',{name:'Arbeitsansichten der Regie'}).getByRole('button',{name:'Szene führen'}).click();await regie.getByRole('navigation',{name:'Werkzeuge: Szene führen'}).getByRole('button',{name:'Erzählung',exact:true}).click();
   const narration=regie.getByRole('region',{name:'Erzählung'});
   await narration.getByRole('button',{name:nameB}).click();await narration.getByRole('button',{name:/Erzählung freigeben|Erneut freigeben/}).click();
   await pb.getByRole('region',{name:'Freigegebene Erzählung',exact:true}).waitFor();
@@ -82,7 +83,7 @@ try{
   await pb.getByRole('region',{name:'Freigegebene Erzählung',exact:true}).waitFor({state:'detached'});
   const second=await regie.getByLabel('Szene in der Regie').locator('option').nth(1);const secondId=await second.getAttribute('value'),secondTitle=(await second.textContent()).replace(/^\d+ · /,'').replace(/ · läuft$/,'');
   await regie.getByLabel('Szene in der Regie').selectOption(secondId);
-  await sl.getByRole('button',{name:'Regie (privat)'}).click();
+  await sl.getByRole('button',{name:'Szenen des Abends',exact:true}).click();await sl.getByRole('complementary',{name:'Szenen des Abends',exact:true}).getByRole('button',{name:/^(Regie öffnen|Nur privat lesen)$/}).click();
   await sl.locator('[data-scene="'+secondId+'"]').waitFor();
   assert.ok(await sl.getByRole('heading',{name:secondTitle}).first().isVisible(),'Table drawer follows the Regie scene');
   await sl.getByRole('button',{name:'Werkzeug schließen'}).click();
@@ -91,7 +92,7 @@ try{
 
   // Reset for the next viewport.
   await regie.getByRole('button',{name:'Musik stoppen'}).click();
-  await regie.getByRole('navigation',{name:'Arbeitsansichten der Regie'}).getByRole('button',{name:'Stimmung'}).click();await regie.getByRole('navigation',{name:'Werkzeuge: Stimmung'}).getByRole('button',{name:'Effekte',exact:true}).click();await regie.getByRole('button',{name:'Regen'}).click();await regie.getByRole('button',{name:'Nebel'}).click();
+  await regie.getByRole('navigation',{name:'Arbeitsansichten der Regie'}).getByRole('button',{name:'Stimmung'}).click();await regie.getByRole('navigation',{name:'Werkzeuge: Stimmung'}).getByRole('button',{name:'Effekte',exact:true}).click();await regie.locator('#regie-bereich-effects').getByRole('button',{name:'Regen',exact:true}).click();await regie.locator('#regie-bereich-effects').getByRole('button',{name:'Nebel',exact:true}).click();
   await pa.locator('[data-effect]').first().waitFor({state:'detached'});
   await regie.getByRole('button',{name:'Pager zurückziehen'}).first().click();
   await Promise.all([gm,a,b].map(c=>c.close()));
