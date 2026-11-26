@@ -234,3 +234,138 @@
 .directoryPanel:has(.editorControlPanel[open]) .directoryScroll{flex:0 0 auto;min-height:120px;max-height:260px}
 .inactiveToggle{display:flex;align-items:center;gap:8px;font-size:13px;line-height:1.5;color:#d7c9ad;cursor:pointer}
 .inactiveToggle input{flex:none;width:18px;height:18px;accent-color:#d6b36f}
+
+/* ===== Orte im Werkbank-Stil (Schritt 2, Weg B Teil 1): gleiche Farbmodelle wie das Command Center (--cc-*),
+   Gliederung links mit Gold/Silber-Punkt, ein Ort in der Mitte, keine Großbuchstaben-Etiketten. ===== */
+.cmsWorkspace{--or-panel:var(--cc-panel,#111b1f);--or-panel-2:var(--cc-panel-2,#16242a);--or-line:var(--cc-line,#2b3a40);--or-line-strong:var(--cc-line-strong,#3e5359);--or-ink:var(--cc-ink,#e9e6df);--or-mute:var(--cc-mute,#a7aeb0);--or-title:var(--cc-title,#f3eee4);--or-gold:var(--cc-gold,#d6b36f);--or-gold-soft:var(--cc-gold-soft,#d6b36f2b);--or-silver:var(--cc-silver,#c6cfd2);--or-field:var(--cc-bg,#0b1316);color:var(--or-ink)}
+.cmsWorkspace .redactionLayout{gap:24px}
+.cmsWorkspace :global(.panel){background:var(--or-panel);border:1px solid var(--or-line);border-radius:4px;box-shadow:none}
+.cmsWorkspace :global(.eyebrow){letter-spacing:0;text-transform:none;font-size:12.5px;color:var(--or-mute)}
+.cmsWorkspace :global(.button){border-radius:4px;border-color:var(--or-line-strong);background:var(--or-panel-2);color:var(--or-ink);box-shadow:none}
+.cmsWorkspace :global(.button):hover:not(:disabled){border-color:var(--or-silver)}
+.cmsWorkspace :global(.button.primary){border-color:var(--or-gold);background:var(--or-gold);color:#15110b}
+.cmsWorkspace :global(.field) :is(input,select,textarea){border-radius:4px;border-color:var(--or-line);background:var(--or-field);color:var(--or-ink)}
+.cmsWorkspace :global(.field) :is(input,select,textarea):focus{border-color:var(--or-silver);outline:none}
+.cmsWorkspace :global(.field)>span{color:var(--or-mute);letter-spacing:0;text-transform:none}
+/* left: the outline */
+.cmsWorkspace .directoryPanel{padding:14px 12px;background:var(--or-panel)}
+.cmsWorkspace .directoryHead h2{margin:0;font:400 24px/1.2 var(--cp-font-title,Georgia,serif);color:var(--or-title)}
+.directoryLead{margin:2px 0 0;font-size:13px;color:var(--or-mute)}
+.cmsWorkspace .directorySearch{border-radius:4px;border-color:var(--or-line);background:var(--or-field)}
+.cmsWorkspace .creationMenu{border-radius:4px;border-color:var(--or-line);background:var(--or-panel-2)}
+.cmsWorkspace .creationMenu summary{color:var(--or-ink);font-weight:500}
+.cmsWorkspace .nodeTree{gap:1px}
+.cmsWorkspace .nodeRow{display:flex;align-items:center;gap:10px;padding:8px 10px;border:0;border-radius:4px;background:transparent;color:var(--or-ink);text-align:left;box-shadow:none}
+.cmsWorkspace .nodeRow:hover{background:var(--or-panel-2)}
+.cmsWorkspace .nodeRow[data-selected=true]{background:var(--or-panel-2);box-shadow:inset 2px 0 0 var(--or-silver);border:0}
+.cmsWorkspace .nodeCopy{display:grid;min-width:0}
+.cmsWorkspace .nodeCopy strong{overflow:hidden;font-weight:500;font-size:14px;color:var(--or-ink);white-space:nowrap;text-overflow:ellipsis}
+.cmsWorkspace .nodeCopy small{letter-spacing:0;text-transform:none;font-size:12px;color:var(--or-mute)}
+.cmsWorkspace .nodeRow[data-level=room] .nodeCopy strong,.cmsWorkspace .nodeRow[data-level=information] .nodeCopy strong{font-weight:400}
+.reachDot{display:inline-block;flex:none;width:8px;height:8px;border-radius:50%;border:1px solid var(--or-silver,#c6cfd2);background:transparent}
+.reachDot[data-reach=table]{border-color:var(--or-gold,#d6b36f);background:var(--or-gold,#d6b36f)}
+.reachDot[data-reach=sl]{border-style:dashed}
+/* middle: one place */
+.cmsWorkspace .editorHeader{padding:4px 0 16px;border-bottom:1px solid var(--or-line)}
+.levelName{margin:0;font-size:13px;color:var(--or-mute)}
+.cmsWorkspace .editorHeader h2{margin:2px 0 4px;font:400 34px/1.15 var(--cp-font-title,Georgia,serif);color:var(--or-title)}
+.cmsWorkspace .editorHeader p{color:var(--or-mute)}
+.cmsWorkspace .editorState span{display:inline-flex;align-items:center;gap:7px;padding:4px 11px;border:1px solid var(--or-line);border-radius:999px;letter-spacing:0;text-transform:none;font-size:13px;color:var(--or-silver);background:transparent}
+.cmsWorkspace .editorState span[data-released]{border-color:var(--or-gold-soft);color:var(--or-gold)}
+.cmsWorkspace .editorState small{color:var(--or-mute)}
+.cmsWorkspace .sectionTabs{gap:6px;border-bottom:0;padding:14px 0 4px}
+.cmsWorkspace .sectionTab,.cmsWorkspace .sectionTabActive{padding:7px 14px;border:1px solid var(--or-line);border-radius:4px;background:none;color:var(--or-mute);font-size:14px;letter-spacing:0;text-transform:none}
+.cmsWorkspace .sectionTabActive{border-color:var(--or-silver);background:var(--or-panel-2);color:var(--or-ink)}
+.cmsWorkspace .editorPanel{padding:22px 24px;background:var(--or-panel)}
+.cmsWorkspace .panelIntro h3{margin:0 0 4px;font:400 24px/1.2 var(--cp-font-title,Georgia,serif);color:var(--or-title)}
+.cmsWorkspace .panelIntro p{color:var(--or-mute)}
+.cmsWorkspace .titleImage img{max-width:420px;max-height:260px;object-fit:cover;border-radius:4px}
+.cmsWorkspace .saveBar{border-radius:4px;border-color:var(--or-line);background:var(--or-panel-2)}
+.cmsWorkspace .saveStatus span{letter-spacing:0;text-transform:none;color:var(--or-ink)}
+.cmsWorkspace .dossierPreviewLabel span{letter-spacing:0;text-transform:none;color:var(--or-gold)}
+.cmsWorkspace .inlineNotice,.cmsWorkspace .readOnlyNote{border-radius:4px;border-color:var(--or-line);background:var(--or-panel-2);color:var(--or-mute)}
+/* bottom: rarely used settings, folded */
+.moreSettings{margin-top:18px}
+.moreSettings>summary{display:flex;flex-wrap:wrap;align-items:baseline;gap:10px;cursor:pointer;font-weight:500;color:var(--or-ink)}
+.moreSettings>summary small{font-weight:400;font-size:12.5px;color:var(--or-mute)}
+.cmsWorkspace .editorControlPanel{border-radius:4px;border-color:var(--or-line);background:var(--or-panel)}
+.cmsWorkspace .editorControlPanel summary{color:var(--or-ink)}
+
+.cmsWorkspace .releaseSummary{border-radius:4px;border-color:var(--or-line);background:var(--or-panel-2)}
+.cmsWorkspace .releaseSummary span{letter-spacing:0;text-transform:none;font-size:12.5px;border-radius:999px}
+.cmsWorkspace .releaseSummary strong{color:var(--or-title)}
+/* Orte Teil 2: every section with what the players see, one action each */
+.releaseOverview{display:grid;gap:12px;margin:4px 0 18px}
+.releaseOverviewHead{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px}
+.releaseOverviewHead>p{margin:0;color:var(--or-ink,#e9e6df)}
+.releaseOverviewTools{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.releaseOverviewTools label{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--or-mute,#a7aeb0)}
+.releaseOverviewTools select{padding:6px 8px;border:1px solid var(--or-line,#2b3a40);border-radius:4px;background:var(--or-field,#0b1316);color:var(--or-ink,#e9e6df)}
+.sectionList{display:grid;gap:1px;margin:0;padding:0;list-style:none;border:1px solid var(--or-line,#2b3a40);border-radius:4px;overflow:hidden}
+.sectionRow{display:flex;align-items:center;gap:12px;min-width:0;padding:8px 12px;background:var(--or-panel-2,#16242a)}
+.sectionRow[data-level=area]{padding-left:28px}
+.sectionRow[data-level=room],.sectionRow[data-level=information]{padding-left:44px}
+.sectionRow[data-state=visible],.sectionRow[data-state=newer]{background:var(--or-panel,#111b1f)}
+.sectionName{display:grid;flex:1;min-width:0;padding:2px 0;border:0;background:none;color:inherit;text-align:left;cursor:pointer}
+.sectionName strong{overflow:hidden;font-weight:500;font-size:14px;color:var(--or-ink,#e9e6df);white-space:nowrap;text-overflow:ellipsis}
+.sectionName small{font-size:12.5px;color:var(--or-mute,#a7aeb0)}
+.sectionName:hover strong{text-decoration:underline;text-underline-offset:3px}
+.sectionRow[data-state=newer] .sectionName small,.sectionRow[data-state=undiscovered] .sectionName small{color:var(--or-gold,#d6b36f)}
+.sectionRow :global(.button){flex:none;padding:6px 12px;font-size:13px}
+.releaseCurrent{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;margin:0 0 14px;padding:10px 12px;border:1px solid var(--or-line,#2b3a40);border-radius:4px;color:var(--or-mute,#a7aeb0)}
+.releaseCurrent p{margin:0}
+.releaseDetails{margin-top:18px;padding-top:12px;border-top:1px solid var(--or-line,#2b3a40)}
+.releaseDetails>summary{display:flex;flex-wrap:wrap;align-items:baseline;gap:10px;cursor:pointer;font-weight:500;color:var(--or-ink,#e9e6df)}
+.releaseDetails>summary small{font-weight:400;font-size:12.5px;color:var(--or-mute,#a7aeb0)}
+.releaseDetails[open]>summary{margin-bottom:14px}
+@media (max-width:600px){.sectionRow{flex-wrap:wrap}.sectionRow[data-level]{padding-left:12px}.sectionName{flex-basis:calc(100% - 24px)}}/* Orte Etappe 1-3: save in the sticky header, discovery ladder */
+.cmsWorkspace .editorHeader{position:sticky;top:0;z-index:15;align-items:center;padding:10px 0 12px;background:var(--or-field,#0b1316);box-shadow:0 -28px 0 var(--or-field,#0b1316)}
+.cmsWorkspace .editorHeader h2{font-size:30px}
+.cmsWorkspace .editorState{display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-end;gap:10px}
+.headerActions{display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-end;gap:8px}
+.headerActions :global(.button){padding:7px 13px;font-size:14px}
+.headerActions :global(.button.primary:disabled){opacity:.55}
+.releaseOverviewTools{align-items:flex-start}
+.discoverySteps{display:grid;gap:6px;min-width:0}
+.discoveryStepsLabel{font-size:13px;color:var(--or-mute,#a7aeb0)}
+.discoveryStepsRow{display:flex;flex-wrap:wrap;gap:0;border:1px solid var(--or-line,#2b3a40);border-radius:4px;overflow:hidden;width:max-content;max-width:100%}
+.discoveryStepsRow button{display:inline-flex;align-items:center;gap:7px;padding:7px 12px;border:0;background:none;color:var(--or-mute,#a7aeb0);font-size:13.5px;cursor:pointer}
+.discoveryStepsRow button+button{border-left:1px solid var(--or-line,#2b3a40)}
+.discoveryStepsRow button i{width:8px;height:8px;border:1px solid currentColor;border-radius:50%}
+.discoveryStepsRow button[data-reached]{color:var(--or-ink,#e9e6df)}
+.discoveryStepsRow button[data-reached] i{border-color:var(--or-gold,#d6b36f);background:var(--or-gold,#d6b36f)}
+.discoveryStepsRow button[aria-checked=true]{background:var(--or-panel-2,#16242a);box-shadow:inset 0 -2px 0 var(--or-gold,#d6b36f)}
+.discoveryStepsRow button[data-current]::after{content:"heute";margin-left:2px;padding:1px 5px;border:1px solid var(--or-line,#2b3a40);border-radius:999px;font-size:10.5px;color:var(--or-mute,#a7aeb0)}
+.discoveryStepsRow button:focus-visible{outline:2px solid var(--or-gold,#d6b36f);outline-offset:-2px}
+.discoveryStepsRow button:disabled{cursor:default;opacity:.6}
+.discoverySteps small{font-size:12.5px;color:var(--or-mute,#a7aeb0)}
+@media (max-width:760px){.cmsWorkspace .editorHeader h2{font-size:22px}.cmsWorkspace .editorState{justify-content:flex-start}.headerActions{justify-content:flex-start}}
+/* Etappe 4: icons in the ladder, state of a place */
+.discoveryStepsRow button svg{color:var(--or-mute,#a7aeb0)}
+.discoveryStepsRow button[data-reached] svg{color:var(--or-gold,#d6b36f)}
+.sectionMeta{display:inline-flex;align-items:center;gap:6px}
+.sectionMeta svg{flex:none;color:var(--or-gold,#d6b36f)}
+.stateChip{display:inline-flex;align-items:center;gap:5px;margin-left:8px;padding:1px 8px;border:1px solid var(--or-line,#2b3a40);border-radius:999px;font-size:12px;color:var(--or-ink,#e9e6df)}
+.stateChip svg{color:var(--or-gold,#d6b36f)}
+.worldStatePanel{display:grid;gap:8px;padding:12px 14px;border:1px solid var(--or-line,#2b3a40);border-radius:4px;background:var(--or-panel-2,#16242a)}
+.worldStatePanel>p{margin:0;color:var(--or-ink,#e9e6df)}
+.worldStatePanel>p strong{font-weight:500}
+.worldStatePanel small{font-size:12.5px;color:var(--or-mute,#a7aeb0)}
+.worldStateRow{display:flex;flex-wrap:wrap;border:1px solid var(--or-line,#2b3a40);border-radius:4px;overflow:hidden;width:max-content;max-width:100%}
+.worldStateRow button{display:inline-flex;align-items:center;gap:7px;padding:7px 12px;border:0;background:none;color:var(--or-mute,#a7aeb0);font-size:13.5px;cursor:pointer}
+.worldStateRow button+button{border-left:1px solid var(--or-line,#2b3a40)}
+.worldStateRow button[aria-checked=true]{background:var(--or-panel,#111b1f);color:var(--or-ink,#e9e6df);box-shadow:inset 0 -2px 0 var(--or-gold,#d6b36f)}
+.worldStateRow button[aria-checked=true] svg{color:var(--or-gold,#d6b36f)}
+.worldStateRow button:disabled{cursor:default;opacity:.6}
+.worldStateRow button:focus-visible{outline:2px solid var(--or-gold,#d6b36f);outline-offset:-2px}
+
+/* Orte, Etappe 1: group heading for the Erkenntnisse in the tree */
+.treeHeading{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:16px 0 6px;padding:0 4px;font:500 12.5px/1.4 system-ui,sans-serif;color:var(--or-mute,#a7aeb0);letter-spacing:0}
+.treeHeading .button{padding:4px 10px;font-size:12.5px;white-space:nowrap}
+
+/* Orte, Etappe 2: milestone binding of an Erkenntnis */
+.milestoneLink{display:grid;gap:8px;padding:12px 14px;border:1px dashed var(--or-line-strong,#3e5359);border-radius:4px;background:var(--or-panel-2,#16242a)}
+.milestoneLink strong{font-weight:500;color:var(--or-ink,#e9e6df)}
+.milestoneLink p{margin:0;font-size:12.5px;color:var(--or-mute,#a7aeb0)}
+.milestoneRow{display:flex;flex-wrap:wrap;align-items:end;gap:8px}
+.milestoneRow label{min-width:240px;flex:1}

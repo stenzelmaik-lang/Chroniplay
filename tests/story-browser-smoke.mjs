@@ -100,7 +100,13 @@ try {
   // Seed the existing accepted location fixture in this isolated local database.
   // Since the storyboard release (15.11.2026) the command center opens with "Bücher und Kampagnen"; this journey
   // drives the classic preparation view, which the app reads once from ?ansicht=klassisch after mount.
-  async function openClassicPreparation(){
+  // Command Center (ADR-002): the start page is the module selection; inside a module the bar leads back to it.
+async function openModule(name){
+  const back=page.getByRole("navigation",{name:"Modul"}).getByRole("button",{name:"Übersicht"});
+  if(await back.isVisible().catch(()=>false))await back.click();
+  await page.getByRole("navigation",{name:"Verwaltungsbereiche"}).getByRole("button",{name}).click();
+}
+async function openClassicPreparation(){
     const url=new URL(page.url());
     if(url.searchParams.get("ansicht")==="klassisch")return;
     url.searchParams.set("ansicht","klassisch");
@@ -120,15 +126,16 @@ try {
 
   phase = "create Spielabend from SL UI";
   await page.goto(base + "/sl/command-center", { waitUntil: "domcontentloaded" });
-  await openClassicPreparation();
   const management=page.getByRole("navigation",{name:"Verwaltungsbereiche"});
-  assert.ok(await management.getByRole("button",{name:/Spieler & Charaktere/}).isVisible());
-  await management.getByRole("button",{name:/Orte/}).click();
+  // The overview is decided on the client (no `bereich` in the address), so wait for it instead of checking at once.
+  await management.getByRole("button",{name:/Spieler & Charaktere/}).waitFor({timeout:15000}).catch(()=>{throw new Error("the start page lists the modules");});
+  await openModule(/Orte/);
   await page.waitForFunction(()=>new URLSearchParams(location.search).get("bereich")==="ortscms");
-  await management.getByRole("button",{name:/Spielabende & Szenen/}).click();
+  await openModule(/Spielabende & Szenen/);
+  await openClassicPreparation();// the storyboard is the default view; this flow checks the classic workspace, as on main
   await page.getByRole("heading", {name:"Spielabend & Story",exact:true}).waitFor();
-  assert.ok(await page.getByRole("region",{name:"Handlungsstränge",exact:true}).isVisible());
-  assert.ok(await page.getByRole("region",{name:"Freie Szenen",exact:true}).isVisible());
+  await page.getByRole("region",{name:"Handlungsstränge",exact:true}).waitFor();
+  await page.getByRole("region",{name:"Freie Szenen",exact:true}).waitFor();
   await page.getByRole("button", { name: "+ Spielabend anlegen" }).click();
   await page.waitForFunction(() => new URLSearchParams(location.search).has("session"));
   const sessionId = new URL(page.url()).searchParams.get("session");
@@ -180,7 +187,8 @@ try {
   assert.equal(await page.locator("main").getByLabel("Titel",{exact:true}).count(),0,"Reading does not open a form");
   assert.ok((await overview.innerText()).includes("Eine stille Nacht in Kleve."),"Scene summary is visible before editing");
   assert.equal(await page.getByRole("region",{name:"Weitere Vorbereitungen"}).count(),0,"Independent preparations remain on the home overview");
-  await management.getByRole("button",{name:/Spielabende & Szenen/}).click();
+  await openModule(/Spielabende & Szenen/);
+  await openClassicPreparation();// opening a module resets the address, so the classic view is chosen again
   await page.getByRole("region",{name:"Alle Spielabende",exact:true}).waitFor();
   await page.getByRole("button",{name:`Spielabend öffnen: ${sessionTitle}`,exact:true}).click();
   await overview.waitFor();
@@ -296,7 +304,7 @@ try {
 
   phase = "delete confirmation and cancel";
   await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto(base + "/sl/command-center", { waitUntil: "domcontentloaded" });
+  await page.goto(base + "/sl/command-center?bereich=sitzung", { waitUntil: "domcontentloaded" });
   await openClassicPreparation();
   await page.getByRole("button", { name: "+ Spielabend anlegen" }).click();
   await page.waitForFunction(() => new URLSearchParams(location.search).has("session"));

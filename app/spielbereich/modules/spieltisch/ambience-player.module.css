@@ -28,5 +28,5 @@
 .error{margin:0;color:#ffcfbf}
 @media(prefers-reduced-motion:reduce){.record[data-spinning=true] .disc{animation:none}.drawer,.ambience[data-open=false] .drawer{transition:none}}
 :global(.user-reduced-motion) .record[data-spinning=true] .disc{animation:none!important}
-@media(max-width:600px){.ambience{right:10px;top:64px}.record{width:40px;height:40px}.disc{width:31px;height:31px}.disc i{inset:10px}.frame{height:140px}}
+@media(max-width:600px){.ambience{right:10px;top:64px}.record{width:40px;height:40px}.disc{width:31px;height:31px}.disc i{inset:10px}.frame{height:96px}}
 .record[data-spinning=true]{border-color:#a9d6b9aa;box-shadow:0 0 0 2px #a9d6b933,0 4px 14px #0007}

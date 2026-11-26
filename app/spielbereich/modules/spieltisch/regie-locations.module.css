@@ -1,0 +1,15 @@
+/* Regie: places of the scene with their state on site. Large touch targets for the second screen. */
+.list{display:grid;gap:12px}
+.place{display:grid;gap:8px;padding:10px 12px;border:1px solid rgba(198,207,210,.18);border-radius:4px}
+.place header{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px}
+.place header strong{font-weight:500}
+.place header small{font-size:12.5px;opacity:.7}
+.states{display:grid;grid-template-columns:repeat(auto-fit,minmax(92px,1fr));gap:6px}
+.states button{display:flex;align-items:center;justify-content:center;gap:7px;min-height:42px;padding:6px 10px;border:1px solid rgba(198,207,210,.22);border-radius:4px;background:transparent;color:inherit;font-size:14px;cursor:pointer}
+.states button svg{flex:none;color:#d6b36f}
+.states button[aria-checked=true]{border-color:#d6b36f;background:rgba(214,179,111,.16)}
+.states button:disabled{cursor:default;opacity:.6}
+.states button:focus-visible{outline:2px solid #d6b36f;outline-offset:1px}
+.empty{margin:0;opacity:.75}
+.error{margin:0;color:#e0a497}
+.notice{margin:0;opacity:.85}

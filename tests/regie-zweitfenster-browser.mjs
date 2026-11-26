@@ -31,16 +31,17 @@ try{
   // One click opens the Regie in its own tab; a second click focuses it instead of opening another.
   const opened=gm.waitForEvent('page');await sl.getByRole('button',{name:'Regie im zweiten Fenster'}).click();const regie=await opened;
   regie.setDefaultTimeout(15000);regie.on('pageerror',e=>errors.push(name+' Regie: '+e.message));
-  await regie.waitForURL(/\/sl\/regie/);await regie.getByRole('heading',{name:/Texte zum Vorlesen/}).waitFor();
+  await regie.waitForURL(/\/sl\/regie/);await regie.getByRole('heading',{name:/^Erzählung$/}).waitFor();
   await sl.getByRole('button',{name:'Regie im zweiten Fenster'}).click();await regie.waitForTimeout(400);
   assert.equal(gm.pages().length,2,'The remembered Regie tab is reused');
-  for(const column of ['Materialbibliothek','Texte zum Vorlesen','Tonaufnahmen · Kassette','NPCs der Szene'])assert.ok(await regie.getByRole('heading',{name:column,exact:true}).isVisible(),name+': column '+column);
+  // The studio shows one area at a time: open each area of the current layout and check its heading.
+  for(const [group,tab,heading] of [['Interaktion','Spontanmaterialien','Spontanmaterialien'],['Szene führen','Erzählung','Erzählung'],['Stimmung','Tonaufnahmen','Tonaufnahmen · Kassette'],['Proben & NPCs','Szenen-NPCs','NPCs der Szene']]){await regie.getByRole('navigation',{name:'Arbeitsansichten der Regie'}).getByRole('button',{name:group}).click();await regie.getByRole('navigation',{name:'Werkzeuge: '+group}).getByRole('button',{name:tab,exact:true}).click();assert.ok(await regie.getByRole('heading',{name:heading,exact:true}).isVisible(),name+': area '+heading);}
   await noHorizontalScroll(regie,name+' Regie');
   pass(name+': Regie opens from the table in a remembered tab, live tiles visible');
 
   // Pager to A only: A sees it float in, B does not.
   const text='Ruf an, '+name+' – '+Date.now();
-  const pager=regie.getByRole('group',{name:'Empfänger: Pager'});
+  await regie.getByRole('button',{name:/^Pager.*Alt P/}).click();const pager=regie.getByRole('group',{name:'Empfänger: Pager'});
   await pager.getByRole('button',{name:nameA}).click();
   await regie.getByLabel('Pager-Nachricht').fill(text);await regie.getByRole('button',{name:'Pager senden'}).click();
   await pa.getByRole('region',{name:'Pager'}).getByText(text,{exact:true}).waitFor();
@@ -53,7 +54,7 @@ try{
   pass(name+': pager reaches A only, animated, read state survives reload');
 
   // Weather for the whole round; reduced motion keeps it still.
-  await regie.getByRole('button',{name:'Regen'}).click();await regie.getByRole('button',{name:'Nebel'}).click();
+  await regie.getByRole('navigation',{name:'Arbeitsansichten der Regie'}).getByRole('button',{name:'Stimmung'}).click();await regie.getByRole('navigation',{name:'Werkzeuge: Stimmung'}).getByRole('button',{name:'Effekte',exact:true}).click();await regie.locator('#regie-bereich-effects').getByRole('button',{name:'Regen',exact:true}).click();await regie.locator('#regie-bereich-effects').getByRole('button',{name:'Nebel',exact:true}).click();
   for(const p of [pa,pb,sl])await p.locator('[data-effect=rain]').waitFor({state:'attached'});
   await pb.locator('[data-effect=fog]').waitFor({state:'attached'});
   assert.equal(await pb.locator('[data-effect=rain] span').first().evaluate(e=>getComputedStyle(e).animationName),'none','Reduced motion: no rain animation');
@@ -62,7 +63,7 @@ try{
   pass(name+': rain and fog for the round, reduced motion respected');
 
   // Background music: personal volume, browser decides about autoplay (start button otherwise).
-  await regie.locator('li',{hasText:'Regennacht'}).getByRole('button').click();
+  await regie.getByRole('navigation',{name:'Arbeitsansichten der Regie'}).getByRole('button',{name:'Stimmung'}).click();await regie.getByRole('navigation',{name:'Werkzeuge: Stimmung'}).getByRole('button',{name:'Hintergrundmusik',exact:true}).click();await regie.locator('li',{hasText:'Regennacht'}).getByRole('button').click();
   for(const p of [pa,pb])await p.getByRole('group',{name:'Hintergrundmusik'}).waitFor();
   await pa.getByLabel('Eigene Musiklautstärke').fill('0.2');
   assert.equal(await pb.getByLabel('Eigene Musiklautstärke').inputValue(),'0.5','Volume is personal');
@@ -71,6 +72,7 @@ try{
   pass(name+': background music for all, personal volume');
 
   // Narration from the text column for B only; the scene choice follows into the table drawer.
+  await regie.getByRole('navigation',{name:'Arbeitsansichten der Regie'}).getByRole('button',{name:'Szene führen'}).click();await regie.getByRole('navigation',{name:'Werkzeuge: Szene führen'}).getByRole('button',{name:'Erzählung',exact:true}).click();
   const narration=regie.getByRole('region',{name:'Erzählung'});
   await narration.getByRole('button',{name:nameB}).click();await narration.getByRole('button',{name:/Erzählung freigeben|Erneut freigeben/}).click();
   await pb.getByRole('region',{name:'Freigegebene Erzählung',exact:true}).waitFor();
@@ -81,29 +83,28 @@ try{
   await pb.getByRole('region',{name:'Freigegebene Erzählung',exact:true}).waitFor({state:'detached'});
   const second=await regie.getByLabel('Szene in der Regie').locator('option').nth(1);const secondId=await second.getAttribute('value'),secondTitle=(await second.textContent()).replace(/^\d+ · /,'').replace(/ · läuft$/,'');
   await regie.getByLabel('Szene in der Regie').selectOption(secondId);
-  await sl.getByRole('button',{name:'Regie (privat)'}).click();
-  await sl.locator('[data-scene="'+secondId+'"]').waitFor();
-  assert.ok(await sl.getByRole('heading',{name:secondTitle}).first().isVisible(),'Table drawer follows the Regie scene');
-  await sl.getByRole('button',{name:'Werkzeug schließen'}).click();
+  // Rule of 09.11.2026: the SL chooses and starts scenes in the Regie; the table has no scene panel to open.
+  assert.equal(await regie.getByLabel('Szene in der Regie').inputValue(),secondId,'Regie shows the chosen scene');
+  await regie.getByRole('heading',{name:secondTitle}).first().waitFor();
   await regie.getByLabel('Szene in der Regie').selectOption(await regie.getByLabel('Szene in der Regie').locator('option').first().getAttribute('value'));
   pass(name+': narration to B only from the text column; scene focus shared with the table drawer');
 
   // Reset for the next viewport.
-  await regie.getByRole('button',{name:'Musik stoppen'}).click();
-  await regie.getByRole('button',{name:'Regen'}).click();await regie.getByRole('button',{name:'Nebel'}).click();
+  await regie.getByRole('navigation',{name:'Arbeitsansichten der Regie'}).getByRole('button',{name:'Stimmung'}).click();await regie.getByRole('navigation',{name:'Werkzeuge: Stimmung'}).getByRole('button',{name:'Hintergrundmusik',exact:true}).click();await regie.getByRole('button',{name:'Musik stoppen'}).click();
+  await regie.getByRole('navigation',{name:'Arbeitsansichten der Regie'}).getByRole('button',{name:'Stimmung'}).click();await regie.getByRole('navigation',{name:'Werkzeuge: Stimmung'}).getByRole('button',{name:'Effekte',exact:true}).click();await regie.locator('#regie-bereich-effects').getByRole('button',{name:'Regen',exact:true}).click();await regie.locator('#regie-bereich-effects').getByRole('button',{name:'Nebel',exact:true}).click();
   await pa.locator('[data-effect]').first().waitFor({state:'detached'});
-  await regie.getByRole('button',{name:'Pager zurückziehen'}).first().click();
+  await regie.getByRole('button',{name:/^Pager.*Alt P/}).click();await regie.getByRole('button',{name:'Pager zurückziehen'}).first().click();
   await Promise.all([gm,a,b].map(c=>c.close()));
  }
  // Player on a phone: pager and music fit in 375 px.
  phase='375';
  const [gm,a]=await Promise.all([account('command-gm',{viewport:{width:1440,height:900}}),account('command-a',mobile)]);
- const regie=await gm.newPage();regie.setDefaultTimeout(15000);await regie.goto(base+'/sl/regie');await regie.getByRole('heading',{name:/Texte zum Vorlesen/}).waitFor();
+ const regie=await gm.newPage();regie.setDefaultTimeout(15000);await regie.goto(base+'/sl/regie');await regie.getByRole('heading',{name:/^Erzählung$/}).waitFor();
  const pa=await table(a,'375 A');
  const text='Treffpunkt Tor 3 – mobil '+Date.now();
- await regie.getByRole('group',{name:'Empfänger: Pager'}).getByRole('button',{name:nameA}).click();
+ await regie.getByRole('button',{name:/^Pager.*Alt P/}).click();await regie.getByRole('group',{name:'Empfänger: Pager'}).getByRole('button',{name:nameA}).click();
  await regie.getByLabel('Pager-Nachricht').fill(text);await regie.getByRole('button',{name:'Pager senden'}).click();
- await regie.locator('li',{hasText:'Regennacht'}).getByRole('button').click();
+ await regie.getByRole('navigation',{name:'Arbeitsansichten der Regie'}).getByRole('button',{name:'Stimmung'}).click();await regie.getByRole('navigation',{name:'Werkzeuge: Stimmung'}).getByRole('button',{name:'Hintergrundmusik',exact:true}).click();await regie.locator('li',{hasText:'Regennacht'}).getByRole('button').click();
  const box=null;
  await pa.getByText(text,{exact:true}).waitFor();await pa.getByRole('group',{name:'Hintergrundmusik'}).waitFor();
  await pa.waitForTimeout(1200);// the pager has floated in
@@ -113,7 +114,7 @@ try{
  const music=await pa.getByRole('group',{name:'Hintergrundmusik'}).boundingBox();assert.ok(music.x+music.width<=375+1,'Music controls fit');
  await noHorizontalScroll(pa,'375 player');
  await pa.screenshot({path:output+'/375-spieler-a.png'});
- await regie.getByRole('button',{name:'Musik stoppen'}).click();await regie.getByRole('button',{name:'Pager zurückziehen'}).first().click();
+ await regie.getByRole('button',{name:'Musik stoppen'}).click();await regie.getByRole('button',{name:/^Pager.*Alt P/}).click();await regie.getByRole('button',{name:'Pager zurückziehen'}).first().click();
  pass('375: pager and music fit a phone');
  await Promise.all([gm,a].map(c=>c.close()));
  assert.deepEqual(errors,[],'No page errors');

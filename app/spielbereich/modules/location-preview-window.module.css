@@ -1,0 +1,15 @@
+/* Orte preview window (second screen). Same calm palette as the Command Center, no shell around it. */
+.window{--pv-bg:#0b1316;--pv-panel:#111b1f;--pv-line:#2b3a40;--pv-ink:#e9e6df;--pv-mute:#a7aeb0;--pv-gold:#d6b36f;min-height:100vh;background:var(--pv-bg);color:var(--pv-ink)}
+.bar{position:sticky;top:0;z-index:20;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px 20px;padding:10px 20px;border-bottom:1px solid var(--pv-line);background:color-mix(in srgb,var(--pv-panel) 94%,transparent);backdrop-filter:blur(8px)}
+.title{display:grid;min-width:0}
+.title strong{overflow:hidden;font:400 20px/1.25 var(--cp-font-title,Georgia,serif);white-space:nowrap;text-overflow:ellipsis}
+.title small,.state small{font-size:12.5px;color:var(--pv-mute)}
+.modes{display:flex;border:1px solid var(--pv-line);border-radius:4px;overflow:hidden}
+.modes button{padding:7px 14px;border:0;background:none;color:var(--pv-mute);font-size:14px;cursor:pointer}
+.modes button+button{border-left:1px solid var(--pv-line)}
+.modes button[aria-checked=true]{background:var(--pv-gold);color:#15110b}
+.modes button:focus-visible{outline:2px solid var(--pv-gold);outline-offset:-2px}
+.state{display:grid;justify-items:end;text-align:right;font-size:13.5px}
+.empty{max-width:640px;margin:48px auto;padding:0 20px;color:var(--pv-mute)}
+.stage{padding:0 12px 40px}
+@media (max-width:700px){.state{justify-items:start;text-align:left}.bar{padding:10px 16px}}

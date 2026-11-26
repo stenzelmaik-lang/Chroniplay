@@ -1,11 +1,14 @@
 /** Presentation only. Stable IDs reuse existing personal layouts; no game state lives here. */
 export const regieGroups = [
-  {id:'scene', title:'Szene führen', areas:['narration','dialogue','atmosphere','interactions','secrets','consequences','notes']},
+  {id:'scene', title:'Szene führen', areas:['narration','dialogue','atmosphere','interactions','secrets','consequences','notes','locations','milestones']},
   {id:'interaction', title:'Interaktion', areas:['Szenenmaterial','material','pager','Pager · spontan','whispers','images','pdfs','handouts']},
   {id:'mood', title:'Stimmung', areas:['effects','sound','recordings','music','video','backdrop']},
   {id:'checks', title:'Proben & NPCs', areas:['checks','npcs','figures']},
   {id:'players', title:'Spieler am Tisch', areas:['players','vitals']},
   {id:'table', title:'Tischblick', areas:['table']},
+  // Storyboard 2.0, Phase 4: the evening's order, switching, skipping, spontaneous scenes and recording. Last, so the
+  // existing shortcuts 1–6 keep their meaning.
+  {id:'evening', title:'Abendfolge', areas:['evening']},
 ] as const;
 export type RegieGroup = typeof regieGroups[number]['id'];
 const legacyAreas:Record<string,string>={'Bilder · Polaroids':'images','Dokumente · PDF':'pdfs','Handout-Akten':'handouts','Tonaufnahmen · Kassette':'recordings','Video · Röhrenbildschirm':'video','Hintergrundmusik':'music','Hintergrund':'backdrop'};
@@ -18,6 +21,7 @@ export const regieAreaLabels:Record<string,string> = {
   effects:'Effekte', sound:'Ambiente', recordings:'Tonaufnahmen', music:'Hintergrundmusik',
   video:'Video', backdrop:'Hintergrund', vitals:'Zustände', checks:'Proben', npcs:'Szenen-NPCs',
   figures:'Standardfiguren & Würfel', players:'Spieler & Charaktere', table:'Auf dem Tisch',
+  evening:'Abendfolge', locations:'Orte der Szene', milestones:'Meilensteine',
 };
 export function regieGroupOf(area:string):RegieGroup {
   return regieGroups.find(group=>(group.areas as readonly string[]).includes(area))?.id || 'scene';

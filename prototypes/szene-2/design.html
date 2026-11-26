@@ -1,0 +1,459 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Szenen-Werkstatt – Gestaltungsprobe 3</title>
+<style>
+@font-face{font-family:'Spectral';src:url('../../public/fonts/spectral/spectral-latin-400-normal.woff2') format('woff2');font-weight:400;font-display:swap}
+@font-face{font-family:'Spectral';src:url('../../public/fonts/spectral/spectral-latin-700-normal.woff2') format('woff2');font-weight:700;font-display:swap}
+@font-face{font-family:'IBM Plex Sans';src:url('../../public/fonts/ibm-plex-sans/ibm-plex-sans-latin-400-normal.woff2') format('woff2');font-weight:400;font-display:swap}
+@font-face{font-family:'IBM Plex Sans';src:url('../../public/fonts/ibm-plex-sans/ibm-plex-sans-latin-700-normal.woff2') format('woff2');font-weight:700;font-display:swap}
+/* SL world. Derived from the wordmark: "Chroni" is silver (the chronicler, the SL), "Play" is gold (the table).
+   Silver = only you see it. Gold = it reaches the table. Night violet sets the SL area apart from the teal player world. */
+:root{
+  --night:#0f0d17;--night-2:#151220;--night-3:#1c1829;--rim:#2d2840;--rim-strong:#433c5c;
+  --silver:#d3d8e0;--silver-soft:#9aa1ae;--silver-faint:#7f8594;
+  --gold:#d6b36f;--gold-strong:#e9cb8b;--gold-line:#d6b36f80;--gold-wash:#d6b36f17;
+  --hearth:#efe3c8;            /* narration: what the table hears, warm like lantern light */
+  --title:'Spectral',Georgia,serif;--text:'IBM Plex Sans',Arial,sans-serif;
+  --r:2px;--t:420ms;--ease:cubic-bezier(.2,.7,.2,1);
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--night);color:var(--silver);font:15px/1.5 var(--text)}
+button,select,input{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+
+/* ===== Head: mode, scene, actions ===== */
+.top{display:flex;align-items:center;gap:14px;padding:12px 28px;border-bottom:1px solid var(--rim)}
+.mark{width:34px;height:34px;flex:none}
+.mode{margin:0;font-size:13px;color:var(--silver-soft)}
+.mode b{display:block;font:400 15px/1.2 var(--title);color:var(--silver)}
+.scenes{margin-left:auto;display:flex;align-items:center;gap:6px;font-size:13px;color:var(--silver-faint)}
+.iconbtn{display:grid;place-items:center;width:34px;height:34px;border:1px solid var(--rim);border-radius:var(--r);background:none;cursor:pointer;color:var(--silver-soft)}
+.iconbtn:hover{border-color:var(--rim-strong);color:var(--silver)}
+.more,.addarea{position:relative}
+.menu{position:absolute;right:0;top:40px;z-index:20;min-width:240px;padding:6px;border:1px solid var(--rim-strong);background:var(--night-2);display:none}
+.addarea .menu{left:0;right:auto}
+.menu[data-open]{display:block}
+.menu button{display:block;width:100%;padding:8px 10px;border:0;background:none;text-align:left;cursor:pointer;color:var(--silver)}
+.menu button:hover{background:var(--night-3)}
+.menu hr{border:0;border-top:1px solid var(--rim);margin:6px 0}
+.menu .danger{color:#e3a197}
+
+/* the ChroniPlay start image (owner asset): lantern desk and portals; its left half is dark, the title stays readable */
+.hero{display:grid;grid-template-columns:1fr auto;align-items:end;gap:8px 32px;min-height:230px;padding:26px 28px 22px;background:var(--night) url('../../public/images/chroniplay-hero-background.png') right 38% / cover no-repeat;border-bottom:1px solid var(--rim)}
+.hero .facts{align-self:start;padding:10px 14px;background:var(--night);border:1px solid var(--rim)}
+.hero h1{margin:0;font:400 44px/1.05 var(--title);color:var(--silver);letter-spacing:-.01em}
+.hero p{margin:8px 0 0;max-width:68ch;color:var(--silver-soft)}
+.facts{display:flex;gap:22px;margin:0;font-size:13px;color:var(--silver-faint)}
+.facts b{display:block;font-weight:400;color:var(--silver)}
+
+.chapters{display:flex;align-items:flex-end;gap:4px;padding:22px 28px 0;border-bottom:1px solid var(--rim)}
+.chapter{position:relative;padding:10px 16px 12px;border:0;background:none;cursor:pointer;color:var(--silver-faint);font:400 17px/1 var(--title)}
+.chapter[aria-current=true]{color:var(--silver)}
+.chapter[aria-current=true]::after{content:'';position:absolute;left:12px;right:12px;bottom:-1px;height:2px;background:var(--silver)}
+.chapter small{margin-left:6px;font:400 12px var(--text);color:var(--silver-faint)}
+.subtabs{display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:14px 28px 0}
+.sub{padding:6px 12px;border:1px solid var(--rim);border-radius:var(--r);background:none;cursor:pointer;color:var(--silver-soft);font-size:14px}
+.sub[aria-current=true]{border-color:var(--silver-soft);color:var(--silver);background:var(--night-3)}
+.sub span{margin-left:6px;color:var(--silver-faint)}
+.sub[data-muted]{border-style:dashed}
+
+/* ===== Stage ===== */
+.stage{display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:36px;padding:24px 28px 72px;align-items:start}
+.stage>*{min-width:0}
+.lead{margin:0 0 22px;max-width:66ch;color:var(--silver-soft)}
+
+/* ===== Narration: the orbit. Portals sit where the table changes; the line keeps the mood. ===== */
+.beat{display:grid;grid-template-columns:120px minmax(0,1fr) 220px;gap:0 24px;padding:4px 0 34px;cursor:pointer;position:relative}
+.beat::before{content:'';position:absolute;left:59px;top:0;bottom:0;width:1px;background:var(--gold-line)}
+.beat:first-child::before{top:44px}
+.beat:last-child::before{bottom:auto;height:44px}
+.node{position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;gap:8px;margin:0}
+.portal{display:block;width:96px;height:96px;border-radius:50%;padding:3px;border:1px solid var(--gold);background:var(--night)}
+.portal img,.portal .void{width:100%;height:100%;border-radius:50%;object-fit:cover;display:block}
+.portal .void{display:grid;place-items:center;background:var(--night-3);color:var(--silver-faint);font-size:11px;text-align:center;line-height:1.25;padding:10px}
+.node figcaption{font-size:12px;color:var(--gold);text-align:center;line-height:1.25;max-width:110px}
+.star{margin-top:18px;width:9px;height:9px;border:1px solid var(--gold);background:var(--night);transform:rotate(45deg)}
+.say{padding-top:6px}
+.beat h3{margin:0 0 10px;font:400 22px/1.25 var(--title);color:var(--silver)}
+.beat h3 small{display:block;margin-bottom:4px;font:400 12.5px/1.3 var(--text);color:var(--silver-faint)}
+.say p{margin:0;max-width:62ch;font:400 18.5px/1.7 var(--title);color:var(--hearth)}
+.note{padding:10px 0 0 14px;border-left:1px solid var(--rim-strong);font-size:13.5px;line-height:1.55;color:var(--silver-soft)}
+.note b{display:flex;align-items:center;gap:6px;margin-bottom:4px;font-weight:400;font-size:12px;color:var(--silver-faint)}
+.beat[aria-current=true] h3{color:var(--gold-strong)}
+.beat[aria-current=true] .portal{border-width:2px;padding:2px}
+
+/* ===== Preview: a gothic window onto the table ===== */
+.window{position:sticky;top:20px}
+.arch{position:relative;aspect-ratio:4/5;border:1px solid var(--gold);border-radius:50% 50% var(--r) var(--r)/34% 34% var(--r) var(--r);overflow:hidden;background:#05040a}
+.arch::after{content:'';position:absolute;inset:6px;border:1px solid var(--gold-line);border-radius:inherit;pointer-events:none}
+.arch img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity var(--t) var(--ease)}
+.arch img.on{opacity:1}
+.arch .empty{position:absolute;inset:0;display:grid;place-items:center;padding:40px 28px;text-align:center;color:var(--silver-faint);font-size:13px}
+.fx{position:absolute;inset:0;pointer-events:none;opacity:0;transition:opacity var(--t) var(--ease)}
+.fx.candle{background:radial-gradient(circle at 32% 72%,#f2b25a38,transparent 58%)}
+.fx.on{opacity:1;animation:flicker 2.6s steps(6) infinite}
+@keyframes flicker{0%,100%{opacity:1}35%{opacity:.72}60%{opacity:.93}80%{opacity:.68}}
+.sill{margin-top:12px}
+.sill h2{margin:0;font:400 18px/1.2 var(--title);color:var(--gold)}
+.sill p{margin:4px 0 0;font-size:13px;color:var(--silver-soft)}
+.present{display:flex;flex-wrap:wrap;gap:6px;margin:12px 0 0;padding:0;list-style:none}
+.present li{padding:3px 9px;border:1px solid var(--gold-line);border-radius:var(--r);font-size:12.5px;color:var(--gold)}
+.hidden{margin:14px 0 0;padding-top:10px;border-top:1px solid var(--rim);font-size:12.5px;color:var(--silver-faint)}
+
+/* ===== Atmosphere: portals on one orbit ===== */
+.sky{position:relative;width:max-content;max-width:100%;display:flex;flex-wrap:wrap;gap:34px 40px;padding:10px 0 20px}
+.sky::before{content:'';position:absolute;left:70px;right:70px;top:86px;height:1px;background:var(--gold-line)}
+.world{position:relative;z-index:1;width:160px;text-align:center;border:0;background:none;padding:0;cursor:pointer;color:inherit}
+.world .portal{width:160px;height:160px;margin:0 auto}
+.world[data-default] .portal{border-width:2px;padding:2px}
+.world h3{margin:12px 0 2px;font:400 19px/1.2 var(--title);color:var(--silver)}
+.world p{margin:0;font-size:12.5px;color:var(--silver-faint)}
+.world .when{margin-top:6px;color:var(--gold)}
+.world[aria-pressed=true] h3{color:var(--gold-strong)}
+.btn{padding:7px 12px;border:1px solid var(--rim-strong);border-radius:var(--r);background:none;cursor:pointer;font-size:13px;color:var(--silver)}
+.btn:hover{border-color:var(--silver-soft)}
+
+/* ===== Cast: the table card (gold) and the role (silver) ===== */
+.figure{display:grid;grid-template-columns:270px minmax(0,1fr);gap:28px;padding:0 0 34px;margin-bottom:30px;border-bottom:1px solid var(--rim)}
+.tablecard{position:relative;padding:14px;border:1px solid var(--gold);background:var(--night-2)}
+.tablecard::before,.tablecard::after{content:'';position:absolute;width:14px;height:14px;border:1px solid var(--gold)}
+.tablecard::before{top:5px;left:5px;border-right:0;border-bottom:0}
+.tablecard::after{bottom:5px;right:5px;border-left:0;border-top:0}
+.likeness{aspect-ratio:3/4;display:grid;place-items:center;background:var(--night-3);color:var(--silver-faint);font-size:12px}
+.tablecard h3{margin:12px 0 2px;font:400 22px/1.2 var(--title);color:var(--gold-strong)}
+.tablecard .wiki{margin:0;font-size:13px;color:var(--silver-soft)}
+.tablecard .here{margin:10px 0 0;padding-top:10px;border-top:1px solid var(--gold-line);font:400 15.5px/1.55 var(--title);color:var(--hearth)}
+.tablecard .here small{display:block;margin-bottom:2px;font:400 12px var(--text);color:var(--gold)}
+.role h4{margin:4px 0 14px;font:400 13px var(--text);color:var(--silver-faint)}
+.role dl{display:grid;grid-template-columns:140px 1fr;gap:10px 18px;margin:0}
+.role dt{color:var(--silver-faint);font-size:13.5px}
+.role dd{margin:0;max-width:60ch;color:var(--silver)}
+.lines{margin:18px 0 0;padding:0;list-style:none;display:grid;gap:8px}
+.lines li{font:400 17px/1.5 var(--title);color:var(--hearth)}
+
+/* ===== Gestalten: editing in place. Fields look like the finished text; the frame shows only on focus. ===== */
+.modeswitch{margin-left:auto;display:inline-flex;border:1px solid var(--rim);border-radius:var(--r)}
+.modeswitch button{padding:6px 14px;border:0;background:none;cursor:pointer;color:var(--silver-faint);font-size:14px}
+.modeswitch button[aria-pressed=true]{background:var(--night-3);color:var(--silver)}
+.saved{margin-left:12px;font-size:12.5px;color:var(--silver-faint)}
+.saved[data-busy]{color:var(--silver-soft)}
+.field{display:block;width:100%;padding:6px 8px;margin:0 -8px;font-family:var(--text);border:1px solid transparent;border-radius:var(--r);background:transparent;color:inherit;resize:none;overflow:hidden}
+.field:hover{border-color:var(--rim)}
+.field:focus{outline:none;border-color:var(--silver-soft);background:var(--night-2)}
+.field::placeholder{color:var(--silver-faint);opacity:1}
+textarea.field{min-height:2.2em}
+.f-title{font:400 22px/1.25 var(--title);color:var(--silver)}
+.f-say{font:400 18.5px/1.7 var(--title);color:var(--hearth)}
+.f-note{font-size:13.5px;line-height:1.55;color:var(--silver-soft)}
+.edit .beat{cursor:default}
+.edit .beat h3{margin-bottom:6px}
+.moodpick{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:12px}
+.moodpick span{font-size:12.5px;color:var(--silver-faint);margin-right:2px}
+.pick{display:grid;place-items:center;width:40px;height:40px;padding:2px;border:1px solid var(--rim-strong);border-radius:50%;background:var(--night);cursor:pointer;color:var(--silver-faint);font-size:16px}
+.pick img{width:100%;height:100%;border-radius:50%;object-fit:cover}
+.pick[aria-pressed=true]{border:2px solid var(--gold);padding:1px}
+.pick .void{font-size:9px}
+.beattools{display:flex;gap:4px;margin-top:10px}
+.mini{padding:3px 8px;border:1px solid var(--rim);border-radius:var(--r);background:none;cursor:pointer;color:var(--silver-faint);font-size:12.5px}
+.mini:hover{border-color:var(--rim-strong);color:var(--silver)}
+.insert{position:relative;height:0}
+.insert button{position:absolute;left:47px;top:-28px;z-index:2;display:flex;align-items:center;gap:8px;padding:0;border:0;background:none;cursor:pointer;color:var(--gold)}
+.insert button i{display:grid;place-items:center;width:25px;height:25px;border:1px solid var(--gold);background:var(--night);transform:rotate(45deg);font-style:normal}
+.insert button i b{transform:rotate(-45deg);font-weight:400}
+.insert button span{font-size:12.5px;opacity:0;transition:opacity .2s}
+.insert button:hover span,.insert button:focus-visible span{opacity:1}
+.newbeat{display:flex;align-items:center;gap:12px;margin:6px 0 0 34px;padding:0;border:0;background:none;cursor:pointer;color:var(--gold);font:400 17px var(--title)}
+.newbeat i{display:grid;place-items:center;width:52px;height:52px;border:1px dashed var(--gold);border-radius:50%;font-style:normal;font-size:22px}
+
+/* mood workbench (Atmosphäre, Gestalten) */
+.world.newworld .portal{border-style:dashed;display:grid;place-items:center;color:var(--gold);font-size:40px}
+.bench{margin-top:26px;padding:20px 22px;border:1px solid var(--rim-strong);background:var(--night-2)}
+.bench h3{margin:0 0 16px;font:400 20px/1.2 var(--title);color:var(--silver)}
+.bench .row{display:grid;grid-template-columns:150px 1fr;gap:10px 18px;align-items:start;margin-bottom:16px}
+.bench label,.bench .lab{font-size:13px;color:var(--silver-faint);padding-top:7px}
+.input{width:100%;padding:7px 10px;border:1px solid var(--rim-strong);border-radius:var(--r);background:var(--night);color:var(--silver)}
+.input:focus{outline:none;border-color:var(--silver-soft)}
+.gallery{display:flex;flex-wrap:wrap;gap:8px}
+.gallery button{width:92px;aspect-ratio:4/3;padding:0;border:1px solid var(--rim-strong);border-radius:var(--r);background:var(--night);cursor:pointer;overflow:hidden}
+.gallery button img{width:100%;height:100%;object-fit:cover;display:block}
+.gallery button[aria-pressed=true]{border:2px solid var(--gold)}
+.drop{display:grid;place-items:center;width:92px;aspect-ratio:4/3;border:1px dashed var(--rim-strong);border-radius:var(--r);color:var(--silver-faint);font-size:12px;text-align:center;line-height:1.3}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{padding:5px 11px;border:1px solid var(--rim-strong);border-radius:var(--r);background:none;cursor:pointer;color:var(--silver-soft);font-size:13px}
+.chip[aria-pressed=true]{border-color:var(--gold);color:var(--gold);background:var(--gold-wash)}
+.benchfoot{display:flex;justify-content:space-between;align-items:center;gap:12px;padding-top:14px;border-top:1px solid var(--rim)}
+.benchfoot p{margin:0;font-size:12.5px;color:var(--silver-faint)}
+
+/* cast (Gestalten) */
+.addnpc{position:relative;margin-bottom:26px}
+.picker{position:absolute;left:0;top:44px;z-index:15;width:320px;padding:10px;border:1px solid var(--rim-strong);background:var(--night-2)}
+.picker ul{margin:8px 0 0;padding:0;list-style:none;display:grid;gap:2px}
+.picker li button{width:100%;padding:7px 8px;border:0;background:none;text-align:left;cursor:pointer;color:var(--silver)}
+.picker li button:hover{background:var(--night-3)}
+.picker li button[disabled]{color:var(--silver-faint);cursor:default}
+.picker small{display:block;margin-top:8px;font-size:12px;color:var(--silver-faint)}
+.role .q{display:grid;grid-template-columns:140px 1fr;gap:4px 18px;margin-bottom:8px}
+.role .q label{font-size:13.5px;color:var(--silver-faint);padding-top:7px}
+.f-role{font-size:15px;line-height:1.5;color:var(--silver)}
+.f-here{font:400 15.5px/1.55 var(--title);color:var(--hearth)}
+@media (max-width:720px){
+  .modeswitch{margin-left:0}
+  .insert button{left:13px}
+  .newbeat{margin-left:0}
+  .bench .row,.role .q{grid-template-columns:1fr}
+  .bench label,.bench .lab,.role .q label{padding-top:0}
+  .picker{width:calc(100vw - 32px)}
+}
+
+/* ===== Phone ===== */
+@media (max-width:980px){.stage{grid-template-columns:1fr}.window{position:static;max-width:420px}}
+@media (max-width:720px){
+  .top{padding:10px 16px}.scenes span{display:none}
+  .hero{grid-template-columns:1fr;padding:170px 16px 18px;min-height:0;background:linear-gradient(var(--night),var(--night)) 0 170px/100% 100% no-repeat,url('../../public/images/chroniplay-hero-background.png') 72% 12%/190% auto no-repeat,var(--night)}.hero .facts{align-self:auto}
+  .node .void{font-size:0;padding:0}.hero h1{font-size:32px}.facts{flex-wrap:wrap;gap:14px}
+  .chapters{padding:14px 8px 0;overflow-x:auto}.chapter{padding:10px 10px 12px;white-space:nowrap}
+  .subtabs{padding:12px 16px 0}
+  .stage{padding:18px 16px 140px;gap:24px}
+  .beat{grid-template-columns:52px minmax(0,1fr);gap:0 14px}
+  .beat::before{left:25px}
+  .node .portal{width:50px;height:50px;padding:2px}
+  .node figcaption{display:none}
+  .say p{font-size:17px}
+  .note{grid-column:2;margin-top:12px}
+  .window{position:fixed;top:auto;left:0;right:0;bottom:0;z-index:10;max-width:none;display:grid;grid-template-columns:64px 1fr;gap:12px;align-items:center;padding:10px 16px;background:var(--night-2);border-top:1px solid var(--gold-line)}
+  .arch{aspect-ratio:1;border-radius:50%}
+  .arch::after{inset:3px}
+  .sill{margin:0}.present,.hidden{display:none}
+  .figure{grid-template-columns:1fr}
+  .role dl{grid-template-columns:1fr;gap:2px}.role dd{margin-bottom:10px}
+  .sky::before{display:none}.world,.world .portal{width:130px}.world .portal{height:130px}
+}
+@media (prefers-reduced-motion:reduce){.arch img,.fx{transition:none}.fx.on{animation:none}}
+</style>
+</head>
+<body>
+<div class="top">
+  <!-- the D10 of the wordmark, drawn as line art (no new image) -->
+  <svg class="mark" viewBox="0 0 40 40" aria-hidden="true" fill="none" stroke="#d6b36f" stroke-width="1.5" stroke-linejoin="miter"><path d="M20 2 36 12v16L20 38 4 28V12Z"/><path d="M20 2 9 24h22Z M9 24l11 14 11-14 M4 12l5 12 M36 12l-5 12"/></svg>
+  <p class="mode"><b>Vorbereitung</b>Szenen-Werkstatt, nur für dich</p>
+  <div class="scenes">
+    <button class="iconbtn" type="button" aria-label="Vorherige Szene">‹</button>
+    <span id="pos"></span>
+    <button class="iconbtn" type="button" aria-label="Nächste Szene">›</button>
+    <div class="more">
+      <button class="iconbtn" type="button" aria-label="Weitere Aktionen" aria-expanded="false" data-menu="actions">⋯</button>
+      <div class="menu" id="actions" role="menu">
+        <button type="button" role="menuitem">Vorschau für Spieler öffnen</button>
+        <button type="button" role="menuitem">Verlauf und frühere Stände</button>
+        <button type="button" role="menuitem">Klassische Ansicht</button>
+        <hr>
+        <button type="button" role="menuitem">Aus dem Spielabend nehmen</button>
+        <button type="button" role="menuitem" class="danger">Szene archivieren</button>
+      </div>
+    </div>
+  </div>
+</div>
+<header class="hero">
+  <div><h1 id="title"></h1><p id="situation"></p></div>
+  <p class="facts" id="facts"></p>
+</header>
+<nav class="chapters" id="chapters" aria-label="Kapitel der Szene"></nav>
+<div class="subtabs" id="subtabs"></div>
+<main class="stage">
+  <section id="area" aria-live="polite"></section>
+  <aside class="window" id="window" aria-label="Vorschau: so käme es am Tisch an"></aside>
+</main>
+
+<script src="referenzfall.local.js" onerror="void 0"></script>
+<script src="bilder.local.js" onerror="void 0"></script>
+<script src="beispiel.js"></script>
+<script>
+const D = window.SZENE_DATEN, IMG = window.SZENE_BILDER || {};
+const $ = s => document.querySelector(s);
+const esc = v => String(v ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+// Working copies: everything you change here lives only until the page is reloaded (prototype, nothing is saved).
+const moods = structuredClone(D.stimmungen || []), beats = structuredClone(D.abschnitte || []), cast = structuredClone(D.beteiligte || []);
+const library = D.bibliothek || {};
+const uid = p => p + Math.random().toString(36).slice(2, 8);
+const mood = id => moods.find(m => m.id === id) || moods.find(m => m.standard) || moods[0];
+const img = m => m && (m.datei || IMG[m.bild]);
+const candleOf = m => !!m && ((m.effekte || []).includes('candlelight') || /tisch|hinten/i.test(m.name));
+const presentAt = i => cast.filter(c => i >= beats.length - 1 || c.name.startsWith('Avi')).map(c => c.name.split(' ')[0]);
+const effects = [['candlelight', 'Kerzenlicht'], ['fog', 'Nebel'], ['rain', 'Regen'], ['flicker', 'Flackerndes Licht'], ['blood', 'Blutrand']];
+
+const chapters = () => [
+  ['frame', 'Rahmen', [['overview', 'Überblick', 1], ['places', 'Schauplätze', (D.schauplaetze || []).length], ['cast', 'Beteiligte', cast.length]]],
+  ['tell', 'Erzählen', [['passages', 'Erzählung', beats.length], ['moods', 'Atmosphäre', moods.length]]],
+  ['play', 'Möglichkeiten', [['interactions', 'Interaktionen', (D.interaktionen || []).length], ['material', 'Material', (D.material || []).length], ['checks', 'Proben', (D.proben || []).length], ['insights', 'Erkenntnisse', (D.erkenntnisse || []).length], ['visions', 'Visionen', (D.visionen || []).length], ['events', 'Ereignisse', (D.ereignisse || []).length]]],
+  ['close', 'Abschluss', [['exits', 'Ausgänge', (D.ausgaenge || []).length], ['notes', 'Notizen', (D.notizen || []).length]]],
+];
+const built = ['passages', 'moods', 'cast'];
+let chapter = 'tell', area = 'passages', mode = 'view', current = Math.max(0, beats.findIndex(b => img(mood(b.stimmung)))), shown = null, previewMood = null, benchMood = null, picking = false, focusAfter = null;
+
+function head() {
+  $('#pos').textContent = (D.pfad || []).slice(-1)[0] || '';
+  $('#title').textContent = D.titel;
+  $('#situation').textContent = D.ueberblick?.situation || '';
+  $('#facts').innerHTML = '<span><b>' + esc(D.typ) + '</b>Art</span><span><b>' + esc(D.ueberblick?.grundton || '') + '</b>Grundton</span><span><b>' + esc(D.dauer) + ' min</b>geplant</span>';
+}
+function tabs() {
+  const list = chapters();
+  $('#chapters').innerHTML = list.map(([id, label, items]) => '<button type="button" class="chapter" data-chapter="' + id + '" aria-current="' + (chapter === id) + '">' + esc(label) + '<small>' + items.filter(([, , n]) => n).length + '</small></button>').join('');
+  const items = list.find(c => c[0] === chapter)[2], filled = items.filter(([, , n]) => n), empty = items.filter(([, , n]) => !n);
+  $('#subtabs').innerHTML = filled.map(([id, label, n]) => '<button type="button" class="sub" data-area="' + id + '" aria-current="' + (area === id) + '"' + (built.includes(id) ? '' : ' data-muted title="In dieser Probe nicht ausgearbeitet"') + '>' + esc(label) + '<span>' + n + '</span></button>').join('') +
+    (empty.length ? '<span class="addarea"><button type="button" class="sub" data-menu="more-areas" aria-expanded="false">+ Weitere Bereiche</button><span class="menu" id="more-areas" role="menu">' + empty.map(([, label]) => '<button type="button" role="menuitem">' + esc(label) + ' anlegen</button>').join('') + '</span></span>' : '') +
+    '<span class="modeswitch" role="group" aria-label="Modus"><button type="button" data-mode="view" aria-pressed="' + (mode === 'view') + '">Ansehen</button><button type="button" data-mode="edit" aria-pressed="' + (mode === 'edit') + '">Gestalten</button></span><span class="saved" id="saved">' + (mode === 'edit' ? 'Alles gespeichert' : '') + '</span>';
+}
+let saveTimer;
+function touched() {
+  const s = $('#saved'); if (!s) return;
+  s.textContent = 'Wird gespeichert …'; s.dataset.busy = '1';
+  clearTimeout(saveTimer); saveTimer = setTimeout(() => { s.textContent = 'Alles gespeichert'; delete s.dataset.busy; }, 900);
+}
+
+function portal(m) {
+  const src = img(m);
+  return '<span class="portal">' + (src ? '<img src="' + esc(src) + '" alt="">' : '<span class="void">Bild fehlt noch</span>') + '</span>';
+}
+const no = b => String(b.titel).split(' · ')[0];
+const name = b => { const [, ...rest] = String(b.titel).split(' · '); return rest.join(' · ') || b.titel; };
+function renumber() { beats.forEach((b, i) => { b.titel = String(i + 1).padStart(2, '0') + ' · ' + name(b); }); }
+
+/* ---------- Erzählung ---------- */
+function passages() {
+  let prev = null;
+  const edit = mode === 'edit';
+  const lead = edit ? 'Schreib direkt hinein, es speichert von selbst. Die Raute auf der Linie fügt dazwischen einen Abschnitt ein; unter dem Text wählst du, ob die Stimmung wechselt.'
+    : 'Was du vorliest, in der wahrscheinlichen Reihenfolge. Wo ein goldenes Portal steht, wechselt am Tisch die Stimmung; die Linie heißt: Sie bleibt. Silbern ist, was nur du siehst.';
+  const rows = beats.map((b, i) => {
+    const m = mood(b.stimmung), change = !prev || m?.id !== prev?.id; prev = m;
+    const node = '<figure class="node">' + (change ? portal(m) + '<figcaption>' + esc(m?.name) + '</figcaption>' : '<span class="star" aria-hidden="true"></span>') + '</figure>';
+    const insert = edit && i > 0 ? '<div class="insert"><button type="button" data-insert="' + i + '" aria-label="Abschnitt vor ' + esc(name(b)) + ' einfügen"><i><b>+</b></i><span>Abschnitt hier einfügen</span></button></div>' : '';
+    if (!edit) return '<article class="beat" tabindex="0" role="button" data-beat="' + i + '" aria-current="' + (i === current) + '" aria-label="Abschnitt ' + (i + 1) + ' im Fenster zeigen">' + node +
+      '<div class="say"><h3><small>Abschnitt ' + esc(no(b)) + (change ? '' : ', Stimmung bleibt') + '</small>' + esc(name(b)) + '</h3><p>' + esc(b.text) + '</p></div>' +
+      '<aside class="note"><b>' + moon + 'Regie, nur du</b>' + esc(b.regie || '–') + '</aside></article>';
+    return insert + '<article class="beat" data-beat-edit="' + i + '" aria-current="' + (i === current) + '">' + node +
+      '<div class="say"><h3><small>Abschnitt ' + esc(no(b)) + '</small><input class="field f-title" data-f="titel" data-i="' + i + '" value="' + esc(name(b)) + '" placeholder="Wie heißt dieser Abschnitt?" aria-label="Titel des Abschnitts"></h3>' +
+      '<textarea class="field f-say" data-f="text" data-i="' + i + '" rows="3" placeholder="Was liest du vor? Schreib es so, wie du es am Tisch sagen willst …" aria-label="Vorlesetext">' + esc(b.text) + '</textarea>' +
+      '<div class="moodpick" role="group" aria-label="Stimmung bei diesem Abschnitt"><span>Stimmung</span>' +
+      (i > 0 ? '<button type="button" class="pick" data-pickmood="" data-i="' + i + '" aria-pressed="' + (!b.stimmung || b.stimmung === beats[i - 1]?.stimmung) + '" title="bleibt, wie sie ist">◇</button>' : '') +
+      moods.map(x => '<button type="button" class="pick" data-pickmood="' + x.id + '" data-i="' + i + '" aria-pressed="' + (b.stimmung === x.id && (i === 0 || b.stimmung !== beats[i - 1]?.stimmung)) + '" title="wechselt zu ' + esc(x.name) + '">' + (img(x) ? '<img src="' + esc(img(x)) + '" alt="">' : '<span class="void">' + esc(x.name.slice(0, 1)) + '</span>') + '</button>').join('') +
+      '<button type="button" class="pick" data-newmood="' + i + '" title="Neue Stimmung anlegen">+</button></div>' +
+      '<div class="beattools"><button type="button" class="mini" data-move="-1" data-i="' + i + '"' + (i === 0 ? ' disabled' : '') + '>Nach oben</button><button type="button" class="mini" data-move="1" data-i="' + i + '"' + (i === beats.length - 1 ? ' disabled' : '') + '>Nach unten</button><button type="button" class="mini" data-remove="' + i + '">Entfernen</button></div></div>' +
+      '<aside class="note"><b>' + moon + 'Regie, nur du</b><textarea class="field f-note" data-f="regie" data-i="' + i + '" rows="3" placeholder="z. B. langsam lesen, Pause lassen, Bild wechseln …" aria-label="Regie zu diesem Abschnitt">' + esc(b.regie || '') + '</textarea></aside></article>';
+  }).join('');
+  return '<p class="lead">' + lead + '</p><div class="orbit' + (edit ? ' edit' : '') + '">' + rows + '</div>' +
+    (edit ? '<button type="button" class="newbeat" data-insert="' + beats.length + '"><i>+</i>Abschnitt anhängen</button>' : '');
+}
+const moon = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a7 7 0 0 0 10.5 10.5Z"/></svg>';
+
+/* ---------- Atmosphäre ---------- */
+function atmosphere() {
+  const edit = mode === 'edit';
+  const uses = id => beats.filter(b => b.stimmung === id).map(no);
+  const worlds = moods.map(m => '<button type="button" class="world" data-world="' + m.id + '"' + (m.standard ? ' data-default' : '') + ' aria-pressed="' + ((edit ? benchMood : previewMood) === m.id) + '">' + portal(m) +
+    '<h3>' + esc(m.name) + '</h3><p>' + esc(m.ton || 'ohne Klang') + '</p><p class="when">' + (m.standard ? 'Beginnt mit der Szene' : uses(m.id).length ? 'bei Abschnitt ' + uses(m.id).join(', ') : 'noch ohne Abschnitt') + '</p></button>').join('');
+  const add = edit ? '<button type="button" class="world newworld" data-newmood="-1"><span class="portal">+</span><h3>Neue Stimmung</h3><p>Bild, Klang, Effekt</p></button>' : '';
+  return '<p class="lead">' + (edit ? 'Tippe eine Stimmung an, um sie zu gestalten, oder lege eine neue an. Das Fenster rechts zeigt sie sofort so, wie der Tisch sie zeigen würde.' : 'Jede Stimmung ist ein eigenes Portal: Bild, Klang und Effekt zusammen. Tippe eins an, um es im Fenster zu sehen.') + '</p>' +
+    '<div class="sky">' + worlds + add + '</div>' + (edit && benchMood ? bench(mood(benchMood)) : '');
+}
+function bench(m) {
+  const pics = Object.entries(IMG);
+  return '<section class="bench" aria-label="Stimmung gestalten"><h3>' + esc(m.name || 'Neue Stimmung') + '</h3>' +
+    '<div class="row"><label for="m-name">Name</label><input id="m-name" class="input" data-m="name" value="' + esc(m.name) + '" placeholder="z. B. Kellergang"></div>' +
+    '<div class="row"><span class="lab">Bild</span><div class="gallery">' + pics.map(([key, src]) => '<button type="button" data-mpic="' + esc(key) + '" aria-pressed="' + (m.bild === key && !m.datei) + '" aria-label="Bild ' + esc(key) + '"><img src="' + esc(src) + '" alt=""></button>').join('') +
+      '<span class="drop">Datei hierher ziehen oder hochladen</span></div></div>' +
+    '<div class="row"><label for="m-ton">Klang</label><input id="m-ton" class="input" data-m="ton" value="' + esc(m.ton || '') + '" placeholder="Beschreibung oder YouTube-Link"></div>' +
+    '<div class="row"><span class="lab">Effekt am Tisch</span><div class="chips">' + effects.map(([id, label]) => '<button type="button" class="chip" data-mfx="' + id + '" aria-pressed="' + (m.effekte || []).includes(id) + '">' + esc(label) + '</button>').join('') + '</div></div>' +
+    '<div class="row"><span class="lab">Beginn</span><div class="chips"><button type="button" class="chip" data-mstandard aria-pressed="' + !!m.standard + '">Beginnt mit der Szene</button></div></div>' +
+    '<div class="benchfoot"><p>Speichert von selbst. Erst die Regie bringt die Stimmung auf den Tisch.</p><button type="button" class="mini" data-mremove>Stimmung entfernen</button></div></section>';
+}
+
+/* ---------- Beteiligte ---------- */
+function castView() {
+  const edit = mode === 'edit';
+  const known = new Set(cast.map(c => c.name));
+  const picker = edit ? '<div class="addnpc"><button type="button" class="btn" data-picknpc aria-expanded="' + picking + '">+ NSC aus der Welt hinzufügen</button>' +
+    (picking ? '<div class="picker"><input class="input" placeholder="Name suchen …" aria-label="NSC suchen"><ul>' + (library.npc || []).map(n => '<li><button type="button" data-addnpc="' + esc(n) + '"' + (known.has(n) ? ' disabled' : '') + '>' + esc(n) + (known.has(n) ? ' · schon dabei' : '') + '</button></li>').join('') + '</ul><small>Die Akte wird nur verknüpft, nicht kopiert.</small></div>' : '') + '</div>' : '';
+  const q = [['warum', 'Warum da'], ['will', 'Will'], ['weiss', 'Weiß'], ['verschweigt', 'Verschweigt'], ['reaktion', 'Reagiert'], ['eingreifen', 'Greift ein, wenn'], ['geht', 'Geht, wenn']];
+  return '<p class="lead">' + (edit ? 'Links ergänzt du, was die Runde an der Figur in dieser Szene bemerkt. Rechts beantwortest du die Fragen zur Rolle, so knapp oder ausführlich du willst.' : 'Links die Karte, die am Tisch erscheint. Rechts die Rolle, die nur du kennst. Die Akte selbst bleibt bei den NSCs.') + '</p>' + picker +
+    cast.map((c, ci) => '<article class="figure"><div class="tablecard"><div class="likeness">' + esc(c.bild || 'Figurenbild aus der Akte') + '</div><h3>' + esc(c.name) + '</h3><p class="wiki">Wiki-Karte aus der NSC-Akte</p>' +
+      (edit ? '<p class="here"><small>Zusatz in dieser Szene</small><textarea class="field f-here" data-c="karte" data-ci="' + ci + '" rows="3" placeholder="Was bemerkt die Runde hier an der Figur?">' + esc(c.karte || '') + '</textarea></p>'
+        : c.karte ? '<p class="here"><small>Zusatz in dieser Szene</small>' + esc(c.karte) + '</p>' : '') + '</div>' +
+      '<div class="role"><h4>Rolle in dieser Szene</h4>' + (edit ? q.map(([k, label]) => '<div class="q"><label for="c' + ci + k + '">' + esc(label) + '</label><textarea id="c' + ci + k + '" class="field f-role" data-c="' + k + '" data-ci="' + ci + '" rows="1" placeholder="…">' + esc(c[k] && c[k] !== '–' ? c[k] : '') + '</textarea></div>').join('') + '<div class="beattools"><button type="button" class="mini" data-dropnpc="' + ci + '">Aus der Szene nehmen</button></div>'
+        : '<dl>' + q.map(([k, label]) => [label, c[k]]).filter(([, v]) => v && v !== '–').map(([k, v]) => '<dt>' + esc(k) + '</dt><dd>' + esc(v) + '</dd>').join('') + '</dl>' + ((c.saetze || []).length ? '<ul class="lines">' + c.saetze.map(s => '<li>' + esc(s) + '</li>').join('') + '</ul>' : '')) + '</div></article>').join('');
+}
+
+/* ---------- Fenster ---------- */
+function preview() {
+  const m = mode === 'edit' && area === 'moods' && benchMood ? mood(benchMood) : previewMood ? mood(previewMood) : mood(beats[current]?.stimmung), box = $('#window');
+  const prior = box.querySelector('.arch img.on'), src = img(m), changed = shown !== (m?.id + '|' + src); shown = m?.id + '|' + src;
+  box.innerHTML = '<div class="arch">' + (prior && changed ? '<img class="on" src="' + esc(prior.getAttribute('src')) + '" alt="">' : '') +
+    (src ? '<img class="' + (prior && changed ? 'next' : 'on next') + '" src="' + esc(src) + '" alt="Bühnenbild ' + esc(m.name) + '">' : '<span class="empty">Für „' + esc(m?.name || '') + '“ fehlt noch ein Bild.</span>') +
+    (candleOf(m) ? '<span class="fx candle on"></span>' : '') + '</div>' +
+    '<div class="sill"><h2>So käme es am Tisch an</h2><p>' + esc(m?.name || '') + (m?.ton ? ', ' + esc(m.ton) : '') + '</p>' +
+    '<ul class="present">' + presentAt(current).map(n => '<li>' + esc(n) + ' ist da</li>').join('') + '</ul>' +
+    '<p class="hidden">Nur eine Vorschau. Am Tisch zeigt es erst die Regie, wenn du es auslöst. Erzähltext, Regie und Rollen sehen die Spieler nie.</p></div>';
+  if (prior && changed && src) requestAnimationFrame(() => requestAnimationFrame(() => box.querySelector('.arch img.next')?.classList.add('on')));
+}
+function grow(el) { el.style.height = 'auto'; el.style.height = el.scrollHeight + 'px'; }
+function render() {
+  tabs();
+  $('#area').innerHTML = area === 'passages' ? passages() : area === 'moods' ? atmosphere() : area === 'cast' ? castView() : '<p class="lead">In dieser Gestaltungsprobe nicht ausgearbeitet.</p>';
+  document.querySelectorAll('textarea.field').forEach(grow);
+  preview();
+  if (focusAfter) { document.querySelector(focusAfter)?.focus(); focusAfter = null; }
+}
+
+/* ---------- Eingaben ---------- */
+function closeMenus(except) { document.querySelectorAll('.menu[data-open]').forEach(m => { if (m.id !== except) { m.removeAttribute('data-open'); document.querySelector('[data-menu="' + m.id + '"]')?.setAttribute('aria-expanded', 'false'); } }); }
+function newMood(forBeat) {
+  const m = { id: uid('s'), name: 'Neue Stimmung', bild: '', ton: '', effekte: [], standard: !moods.length };
+  moods.push(m); benchMood = m.id;
+  if (forBeat >= 0) beats[forBeat].stimmung = m.id;
+  area = 'moods'; chapter = 'tell'; focusAfter = '#m-name'; touched(); render();
+}
+document.addEventListener('input', e => {
+  const t = e.target;
+  if (t.dataset.f) { const b = beats[+t.dataset.i]; if (t.dataset.f === 'titel') b.titel = no(b) + ' · ' + t.value; else b[t.dataset.f] = t.value; }
+  else if (t.dataset.c) cast[+t.dataset.ci][t.dataset.c] = t.value;
+  else if (t.dataset.m) { const m = mood(benchMood); m[t.dataset.m] = t.value; if (t.dataset.m === 'name') { const h = document.querySelector('.bench h3'); if (h) h.textContent = t.value || 'Neue Stimmung'; const w = document.querySelector('[data-world="' + benchMood + '"] h3'); if (w) w.textContent = t.value; } preview(); }
+  else return;
+  if (t.tagName === 'TEXTAREA') grow(t);
+  touched();
+});
+document.addEventListener('click', e => {
+  const opener = e.target.closest('[data-menu]');
+  if (opener) { const m = document.getElementById(opener.dataset.menu); const open = !m.hasAttribute('data-open'); closeMenus(m.id); m.toggleAttribute('data-open', open); opener.setAttribute('aria-expanded', String(open)); return; }
+  if (!e.target.closest('.menu')) closeMenus();
+  const md = e.target.closest('[data-mode]'); if (md) { mode = md.dataset.mode; benchMood = null; picking = false; render(); return; }
+  const ch = e.target.closest('[data-chapter]'); if (ch) { chapter = ch.dataset.chapter; const items = chapters().find(c => c[0] === chapter)[2]; const first = items.find(([id, , n]) => n && built.includes(id)) || items.find(([, , n]) => n); area = first ? first[0] : ''; previewMood = null; benchMood = null; render(); return; }
+  const a = e.target.closest('[data-area]'); if (a) { area = a.dataset.area; previewMood = null; benchMood = null; render(); return; }
+  const ins = e.target.closest('[data-insert]'); if (ins) { const at = +ins.dataset.insert; beats.splice(at, 0, { id: uid('a'), titel: '00 · ', text: '', regie: '', stimmung: beats[at - 1]?.stimmung || moods[0]?.id }); renumber(); current = at; focusAfter = '[data-f="titel"][data-i="' + at + '"]'; touched(); render(); return; }
+  const mv = e.target.closest('[data-move]'); if (mv) { const i = +mv.dataset.i, j = i + +mv.dataset.move; [beats[i], beats[j]] = [beats[j], beats[i]]; renumber(); current = j; touched(); render(); return; }
+  const rm = e.target.closest('[data-remove]'); if (rm) { const i = +rm.dataset.remove; if (beats[i].text.trim() && !confirm('Abschnitt „' + name(beats[i]) + '“ mit seinem Text entfernen?')) return; beats.splice(i, 1); renumber(); current = Math.min(current, beats.length - 1); touched(); render(); return; }
+  const pm = e.target.closest('[data-pickmood]'); if (pm) { const i = +pm.dataset.i; beats[i].stimmung = pm.dataset.pickmood || beats[i - 1]?.stimmung; current = i; touched(); render(); return; }
+  const nm = e.target.closest('[data-newmood]'); if (nm) { newMood(+nm.dataset.newmood); return; }
+  const pic = e.target.closest('[data-mpic]'); if (pic) { const m = mood(benchMood); m.bild = pic.dataset.mpic; delete m.datei; touched(); render(); return; }
+  const fx = e.target.closest('[data-mfx]'); if (fx) { const m = mood(benchMood); m.effekte = m.effekte?.includes(fx.dataset.mfx) ? m.effekte.filter(x => x !== fx.dataset.mfx) : [...(m.effekte || []), fx.dataset.mfx]; touched(); render(); return; }
+  if (e.target.closest('[data-mstandard]')) { moods.forEach(m => { m.standard = m.id === benchMood; }); touched(); render(); return; }
+  if (e.target.closest('[data-mremove]')) { const m = mood(benchMood); if (!confirm('Stimmung „' + m.name + '“ entfernen? Abschnitte, die zu ihr wechseln, behalten dann die vorige Stimmung.')) return; const i = moods.indexOf(m); moods.splice(i, 1); beats.forEach(b => { if (b.stimmung === m.id) b.stimmung = ''; }); if (m.standard && moods[0]) moods[0].standard = true; benchMood = null; touched(); render(); return; }
+  if (e.target.closest('[data-picknpc]')) { picking = !picking; render(); return; }
+  const an = e.target.closest('[data-addnpc]'); if (an) { cast.push({ id: uid('n'), name: an.dataset.addnpc, bild: '', karte: '' }); picking = false; focusAfter = '[data-c="karte"][data-ci="' + (cast.length - 1) + '"]'; touched(); render(); return; }
+  const dn = e.target.closest('[data-dropnpc]'); if (dn) { const c = cast[+dn.dataset.dropnpc]; if (!confirm('„' + c.name + '“ aus der Szene nehmen? Die NSC-Akte bleibt unverändert.')) return; cast.splice(+dn.dataset.dropnpc, 1); touched(); render(); return; }
+  const b = e.target.closest('[data-beat]'); if (b) { current = Number(b.dataset.beat); previewMood = null; document.querySelectorAll('.beat').forEach(x => x.setAttribute('aria-current', String(x === b))); preview(); return; }
+  const be = e.target.closest('[data-beat-edit]'); if (be && +be.dataset.beatEdit !== current) { current = +be.dataset.beatEdit; document.querySelectorAll('.beat').forEach(x => x.setAttribute('aria-current', String(x === be))); preview(); }
+  const w = e.target.closest('[data-world]'); if (w) { if (mode === 'edit') { benchMood = w.dataset.world; render(); } else { previewMood = w.dataset.world; document.querySelectorAll('.world').forEach(x => x.setAttribute('aria-pressed', String(x === w))); preview(); } }
+});
+document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeMenus(); if (picking) { picking = false; render(); } } const b = e.target.closest?.('[data-beat]'); if (b && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); b.click(); } });
+// #passages, #moods, #cast open that area; "-edit" opens it in Gestalten (handy for sharing a view)
+const [hArea, hMode] = location.hash.slice(1).split('-');
+if (built.includes(hArea)) { area = hArea; chapter = chapters().find(c => c[2].some(([id]) => id === hArea))[0]; }
+if (hMode === 'edit') { mode = 'edit'; if (hArea === 'moods' && moods[1]) benchMood = moods[1].id; if (hArea === 'cast') picking = false; }
+head(); render();
+</script>
+</body>
+</html>

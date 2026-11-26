@@ -1,25 +1,40 @@
 "use client";
 /* eslint-disable @next/next/no-img-element -- material thumbnails come from the protected /api/files endpoint. */
-import { useCallback, useEffect, useLayoutEffect, useRef, useState, type DragEvent } from "react";
-import { ArrowLeft, ArrowRight, BookOpen, ChevronLeft, ChevronRight, Clapperboard, Compass, FileText, Film, GripVertical, LayoutGrid, Lightbulb, Lock, MapPin, PencilLine, Plus, RotateCcw, ScrollText, Users, Wrench } from "lucide-react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type DragEvent, type ReactNode } from "react";
+import { MoreHorizontal, ArrowLeft, ArrowRight, BookOpen, ChevronLeft, ChevronRight, Clapperboard, Archive, Clock, Compass, GitBranch, FileText, Link2, Undo2, Film, GripVertical, LayoutGrid, Lightbulb, MapPin, PencilLine, Plus, RotateCcw, ScrollText, Users, Wrench } from "lucide-react";
 import type { PreparationRecipient } from "@/domain/personal-message";
 import { sceneGuideSteps } from "@/domain/preparation-guide";
 import { richTextToPlainText } from "@/domain/location-rich-text";
 import { PreparationWhispers } from "./preparation-whispers";
-import { isCentralPreparationPlace, preparationPlaces } from "./preparation-catalog";
+import { preparationPlaces } from "./preparation-catalog";
 import type { Actor } from "@/domain/types";
 import { authoringTextMax } from "@/domain/authoring-limits";
 import { emptyStory, type CommandReference, type StoryView } from "@/domain/command-workspace";
 import { emptyScene, type SceneDocument, type SceneSummary, type SceneView } from "@/domain/story-scene";
 import { sessionPreparationSchema, type PreparedSession } from "@/domain/story-preparation";
-import { orderedSessionScenes, preparationSections } from "@/domain/session-overview";
-import { assignEveningBook, bookEvenings, eveningProgress, guideState, looseEvenings, reorderedSessionSceneIds, sceneReadiness, sceneResources, sceneReadinessNames, sortEvenings, storyboardGuide, unplacedBookScenes, type GuideStepId } from "@/domain/storyboard";
+import { orderedSessionScenes, preparationSections, scenePreparation } from "@/domain/session-overview";
+import { assignEveningBook, bookEvenings, eveningStatusProgress, guideState, looseEvenings, reorderedSessionSceneIds, sceneResources, sceneStatus, sortEvenings, storyboardGuide, unplacedBookScenes, type EveningStatusProgress, type GuideStepId } from "@/domain/storyboard";
+import { boardBlockKinds, boardBlockTypes, boardLinkKindNames, boardLinkMax, possibilityAsScene, boardDuration, boardKind, boardMinutesMax, boardPlotNames, boardPriorities, boardPriorityNames, boardStatuses, boardStatusNames, boardTextMax, compactBoard, formatMinutes, isOptionalBlock, type BoardBlockKind, type BoardStatus, type SceneBoard } from "@/domain/storyboard-blocks";
 import { RichTextEditor, RichTextView } from "./rich-text";
-import { PreparationNPCs } from "./preparation-npcs";
 import { PreparationFigures } from "./preparation-figures";
-import { SceneBackdropPicker, SceneYoutubePicker } from "./preparation-upload";
 import { preparationStatusNames } from "./session-overview";
 import { useCommandConfirmation } from "./command-confirmation";
+import { BoardLinks, PlotList, PlotNetwork, PlotTimeline, ViewSwitch, type BoardView } from "./storyboard-views";
+import { linkedOutside, nextScenes } from "@/domain/storyboard-views";
+import { SceneThreads, ThreadPage, ThreadShelf, createThread } from "./storyboard-threads";
+import { bookPossibilityAsScene, emptyThread, type ClueKnowledge, type ThreadView } from "@/domain/plot-threads";
+import { EveningPlay, RegieLink } from "./storyboard-play";
+import { eveningPlayLog, moveScenesBetweenEvenings, playStatusNames } from "@/domain/play-log";
+import type { MomentView } from "@/domain/command-workspace";
+import { MaterialArea } from "./storyboard-materials";
+import { EventsEditor, InsightsEditor, InteractionCardsEditor } from "./storyboard-possibilities";
+import { ChecksEditor } from "./storyboard-checks";
+import { NotesArea } from "./storyboard-notes";
+import { freeTextChecks } from "@/domain/scene-checks";
+import { withoutDanglingCardRefs } from "@/domain/scene-possibilities";
+import { isMaterialElement } from "@/domain/material-system";
+import { LegacyText, CastEditor, ContextEditor, MoodsEditor, PassagesEditor, PlacesEditor, WorkshopHead, WorkshopNav } from "./storyboard-workshop";
+import { primaryWorkshopAreas, takeOverDialogue, takeOverPerson, takeOverPlace, takeoverElements, toWorkshop, withWorkshopMirrors, workshopFill, type WorkshopArea } from "@/domain/scene-workshop";
 import s from "./storyboard.module.css";
 
 type Book = { id: string; title: string; status: string; updatedAt: string };
@@ -27,28 +42,18 @@ type MediaFile = { id: string; name: string; mime: string };
 type OpenScene = { id: string; version: number; document: SceneDocument };
 const eveningStatuses = ["draft", "ready", "active", "completed"] as const;
 type SceneArea = typeof sceneGuideSteps[number]["id"];
-const areaShort: Record<SceneArea, string> = { narration: "Erzählung", atmosphere: "Atmosphäre", dialogueNotes: "NPCs & Dialoge", interactions: "Interaktionen", secrets: "Geheimnisse", visions: "Visionen & Botschaften", possibleConsequences: "Folgen & Proben", gmNotes: "SL-Notizen" };
 const areaPlaceholder: Record<SceneArea, string> = {
   narration: "Was liest du der Runde vor, wenn die Szene beginnt? …", atmosphere: "Licht, Geräusche, Gerüche, Wetter – was spüren die Charaktere? …",
   dialogueNotes: "Was wollen die NPCs? Gesprächsangebote, Ziele, mögliche Antworten …", interactions: "Was setzt du wann ein – und warum? …",
   secrets: "Was bleibt zunächst verborgen? Hintergründe und Voraussetzungen für eine spätere Freigabe …", visions: "Gemeinsame Vision oder Botschaft (optional) …",
   possibleConsequences: "Mögliche Proben, Schwierigkeiten und Folgen – nur geplant, nichts wird ausgelöst …", gmNotes: "Regiehinweise, Tempo, was passiert, wenn … – nur für dich",
 };
-const privateAreas = new Set<SceneArea>(["secrets", "gmNotes"]);
 /** The protected gallery is offered only where pictures belong: the material plan of the scene. NPC pictures come from the NPC dossiers. */
 const galleryAreas = new Set<SceneArea>(["interactions"]);
 const cardAreaShort: Record<SceneArea, string> = { narration: "Erzählung", atmosphere: "Atmosphäre", dialogueNotes: "NPCs", interactions: "Interaktion", secrets: "Geheimnis", visions: "Visionen", possibleConsequences: "Folgen", gmNotes: "Notizen" };
 const elementKindNames: Record<string, string> = { text: "Text", "sl-note": "SL-Notiz", description: "Beschreibung", object: "Gegenstand", clue: "Hinweis", check: "Probe", dialogue: "Dialog", encounter: "Begegnung", place: "Ort", person: "Person", image: "Bild", audio: "Audio", video: "Video", handout: "Handout", puzzle: "Rätsel", pager: "Pager" };
-/** A small marker on the area tab: text written or tools of this area in use. Only a hint. */
-function areaFilled(document: SceneDocument, key: SceneArea) {
-  if (richTextToPlainText(String(document[key] || "")).trim()) return true;
-  if (key === "atmosphere") return !!document.backdropFileId || !!document.youtube?.length;
-  if (key === "dialogueNotes") return document.npcIds.length + document.standardFigures.length > 0;
-  if (key === "interactions") return document.elements.length > 0;
-  if (key === "visions") return !!document.whispers?.length;
-  if (key === "possibleConsequences") return document.possibilities.length > 0;
-  return false;
-}
+/** Colour family of a status for the existing card, bar and tray styles; review and deferred get their own accents via data-status. */
+const statusTone: Record<BoardStatus, "idea" | "draft" | "ready"> = { idea: "idea", working: "draft", review: "draft", ready: "ready", deferred: "idea" };
 
 async function call<T>(path: string, body?: unknown): Promise<T> {
   const r = await fetch(path, { method: body ? "POST" : "GET", headers: body ? { "Content-Type": "application/json" } : undefined, body: body ? JSON.stringify(body) : undefined });
@@ -57,13 +62,17 @@ async function call<T>(path: string, body?: unknown): Promise<T> {
   return d;
 }
 
-function readRoute() {
+const boardViews: BoardView[] = ["cards", "network", "list", "timeline"];
+function readView(): BoardView { const v = new URLSearchParams(window.location.search).get("sicht") as BoardView | null; return v && boardViews.includes(v) ? v : "cards"; }
+function writeView(view: BoardView) { const url = new URL(window.location.href); if (view === "cards") url.searchParams.delete("sicht"); else url.searchParams.set("sicht", view); window.history.replaceState(window.history.state, "", url); }
+type Route = { book: string; evening: string; scene: string; thread?: string };
+function readRoute(): Route {
   const q = new URLSearchParams(window.location.search);
-  return { book: q.get("buch") || "", evening: q.get("abend") || "", scene: q.get("szene") || "" };
+  return { book: q.get("buch") || "", evening: q.get("abend") || "", scene: q.get("szene") || "", thread: q.get("strang") || "" };
 }
-function writeRoute(next: { book: string; evening: string; scene: string }, mode: "push" | "replace" = "push") {
+function writeRoute(next: Route, mode: "push" | "replace" = "push") {
   const url = new URL(window.location.href);
-  for (const [key, value] of [["buch", next.book], ["abend", next.evening], ["szene", next.scene]] as const) { if (value) url.searchParams.set(key, value); else url.searchParams.delete(key); }
+  for (const [key, value] of [["buch", next.book], ["abend", next.evening], ["szene", next.scene], ["strang", next.thread || ""]] as const) { if (value) url.searchParams.set(key, value); else url.searchParams.delete(key); }
   url.searchParams.set("bereich", "sitzung");
   if (url.pathname + url.search !== window.location.pathname + window.location.search) window.history[mode === "push" ? "pushState" : "replaceState"](null, "", url);
 }
@@ -74,10 +83,14 @@ export function Storyboard({ a, onDirty, onClassic }: { a: Actor; onDirty?: (dir
   const [scenes, setScenes] = useState<SceneSummary[]>([]);
   const [refs, setRefs] = useState<CommandReference[]>([]);
   const [files, setFiles] = useState<MediaFile[]>([]);
-  const [route, setRoute] = useState({ book: "", evening: "", scene: "" });
+  const [route, setRoute] = useState<Route>({ book: "", evening: "", scene: "" });
+  const [threads, setThreads] = useState<ThreadView[]>([]);
+  const [knowledge, setKnowledge] = useState<ClueKnowledge>({});
+  const [bookStory, setBookStory] = useState<StoryView | null>(null);
+  const [eveningMoments, setEveningMoments] = useState<{ id: string; moments: MomentView[] }>({ id: "", moments: [] });
   const [open, setOpen] = useState<OpenScene | null>(null);
   const [saved, setSaved] = useState("");
-  const [area, setArea] = useState<SceneArea>("narration");
+  const [wsArea, setWsArea] = useState<WorkshopArea>("passages");
   const [writing, setWriting] = useState<SceneArea | null>(null);
   const [players, setPlayers] = useState<PreparationRecipient[]>([]);
   const [message, setMessage] = useState("Lade deine Geschichte …");
@@ -88,18 +101,24 @@ export function Storyboard({ a, onDirty, onClassic }: { a: Actor; onDirty?: (dir
   const [ideaTitle, setIdeaTitle] = useState(""), [ideaText, setIdeaText] = useState("");
   const [dragId, setDragId] = useState(""), [dropIndex, setDropIndex] = useState(-1);
   const [planDraft, setPlanDraft] = useState<string | null>(null);
+  const [ideaKind, setIdeaKind] = useState<BoardBlockKind>("scene");
+  const [view, setViewState] = useState<BoardView>("cards");
+  const [patching, setPatching] = useState("");
   const confirmation = useCommandConfirmation();
+  // Szene 2.0, Etappe 6: how many SL notes refer to the open scene (for the area list).
+  const [noteCount, setNoteCount] = useState(0);
   const ideaInput = useRef<HTMLInputElement>(null);
   const latest = useRef(open), baseline = useRef(saved), inflight = useRef(false);
   useLayoutEffect(() => { latest.current = open; baseline.current = saved; }, [open, saved]);
   const resumeKey = "chroniplay-storyboard-resume:" + a.campaignId + ":" + a.id, guideKey = "chroniplay-storyboard-guide:" + a.id;
 
   const refresh = useCallback(async () => {
-    const [catalog, prep, media, people] = await Promise.all([
+    const [catalog, prep, media, people, plot] = await Promise.all([
       call<{ stories: Book[]; scenes: SceneSummary[]; references: CommandReference[] }>("/api/command-center"),
       call<{ sessions: PreparedSession[]; places?: { id: string; title: string; parent_id?: string | null; level?: string }[] }>("/api/command-center/preparation"),
       call<{ files?: MediaFile[] }>("/api/files").catch(() => ({ files: [] as MediaFile[] })),
       call<{ recipients?: PreparationRecipient[] }>("/api/messages?recipients=1&context=preparation").catch(() => ({ recipients: [] as PreparationRecipient[] })),
+      call<{ threads: ThreadView[]; knowledge: ClueKnowledge }>("/api/command-center/threads").catch(() => ({ threads: [] as ThreadView[], knowledge: {} as ClueKnowledge })),
     ]);
     setBooks(catalog.stories.filter(story => story.status !== "archived"));
     setScenes(catalog.scenes);
@@ -107,12 +126,15 @@ export function Storyboard({ a, onDirty, onClassic }: { a: Actor; onDirty?: (dir
     setPlayers((people.recipients || []).filter(person => person.role === "player"));
     setSessions(prep.sessions);
     setFiles(media.files || []);
+    setThreads(plot.threads); setKnowledge(plot.knowledge);
   }, []);
 
   const loadScene = useCallback(async (id: string) => {
     if (!id) { setOpen(null); setSaved(""); return; }
     const data = await call<{ scene: SceneView }>("/api/command-center/scenes?id=" + encodeURIComponent(id));
-    const next = { id: data.scene.id, version: data.scene.version, document: data.scene.document };
+    // Older scenes open in the workshop (narration → passage 1, picture and music → default mood). The converted
+    // form is the baseline, so nothing is saved until the SL changes something.
+    const next = { id: data.scene.id, version: data.scene.version, document: toWorkshop(data.scene.document) };
     setOpen(next); setSaved(JSON.stringify(next.document)); setWriting(null);
   }, []);
 
@@ -121,7 +143,7 @@ export function Storyboard({ a, onDirty, onClassic }: { a: Actor; onDirty?: (dir
       try { setGuideHidden(localStorage.getItem(guideKey) === "aus"); const r = JSON.parse(localStorage.getItem(resumeKey) || "null"); if (r && typeof r.scene === "string") setResume(r); } catch { /* per-viewer convenience only */ }
       try {
         await refresh();
-        const r = readRoute(); setRoute(r);
+        const r = readRoute(); setRoute(r); setViewState(readView());
         if (r.scene) await loadScene(r.scene);
         setMessage("Nur für die Spielleitung · Änderungen werden automatisch gespeichert.");
       } catch (error) { setMessage((error as Error).message); }
@@ -151,6 +173,21 @@ export function Storyboard({ a, onDirty, onClassic }: { a: Actor; onDirty?: (dir
     } finally { inflight.current = false; setBusy(false); }
   }, [refresh]);
 
+  const openId = open?.id || "";
+  useEffect(() => {
+    let live = true;
+    if (!openId) return;
+    call<{ notes: unknown[] }>("/api/command-center/notes?sceneId=" + encodeURIComponent(openId)).then(d => { if (live) setNoteCount(d.notes.length); }).catch(() => { if (live) setNoteCount(0); });
+    return () => { live = false; };
+  }, [openId]);
+
+  /** After a library save the server refreshed the copies in this scene: load it again (only when nothing is unsaved). */
+  const reloadOpenScene = useCallback(async () => {
+    const current = latest.current;
+    if (!current || JSON.stringify(current.document) !== baseline.current) return;
+    await loadScene(current.id);
+  }, [loadScene]);
+
   useEffect(() => {
     if (!dirty || busy) return;
     const timer = setTimeout(() => void save(), 1400);
@@ -172,7 +209,8 @@ export function Storyboard({ a, onDirty, onClassic }: { a: Actor; onDirty?: (dir
       if (!current || inflight.current || writingRef.current || JSON.stringify(current.document) !== baseline.current) return;
       void call<{ scene: SceneView }>("/api/command-center/scenes?id=" + encodeURIComponent(current.id)).then(data => {
         if (latest.current?.id !== data.scene.id || JSON.stringify(latest.current.document) !== baseline.current) return;
-        setOpen({ id: data.scene.id, version: data.scene.version, document: data.scene.document }); setSaved(JSON.stringify(data.scene.document));
+        const document = toWorkshop(data.scene.document);
+        setOpen({ id: data.scene.id, version: data.scene.version, document }); setSaved(JSON.stringify(document));
       }).catch(() => undefined);
     };
     window.addEventListener("focus", back);
@@ -180,7 +218,7 @@ export function Storyboard({ a, onDirty, onClassic }: { a: Actor; onDirty?: (dir
   }, []);
 
   /** Every move between levels first saves the open scene; nothing is silently dropped. */
-  async function go(next: { book: string; evening: string; scene: string }, mode: "push" | "replace" = "push") {
+  async function go(next: Route, mode: "push" | "replace" = "push") {
     if (latest.current && JSON.stringify(latest.current.document) !== baseline.current) {
       if (!(await save()) && !(await confirmation.ask("Die Szene konnte nicht gespeichert werden. Trotzdem wechseln und die letzten Änderungen verwerfen?"))) return;
     }
@@ -188,7 +226,7 @@ export function Storyboard({ a, onDirty, onClassic }: { a: Actor; onDirty?: (dir
     try {
       if (next.scene !== latest.current?.id) await loadScene(next.scene);
       if (next.scene) {
-        setArea("narration"); setWriting(null);
+        setWsArea("passages"); setWriting(null);
         const title = scenes.find(scene => scene.id === next.scene)?.title || "Szene";
         const entry = { ...next, title }; setResume(entry);
         try { localStorage.setItem(resumeKey, JSON.stringify(entry)); } catch { /* optional */ }
@@ -203,18 +241,233 @@ export function Storyboard({ a, onDirty, onClassic }: { a: Actor; onDirty?: (dir
     return () => window.removeEventListener("popstate", pop);
   }, []);
 
+  function setView(next: BoardView) { setViewState(next); writeView(next); }
+
+  /** Play order across the whole chronicle (evenings in order, then their scenes) – used to rank open strands. */
+  const sceneOrder = new Map<string, number>();
+  for (const item of sortEvenings(sessions.filter(session => session.document.status !== "archived"))) for (const scene of orderedSessionScenes(item.id, item.document, scenes)) if (!sceneOrder.has(scene.id)) sceneOrder.set(scene.id, sceneOrder.size);
+
+  /** After a thread save: keep the list current and re-read the real discovery of newly linked clue dossiers. */
+  function threadSaved(thread: ThreadView) {
+    setThreads(list => list.map(item => item.id === thread.id ? thread : item));
+    if (thread.document.strands.some(strand => strand.kind === "clue" && strand.refIds.some(ref => !(ref in knowledge))))
+      void call<{ knowledge: ClueKnowledge }>("/api/command-center/threads?id=" + encodeURIComponent(thread.id)).then(data => setKnowledge(value => ({ ...value, ...data.knowledge }))).catch(() => undefined);
+  }
+  function openThread(id: string) {
+    if (!id) return void go({ book: route.book, evening: "", scene: "" });
+    return void go({ book: route.book, evening: "", scene: "", thread: id });
+  }
+  /** New thread: from the shelf (opens it) or from a scene (the scene joins it and stays open). */
+  async function newThread(bookId: string, title = "", joinSceneId = "") {
+    if (busy) return;
+    setBusy(true); setMessage("Legt einen Handlungsstrang an …");
+    try {
+      const thread = await createThread({ ...emptyThread(bookId), title: title.trim().slice(0, 200) || "Neuer Handlungsstrang" });
+      setThreads(list => [...list, thread]);
+      setBusy(false);
+      if (joinSceneId && open?.id === joinSceneId) { changeBoard({ threads: [...(open.document.board?.threads || []), thread.id] }); setMessage("Handlungsstrang „" + thread.document.title + "“ angelegt und zugeordnet."); }
+      else { await go({ book: route.book, evening: "", scene: "", thread: thread.id }); setMessage("Handlungsstrang angelegt. Gib ihm einen Titel und sammle seine Fäden."); }
+    } catch (error) { setMessage((error as Error).message); setBusy(false); }
+  }
+  /** Old plot-dossier possibilities into scene ideas of the book; the dossier keeps everything else. */
+  /** Unplayed scenes of this evening go to a later evening (end of its order) or to the idea tray. Preparation stays. */
+  async function moveUnplayed(ids: string[], targetId: string) {
+    if (!evening || !ids.length || busy) return;
+    const targetTitle = sessions.find(item => item.id === targetId)?.document.title;
+    if (!(await confirmation.ask(ids.length + (ids.length === 1 ? " Szene" : " Szenen") + " aus diesem Abend " + (targetId ? "an das Ende von „" + targetTitle + "“ verschieben?" : "in die Ideenablage legen?") + " Inhalte und Vorbereitung bleiben unverändert."))) return;
+    setBusy(true); setMessage("Verschiebt …");
+    try {
+      const source = (await call<{ session: PreparedSession }>("/api/command-center/preparation?id=" + encodeURIComponent(evening.id))).session;
+      const target = targetId ? (await call<{ session: PreparedSession }>("/api/command-center/preparation?id=" + encodeURIComponent(targetId))).session : null;
+      const moved = moveScenesBetweenEvenings(source.document.sceneIds, target?.document.sceneIds || [], ids);
+      // Scenes linked only from the scene side (older data) are released explicitly.
+      const unlink = ids.filter(id => !source.document.sceneIds.includes(id));
+      if (target) await call("/api/command-center/preparation", { action: "save", id: target.id, version: target.version, document: { ...target.document, sceneIds: moved.to } });
+      await call("/api/command-center/preparation", { action: "save", id: source.id, version: source.version, document: { ...source.document, sceneIds: moved.from }, ...(unlink.length ? { unlinkSceneIds: unlink } : {}) });
+      await refresh();
+      setMessage(ids.length + (ids.length === 1 ? " Szene" : " Szenen") + (targetId ? " nach „" + targetTitle + "“ verschoben." : " in die Ideenablage gelegt."));
+    } catch (error) { setMessage((error as Error).message + " Prüfe beide Abende; nichts wurde gelöscht."); }
+    finally { setBusy(false); }
+  }
+
+  async function convertBookPossibilities() {
+    if (!book || !bookStory || bookStory.id !== book.id || busy) return;
+    setBusy(true); setMessage("Wandelt die Möglichkeiten um …");
+    const done: string[] = [];
+    try {
+      for (const item of bookStory.possibilities) {
+        const next = bookPossibilityAsScene(item);
+        await call("/api/command-center/scenes", { action: "create", clientRequestId: crypto.randomUUID(), document: { ...emptyScene(book.id), title: next.title, gmNotes: next.gmNotes, board: next.board } });
+        done.push(item.id);
+      }
+    } catch (error) { setMessage((error as Error).message + (done.length ? ` ${done.length} wurden umgewandelt.` : "")); }
+    try {
+      if (done.length) {
+        const v = (await call<{ story: StoryView }>("/api/command-center/story?id=" + encodeURIComponent(book.id))).story;
+        const document = { title: v.title, summary: v.summary, status: v.status, favorite: v.favorite, pinned: v.pinned, sections: v.sections, references: v.references, possibilities: v.possibilities.filter(item => !done.includes(item.id)) };
+        const saved = (await call<{ story: StoryView }>("/api/command-center/story", { action: "save", id: v.id, version: v.version, document })).story;
+        setBookStory(saved);
+        await refresh();
+        if (done.length === bookStory.possibilities.length) setMessage(done.length + " Möglichkeiten sind jetzt Szenenideen in der Ideenablage.");
+      }
+    } catch (error) { setMessage((error as Error).message + " Die Szenenideen sind angelegt; die alten Möglichkeiten stehen noch im Plotdossier."); }
+    setBusy(false);
+  }
+
+  /** Opens a connected scene: inside this evening when it belongs here, otherwise in its book without an evening. */
+  async function openLinked(id: string) {
+    if (eveningScenes.some(scene => scene.id === id)) return go({ ...route, scene: id });
+    const target = scenes.find(scene => scene.id === id);
+    return go({ book: target?.storyId || route.book, evening: "", scene: id });
+  }
+
+  /** Builds a branch in one step: a new scene idea in the same book, placed right after this scene in the evening
+   * (or in the idea tray), connected from here. The current scene saves the connection through the normal autosave. */
+  async function createSuccessor(title: string, kind: BoardBlockKind) {
+    if (!open || busy || !title.trim()) return;
+    if ((open.document.board?.links?.length || 0) >= boardLinkMax) { setMessage("Höchstens " + boardLinkMax + " Verbindungen je Szene."); return; }
+    const source = open;
+    setBusy(true); setMessage("Legt die Nachfolgeszene an …");
+    try {
+      const board = compactBoard({ kind, status: "idea" });
+      const created = (await call<{ scene: SceneView }>("/api/command-center/scenes", { action: "create", clientRequestId: crypto.randomUUID(), document: { ...emptyScene(source.document.storyId || book?.id || ""), title: title.trim().slice(0, 200), ...(board ? { board } : {}) } })).scene;
+      if (evening && eveningScenes.some(scene => scene.id === source.id)) {
+        const fresh = (await call<{ session: PreparedSession }>("/api/command-center/preparation?id=" + encodeURIComponent(evening.id))).session;
+        const ids = fresh.document.sceneIds.filter(id => id !== created.id), at = ids.indexOf(source.id);
+        ids.splice(at >= 0 ? at + 1 : ids.length, 0, created.id);
+        await call("/api/command-center/preparation", { action: "save", id: fresh.id, version: fresh.version, document: { ...fresh.document, sceneIds: ids } });
+      }
+      setOpen(value => value?.id === source.id ? { ...value, document: { ...value.document, board: compactBoard({ ...(value.document.board || {}), links: [...(value.document.board?.links || []), { id: crypto.randomUUID(), to: created.id, kind: "next", label: "", condition: "" }] }) } } : value);
+      await refresh();
+      setMessage("„" + created.document.title + "“ angelegt und verbunden" + (evening && eveningScenes.some(scene => scene.id === source.id) ? " – im Abend direkt danach eingereiht." : " – liegt in der Ideenablage."));
+    } catch (error) { setMessage((error as Error).message + " Es wurde nichts verbunden."); }
+    finally { setBusy(false); }
+  }
+
+  /** Old free-text branches into the new system: each becomes a scene idea (idea tray) connected as "Alternative".
+   * The branch is removed from this scene only after its scene exists, so nothing is lost on an error. */
+  async function convertPossibilities(ids: string[]) {
+    if (!open || busy) return;
+    const source = open, room = boardLinkMax - (source.document.board?.links?.length || 0);
+    const items = source.document.possibilities.filter(item => ids.includes(item.id)).slice(0, Math.max(0, room));
+    if (!items.length) { setMessage("Höchstens " + boardLinkMax + " Verbindungen je Szene. Entferne zuerst eine Verbindung."); return; }
+    setBusy(true); setMessage("Wandelt " + items.length + (items.length === 1 ? " Abzweigung" : " Abzweigungen") + " um …");
+    const done: { possibilityId: string; sceneId: string; title: string }[] = [];
+    try {
+      for (const item of items) {
+        const next = possibilityAsScene(item, source.document.storyId || book?.id || "");
+        const created = (await call<{ scene: SceneView }>("/api/command-center/scenes", { action: "create", clientRequestId: crypto.randomUUID(), document: { ...emptyScene(next.storyId), title: next.title, gmNotes: next.gmNotes, board: next.board } })).scene;
+        done.push({ possibilityId: item.id, sceneId: created.id, title: item.title.trim() });
+      }
+    } catch (error) { setMessage((error as Error).message + (done.length ? ` ${done.length} wurden umgewandelt, der Rest bleibt als Abzweigung erhalten.` : " Die Abzweigungen bleiben erhalten.")); }
+    if (done.length) {
+      setOpen(value => value?.id === source.id ? { ...value, document: { ...value.document,
+        possibilities: value.document.possibilities.filter(item => !done.some(d => d.possibilityId === item.id)),
+        board: compactBoard({ ...(value.document.board || {}), links: [...(value.document.board?.links || []), ...done.map(d => ({ id: crypto.randomUUID(), to: d.sceneId, kind: "branch" as const, label: d.title.slice(0, 200), condition: "" }))] }) } } : value);
+      await refresh();
+      if (done.length === items.length) setMessage(done.length + (done.length === 1 ? " Abzweigung ist" : " Abzweigungen sind") + " jetzt eigene Szenen in der Ideenablage und mit dieser Szene verbunden.");
+    }
+    setBusy(false);
+  }
+
+  /** Takes the open scene out of this evening (both link directions); the scene itself stays and moves to the idea tray. */
+  async function removeFromEvening() {
+    if (!open || !evening || busy) return;
+    if (!(await confirmation.ask("„" + open.document.title + "“ aus diesem Spielabend nehmen? Die Szene bleibt mit allen Inhalten erhalten und liegt danach in der Ideenablage."))) return;
+    if (!(await save())) return;
+    setBusy(true);
+    try {
+      const fresh = (await call<{ session: PreparedSession }>("/api/command-center/preparation?id=" + encodeURIComponent(evening.id))).session;
+      await call("/api/command-center/preparation", { action: "save", id: fresh.id, version: fresh.version, document: { ...fresh.document, sceneIds: fresh.document.sceneIds.filter(id => id !== open.id) }, unlinkSceneIds: [open.id] });
+      await refresh(); setBusy(false);
+      await go({ ...route, scene: "" });
+      setMessage("Szene aus dem Spielabend genommen. Du findest sie in der Ideenablage.");
+    } catch (error) { setMessage((error as Error).message); setBusy(false); }
+  }
+
+  /** Archives the open scene: it leaves this evening, content, connections and play history stay. Restoring is done in the classic view for now. */
+  async function archiveScene() {
+    if (!open || busy) return;
+    if (!(await confirmation.ask("„" + open.document.title + "“ archivieren? Inhalte, Verbindungen und Spielverlauf bleiben erhalten. Die Szene verschwindet aus Storyboard und Abend."))) return;
+    if (!(await save())) return;
+    setBusy(true);
+    try {
+      if (evening && eveningScenes.some(scene => scene.id === open.id)) {
+        const fresh = (await call<{ session: PreparedSession }>("/api/command-center/preparation?id=" + encodeURIComponent(evening.id))).session;
+        await call("/api/command-center/preparation", { action: "save", id: fresh.id, version: fresh.version, document: { ...fresh.document, sceneIds: fresh.document.sceneIds.filter(id => id !== open.id) }, unlinkSceneIds: [open.id] });
+      }
+      const current = (await call<{ scene: SceneView }>("/api/command-center/scenes?id=" + encodeURIComponent(open.id))).scene;
+      await call("/api/command-center/scenes", { action: "save", id: current.id, version: current.version, document: { ...current.document, archived: true, sessionIds: current.document.sessionIds.filter(id => id !== evening?.id) } });
+      await refresh(); setBusy(false);
+      await go({ ...route, scene: "" });
+      setMessage("Szene archiviert.");
+    } catch (error) { setMessage((error as Error).message); setBusy(false); }
+  }
+
+  /** Quick edit from the list: load the scene, merge the board, save. One scene at a time; nothing else in the document changes. */
+  async function patchSceneBoard(id: string, patch: Partial<SceneBoard>) {
+    if (patching) return;
+    setPatching(id); setMessage("Speichert …");
+    try {
+      const current = (await call<{ scene: SceneView }>("/api/command-center/scenes?id=" + encodeURIComponent(id))).scene;
+      const board = compactBoard({ ...(current.document.board || {}), ...patch });
+      const rest: SceneDocument = { ...current.document };
+      delete rest.board;
+      await call<{ scene: SceneView }>("/api/command-center/scenes", { action: "save", id, version: current.version, document: board ? { ...rest, board } : rest });
+      await refresh();
+      setMessage("Gespeichert · " + new Date().toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" }));
+    } catch (error) { setMessage((error as Error).message + " Die Szene bleibt unverändert."); }
+    finally { setPatching(""); }
+  }
+
+  /** Board properties are stored compactly: an untouched board is not saved at all. */
+  function changeBoard(patch: Partial<SceneBoard>) {
+    if (!open) return;
+    change({ board: compactBoard({ ...(open.document.board || {}), ...patch }) });
+  }
+
   function change(patch: Partial<SceneDocument>) {
-    setOpen(value => value ? { ...value, document: { ...value.document, ...patch } } : value);
+    // The mirrors (narration, picture/music, npcIds, placeId) follow every workshop edit right here, so a save that
+    // overlaps further typing never sends stale mirrors that the server would read as a classic-view edit.
+    setOpen(value => value ? { ...value, document: withoutDanglingCardRefs(withWorkshopMirrors({ ...value.document, ...patch })) } : value);
     setMessage("Ungespeicherte Änderungen · wird gleich gespeichert");
   }
 
-  const book = books.find(item => item.id === route.book) || null;
   const evening = sessions.find(item => item.id === route.evening) || null;
+  /** The book in the address wins; otherwise an evening (or an open scene without evening) brings its own book,
+   * so path, idea tray and book views are there even when a link carries no `buch`. */
+  const book = books.find(item => item.id === route.book)
+    || (!route.book && evening ? books.find(item => evening.document.storyIds.includes(item.id)) : undefined)
+    || (!route.book && !evening && route.scene ? books.find(item => item.id === scenes.find(scene => scene.id === route.scene)?.storyId) : undefined)
+    || null;
   const eveningScenes = evening ? orderedSessionScenes(evening.id, evening.document, scenes) : [];
-  const progress = evening ? eveningProgress(evening.id, evening.document, scenes) : null;
+  const progress = evening ? eveningStatusProgress(evening.id, evening.document, scenes) : null;
+  const duration = boardDuration(eveningScenes.map(scene => scene.board));
   const guide = guideState({ bookId: book?.id || "", eveningId: evening?.id || "", progress });
   const nextStep = storyboardGuide.find(step => !guide[step.id])?.id || "ready";
   const sceneIndex = open ? eveningScenes.findIndex(scene => scene.id === open.id) : -1;
+  /** Book scope for the network, list and timeline: evenings in play order, then the idea tray. */
+  const bookScenes: SceneSummary[] = [];
+  if (book) {
+    const seen = new Set<string>();
+    for (const item of sortEvenings(bookEvenings(book.id, sessions, scenes))) for (const scene of orderedSessionScenes(item.id, item.document, scenes)) if (!scene.archived && !seen.has(scene.id)) { seen.add(scene.id); bookScenes.push(scene); }
+    for (const scene of unplacedBookScenes(book.id, sessions, scenes)) if (!seen.has(scene.id)) { seen.add(scene.id); bookScenes.push(scene); }
+  }
+  const eveningTitleOf = (id: string) => sortEvenings(sessions.filter(item => item.document.status !== "archived")).filter(item => orderedSessionScenes(item.id, item.document, scenes).some(scene => scene.id === id)).map(item => item.document.title).join(", ");
+  /** "Archiv" scenes are never offered as new targets, but existing connections to them keep their title. */
+  const candidateGroups = ["Dieser Spielabend", "Dieses Buch", "Weitere Szenen", "Archiv"];
+  /** Play order: this evening first, then the book in evening order; unknown scenes last. */
+  const orderOf = (id: string) => { const e = eveningScenes.findIndex(scene => scene.id === id); if (e >= 0) return e; const b = bookScenes.findIndex(scene => scene.id === id); return b >= 0 ? 1000 + b : 1e6; };
+  function linkCandidates(current: OpenScene) {
+    return scenes.map(scene => ({ id: scene.id, title: scene.title, group: scene.archived ? candidateGroups[3] : eveningScenes.some(item => item.id === scene.id) ? candidateGroups[0] : current.document.storyId && scene.storyId === current.document.storyId ? candidateGroups[1] : candidateGroups[2] }))
+      .sort((x, y) => candidateGroups.indexOf(x.group) - candidateGroups.indexOf(y.group) || orderOf(x.id) - orderOf(y.id) || x.title.localeCompare(y.title, "de"));
+  }
+  function otherView(list: SceneSummary[], sequence?: string[]) {
+    const openScene = (id: string) => void openLinked(id);
+    if (view === "network") return <PlotNetwork scenes={list} ghosts={linkedOutside(list, scenes)} sequence={sequence} onOpen={openScene} />;
+    if (view === "list") return <PlotList scenes={list} eveningOf={eveningTitleOf} busyId={patching} onOpen={openScene} onPatch={(id, patch) => void patchSceneBoard(id, patch)} />;
+    return <PlotTimeline scenes={list} onOpen={openScene} threadTitles={new Map(threads.map(thread => [thread.id, thread.document.title]))} />;
+  }
 
   async function createBook() {
     if (busy) return;
@@ -278,15 +531,16 @@ export function Storyboard({ a, onDirty, onClassic }: { a: Actor; onDirty?: (dir
     if (!title || busy) return;
     setBusy(true); setMessage("Speichert die Szenenidee …");
     try {
-      const document: SceneDocument = { ...emptyScene(book?.id || ""), title: title.slice(0, 200), gmNotes: ideaText.trim() ? "Idee: " + ideaText.trim() : "", sessionIds: intoEvening && evening ? [evening.id] : [] };
+      const board = compactBoard({ kind: ideaKind, premise: ideaText.trim().slice(0, boardTextMax) });
+      const document: SceneDocument = { ...emptyScene(book?.id || ""), title: title.slice(0, 200), sessionIds: intoEvening && evening ? [evening.id] : [], ...(board ? { board } : {}) };
       const created = await call<{ scene: SceneView }>("/api/command-center/scenes", { action: "create", clientRequestId: crypto.randomUUID(), document });
       if (intoEvening && evening) {
         const fresh = (await call<{ session: PreparedSession }>("/api/command-center/preparation?id=" + encodeURIComponent(evening.id))).session;
         if (!fresh.document.sceneIds.includes(created.scene.id)) await call("/api/command-center/preparation", { action: "save", id: fresh.id, version: fresh.version, document: { ...fresh.document, sceneIds: [...fresh.document.sceneIds, created.scene.id] } });
       }
-      setIdeaTitle(""); setIdeaText("");
+      setIdeaTitle(""); setIdeaText(""); setIdeaKind("scene");
       await refresh();
-      setMessage(intoEvening ? "Szenenidee ans Ende des Abends gelegt. Öffne sie, wenn du sie ausarbeiten willst." : "Szenenidee in der Ideenablage des Buchs gespeichert.");
+      setMessage(intoEvening ? (ideaKind === "scene" ? "Szenenidee" : boardBlockTypes[ideaKind].label) + " ans Ende des Abends gelegt. Öffne sie, wenn du sie ausarbeiten willst." : "Szenenidee in der Ideenablage des Buchs gespeichert.");
     } catch (error) { setMessage((error as Error).message + " Deine Eingabe bleibt im Feld."); }
     finally { setBusy(false); }
   }
@@ -314,7 +568,7 @@ export function Storyboard({ a, onDirty, onClassic }: { a: Actor; onDirty?: (dir
     if (id === "book") void go({ book: "", evening: "", scene: "" });
     else if (id === "evening") { if (book) void (evening ? go({ book: book.id, evening: "", scene: "" }) : createEvening()); else void go({ book: "", evening: "", scene: "" }); }
     else if (id === "sketch") { if (evening) { void go({ ...route, scene: "" }).then(() => requestAnimationFrame(() => ideaInput.current?.focus())); } }
-    else if (id === "elaborate") { const first = eveningScenes.find(scene => sceneReadiness(scene) === "idea") || eveningScenes.find(scene => sceneReadiness(scene) === "draft"); if (first) void go({ ...route, scene: first.id }); }
+    else if (id === "elaborate") { const first = eveningScenes.find(scene => sceneStatus(scene) === "idea") || eveningScenes.find(scene => sceneStatus(scene) === "working" || sceneStatus(scene) === "review"); if (first) void go({ ...route, scene: first.id }); }
     else window.location.assign(new URL("/sl/regie", window.location.origin).toString());
   }
 
@@ -328,12 +582,33 @@ export function Storyboard({ a, onDirty, onClassic }: { a: Actor; onDirty?: (dir
     void moveScene(id, dropIndex > from ? dropIndex - 1 : dropIndex);
   }
 
-  const level = open && route.scene ? "scene" : evening ? "evening" : book ? "book" : "chronicle";
+  const level = route.thread ? "thread" : open && route.scene ? "scene" : evening ? "evening" : book ? "book" : "chronicle";
+  const bookShelfAll = book ? sortEvenings(bookEvenings(book.id, sessions, scenes)) : [];
+  const bookShelf = { all: bookShelfAll, prepared: bookShelfAll.filter(item => item.document.status !== "draft"), drafting: bookShelfAll.filter(item => item.document.status === "draft") };
+  function openEvening(id: string) { void go({ book: book?.id || "", evening: id, scene: "" }); }
+  /** The book's plot dossier is only needed for its old possibilities; loaded when a book is opened. */
+  /** Actual play of the open evening (Phase 4): moments of this evening; runs come with the scene list. */
+  const playEveningId = level === "evening" ? evening?.id || "" : "";
+  useEffect(() => {
+    if (!playEveningId) return;
+    let live = true;
+    call<{ moments: MomentView[] }>("/api/command-center/moments?sessionId=" + encodeURIComponent(playEveningId)).then(data => { if (live) setEveningMoments({ id: playEveningId, moments: data.moments }); }).catch(() => undefined);
+    return () => { live = false; };
+  }, [playEveningId, scenes]);
+  const playLog = evening ? eveningPlayLog(evening.id, eveningScenes.map(scene => scene.id), scenes, eveningMoments.id === evening.id ? eveningMoments.moments : []) : null;
+  const bookId = level === "book" ? book?.id || "" : "";
+  useEffect(() => {
+    if (!bookId) return;
+    let live = true;
+    call<{ story: StoryView }>("/api/command-center/story?id=" + encodeURIComponent(bookId)).then(data => { if (live) setBookStory(data.story); }).catch(() => undefined);
+    return () => { live = false; };
+  }, [bookId]);
   const nameOf = new Map(refs.map(ref => [ref.id, ref.title]));
+  // Szene 2.0, Etappe 2: classic person, dialogue and place elements the workshop can take over on request.
+  const offers = open ? takeoverElements(open.document, new Set(refs.filter(ref => ref.type === "NPC").map(ref => ref.id)), new Set(refs.filter(ref => ref.type === "PLACE").map(ref => ref.id))) : { persons: [], dialogues: [], places: [] };
   const fileNameOf = new Map(files.map(file => [file.id, file.name]));
   const uploaded = (file: MediaFile) => setFiles(old => [file, ...old.filter(f => f.id !== file.id)]);
-  const areaIndex = Math.max(0, sceneGuideSteps.findIndex(step => step.id === area)), currentStep = sceneGuideSteps[areaIndex];
-  function switchArea(next: SceneArea) { setArea(next); setWriting(null); void save(); }
+  function selectArea(next: WorkshopArea) { setWsArea(next); setWriting(null); void save(); }
   /** Reading view first; the editor opens in the same column. Empty areas offer to start writing. */
   function textArea(key: SceneArea) {
     if (!open) return null;
@@ -349,21 +624,25 @@ export function Storyboard({ a, onDirty, onClassic }: { a: Actor; onDirty?: (dir
   }
   const missingLinks = evening ? evening.document.sceneIds.filter(id => !scenes.some(scene => scene.id === id)).length : 0;
 
+  // The colour scheme comes from the Command Center header (data-cp-theme on the shell, ADR-002).
   return <div className={s.board} data-level={level}>
     {confirmation.dialog}
     <nav className={s.path} aria-label="Gliederung der Geschichte">
       <button type="button" onClick={() => void go({ book: "", evening: "", scene: "" })} aria-current={level === "chronicle" ? "page" : undefined}><ScrollText size={15} aria-hidden="true" />Chronik</button>
       {book && <><ChevronRight size={14} aria-hidden="true" /><button type="button" onClick={() => void go({ book: book.id, evening: "", scene: "" })} aria-current={level === "book" ? "page" : undefined}><BookOpen size={15} aria-hidden="true" />{book.title}</button></>}
       {evening && <><ChevronRight size={14} aria-hidden="true" /><button type="button" onClick={() => void go({ book: route.book, evening: evening.id, scene: "" })} aria-current={level === "evening" ? "page" : undefined}><Film size={15} aria-hidden="true" />{evening.document.title}</button></>}
-      {level === "scene" && open && <><ChevronRight size={14} aria-hidden="true" /><span aria-current="page"><Clapperboard size={15} aria-hidden="true" />{open.document.title}</span></>}
+      {level === "scene" && open && (evening && eveningScenes.length > 0
+        ? <ol className={s.pathScenes} aria-label="Szenen dieses Abends">{eveningScenes.map((scene, index) => <li key={scene.id}><button type="button" aria-current={scene.id === open.id ? "step" : undefined} data-readiness={statusTone[sceneStatus(scene)]} title={(index + 1) + ". " + scene.title + " · " + boardStatusNames[sceneStatus(scene)]} aria-label={"Szene " + (index + 1) + ": " + scene.title} onClick={() => void go({ ...route, scene: scene.id })}>{index + 1}</button></li>)}</ol>
+        : <><ChevronRight size={14} aria-hidden="true" /><span aria-current="page"><Clapperboard size={15} aria-hidden="true" />{open.document.title}</span></>)}
+      {level === "thread" && <><ChevronRight size={14} aria-hidden="true" /><span aria-current="page"><GitBranch size={15} aria-hidden="true" />{threads.find(item => item.id === route.thread)?.document.title || "Handlungsstrang"}</span></>}
       <span className={s.pathTools}>
-        <span className={s.pathStatus} role="status">{busy ? "Speichert …" : message}</span>
+        {level !== "scene" && <span className={s.pathStatus} role="status">{busy ? "Speichert …" : message}</span>}
         {resume && resume.scene !== route.scene && <button type="button" className={s.pathTool} onClick={() => void go({ book: resume.book, evening: resume.evening, scene: resume.scene })} title={"Zuletzt geöffnet: " + resume.title}><RotateCcw size={14} aria-hidden="true" />Weiterarbeiten</button>}
-        <button type="button" className={s.pathTool} aria-pressed={!guideHidden} onClick={() => hideGuide(!guideHidden)}><Compass size={14} aria-hidden="true" />Führung</button>
+        {level !== "scene" && <button type="button" className={s.pathTool} aria-pressed={!guideHidden} onClick={() => hideGuide(!guideHidden)}><Compass size={14} aria-hidden="true" />Führung</button>}
       </span>
     </nav>
 
-    {!guideHidden && <ol className={s.guide} aria-label="Geführte Vorbereitung – jeder Schritt ist freiwillig">
+    {!guideHidden && level !== "scene" && <ol className={s.guide} aria-label="Geführte Vorbereitung – jeder Schritt ist freiwillig">
       {storyboardGuide.map((step, index) => <li key={step.id} data-done={guide[step.id] || undefined} data-next={step.id === nextStep || undefined}>
         <button type="button" onClick={() => guideAction(step.id)} title={step.hint} disabled={(step.id === "sketch" || step.id === "elaborate") && !evening}>
           <span className={s.guideNo}>{guide[step.id] ? "✓" : index + 1}</span><span>{step.label}</span>
@@ -385,23 +664,32 @@ export function Storyboard({ a, onDirty, onClassic }: { a: Actor; onDirty?: (dir
       })}</ul>
       {!books.length && <p className={s.empty}>Noch kein Buch angelegt. Beginne mit „Neues Buch“ – oder lege direkt einen Spielabend ohne Buch an.</p>}
       <EveningShelf title="Spielabende ohne Buch" sessions={looseEvenings(books.map(item => item.id), sessions, scenes)} scenes={scenes} onOpen={id => void go({ book: "", evening: id, scene: "" })} onCreate={books.length ? undefined : () => void createEvening()} busy={busy} />
-    </section> : level === "book" && book ? <section aria-labelledby="sb-book">
+      <ThreadShelf threads={threads} scenes={scenes} books={books} sceneOrder={sceneOrder} busy={busy} onOpenThread={openThread} onOpenScene={id => void openLinked(id)} onCreate={() => void newThread("")} />
+    </section> : level === "thread" && route.thread ? <ThreadPage key={route.thread} threadId={route.thread} threads={threads} scenes={scenes} books={books} refs={refs} knowledge={knowledge} sceneOrder={sceneOrder}
+      onOpenScene={id => void openLinked(id)} onOpenThread={openThread} onSaved={threadSaved} onBack={() => window.history.length > 1 ? window.history.back() : void go({ book: route.book, evening: "", scene: "" })} onMessage={setMessage} />
+    : level === "book" && book ? <section aria-labelledby="sb-book">
       <header className={s.levelHead}><div><p className={s.eyebrow}>Buch · {preparationStatusNames[book.status] || book.status}</p><h2 id="sb-book"><EditableTitle key={book.id + book.title} value={book.title} label="Titel des Buchs" onCommit={title => void renameBook(book, title)} /></h2><p>Die Spielabende dieses Buchs. Jeder Abend ist ein eigenes Storyboard.</p></div><button type="button" className={s.primary} disabled={busy} onClick={() => void createEvening()}><Plus size={16} aria-hidden="true" />Neuer Spielabend</button></header>
-      {(() => {
-        const list = sortEvenings(bookEvenings(book.id, sessions, scenes)), prepared = list.filter(item => item.document.status !== "draft"), drafting = list.filter(item => item.document.status === "draft");
-        return <>
-          {!list.length && <p className={s.empty}>Dieses Buch hat noch keinen Spielabend. Lege oben den ersten an.</p>}
-          <EveningShelf title="Vorbereitet" sessions={prepared} scenes={scenes} onOpen={id => void go({ book: book.id, evening: id, scene: "" })} busy={busy} />
-          <EveningShelf title="In Vorbereitung" sessions={drafting} scenes={scenes} onOpen={id => void go({ book: book.id, evening: id, scene: "" })} busy={busy} />
-        </>;
-      })()}
-      <IdeaTray scenes={unplacedBookScenes(book.id, sessions, scenes)} onOpen={id => void go({ book: book.id, evening: "", scene: id })} />
+      <ViewSwitch value={view} onChange={setView} cardsLabel="Spielabende" />
+      {view !== "cards" ? otherView(bookScenes) : <>
+          {!bookShelf.all.length && <p className={s.empty}>Dieses Buch hat noch keinen Spielabend. Lege oben den ersten an.</p>}
+          <EveningShelf title="Vorbereitet" sessions={bookShelf.prepared} scenes={scenes} onOpen={openEvening} busy={busy} />
+          <EveningShelf title="In Vorbereitung" sessions={bookShelf.drafting} scenes={scenes} onOpen={openEvening} busy={busy} />
+        </>}
+      {view === "cards" && <IdeaTray scenes={unplacedBookScenes(book.id, sessions, scenes)} onOpen={id => void go({ book: book.id, evening: "", scene: id })} />}
+      {view === "cards" && bookStory?.id === book.id && bookStory.possibilities.length > 0 && <section className={s.branches} aria-label="Ältere Möglichkeiten des Buchs">
+        <h4>Ältere Möglichkeiten des Buchs <small>{bookStory.possibilities.length}</small></h4>
+        <p>Diese Notizen stammen aus dem alten Plotdossier. Wandle sie um: Jede wird eine Szenenidee in der Ideenablage – offen als Idee, genutzt als spielbereit, verworfen als zurückgestellt. Nichts geht verloren.</p>
+        <ul className={s.legacyList}>{bookStory.possibilities.map(item => <li key={item.id}><span><strong>{item.title}</strong>{item.text && <small>{item.text}</small>}</span><small>{item.status === "used" ? "genutzt" : item.status === "discarded" ? "verworfen" : "offen"}</small></li>)}</ul>
+        <div><button type="button" className={s.primary} disabled={busy} onClick={() => void convertBookPossibilities()}>Alle {bookStory.possibilities.length} in Szenenideen umwandeln</button></div>
+      </section>}
+      {view === "cards" && <ThreadShelf threads={threads} scenes={scenes} books={books} bookId={book.id} sceneOrder={sceneOrder} busy={busy} onOpenThread={openThread} onOpenScene={id => void openLinked(id)} onCreate={() => void newThread(book.id)} />}
     </section> : level === "evening" && evening ? <section aria-labelledby="sb-evening" className={s.evening}>
       <header className={s.eveningHead}>
         <div className={s.eveningTitle}>
           <p className={s.eyebrow}>Spielabend{evening.document.date ? " · " + evening.document.date.replace("T", " · ") : ""}</p>
           <h2 id="sb-evening"><EditableTitle key={evening.id + evening.document.title} value={evening.document.title} label="Titel des Spielabends" onCommit={title => void saveEvening(evening, { title }, "Titel des Spielabends gespeichert.")} /></h2>
           {progress && <ProgressBar progress={progress} />}
+          {duration.estimated > 0 && <p className={s.duration}><Clock size={13} aria-hidden="true" />Geschätzte Spielzeit {formatMinutes(duration.minutes)}{duration.estimated < eveningScenes.filter(scene => scene.board?.status !== "deferred").length ? ` · für ${duration.estimated} von ${eveningScenes.filter(scene => scene.board?.status !== "deferred").length} Szenen geschätzt` : ""}</p>}
         </div>
         <div className={s.headPicks}>
           <label className={s.statusPick}><span>Buch oder Kampagne</span>
@@ -409,6 +697,10 @@ export function Storyboard({ a, onDirty, onClassic }: { a: Actor; onDirty?: (dir
               <option value="">Ohne Buch</option>
               {books.map(item => <option key={item.id} value={item.id}>{item.title}</option>)}
             </select>
+          </label>
+          <RegieLink sessionId={evening.id} />
+          <label className={s.statusPick}><span>Termin</span>
+            <input key={evening.id + evening.document.date} type="datetime-local" defaultValue={evening.document.date.slice(0, 16)} disabled={busy} onBlur={event => { const date = event.target.value; if (date !== evening.document.date.slice(0, 16)) void saveEvening(evening, { date }, date ? "Termin gespeichert." : "Termin entfernt."); }} />
           </label>
           <label className={s.statusPick}><span>Stand des Abends</span>
             <select value={evening.document.status} disabled={busy} onChange={event => void saveEvening(evening, { status: event.target.value as PreparedSession["document"]["status"] }, "Stand des Spielabends gespeichert.")}>
@@ -431,30 +723,34 @@ export function Storyboard({ a, onDirty, onClassic }: { a: Actor; onDirty?: (dir
           </form>}
       </section>
 
+      <ViewSwitch value={view} onChange={setView} />
+      {view !== "cards" ? otherView(eveningScenes, eveningScenes.map(scene => scene.id)) : <>
       <div className={s.runHead}>
         <div><h3>Dein Szenenablauf</h3>
           <p className={s.hintLine}><GripVertical size={14} aria-hidden="true" /><span className={s.hintWide}>Karten ziehen oder Pfeile nutzen, um die Reihenfolge zu ändern.</span><span className={s.hintNarrow}>Mit den Pfeilen änderst du die Reihenfolge.</span> Jede Änderung wird sofort gespeichert.</p></div>
         <button type="button" className={s.primary} onClick={() => { ideaInput.current?.scrollIntoView({ block: "center", behavior: "smooth" }); ideaInput.current?.focus({ preventScroll: true }); }}><Plus size={16} aria-hidden="true" />Szene für diesen Spielabend</button>
       </div>
-      {missingLinks > 0 && <p role="alert" className={s.alert}>{missingLinks} verknüpfte {missingLinks === 1 ? "Szene ist" : "Szenen sind"} nicht verfügbar. Die Verknüpfungen bleiben erhalten; prüfe sie in der klassischen Ansicht.</p>}
+      {missingLinks > 0 && <p role="alert" className={s.alert}>{missingLinks} verknüpfte {missingLinks === 1 ? "Szene ist" : "Szenen sind"} nicht verfügbar. Die Verknüpfungen bleiben erhalten, bis du sie bereinigst. <button type="button" className={s.ghost} disabled={busy} onClick={() => void saveEvening(evening, { sceneIds: evening.document.sceneIds.filter(id => scenes.some(scene => scene.id === id)) }, "Nicht verfügbare Verknüpfungen entfernt.")}>Bereinigen</button></p>}
 
       <ol className={s.strip} onDragOver={event => dragId && event.preventDefault()} onDrop={onDrop} onDragLeave={event => { if (event.currentTarget === event.target) setDropIndex(-1); }}>
         {eveningScenes.map((scene, index) => {
-          const readiness = sceneReadiness(scene), excerpt = scene.preparation?.narrationExcerpt, sections = scene.preparation?.sections || [];
+          const status = sceneStatus(scene), readiness = statusTone[status], kind = boardKind(scene.board), excerpt = scene.preparation?.narrationExcerpt, sections = scene.preparation?.sections || [];
           const { people, materials } = sceneResources(scene, nameOf, fileNameOf);
-          return <li key={scene.id} className={s.card} data-readiness={readiness} data-dragging={dragId === scene.id || undefined} data-drop-before={dropIndex === index || undefined} data-drop-after={dropIndex === index + 1 && index === eveningScenes.length - 1 || undefined}
+          return <li key={scene.id} className={s.card} data-readiness={readiness} data-status={status} data-kind={kind} data-dragging={dragId === scene.id || undefined} data-drop-before={dropIndex === index || undefined} data-drop-after={dropIndex === index + 1 && index === eveningScenes.length - 1 || undefined}
             draggable={!busy} onDragStart={event => onDragStart(event, scene.id)} onDragEnd={() => { setDragId(""); setDropIndex(-1); }} onDragOver={event => onDragOver(event, index)}>
             <button type="button" className={s.cardOpen} onClick={() => void go({ ...route, scene: scene.id })} aria-label={`Szene ${index + 1} öffnen: ${scene.title}`}>
-              <span className={s.cardTop}><span className={s.cardNo}>{String(index + 1).padStart(2, "0")}</span><span className={s.pill} data-readiness={readiness}>{sceneReadinessNames[readiness]}</span></span>
+              <span className={s.cardTop}><span className={s.cardNo}>{String(index + 1).padStart(2, "0")}</span>{playLog?.started && playLog.status[scene.id] !== "open" && <span className={s.playBadge} data-play={playLog.status[scene.id]}>{playStatusNames[playLog.status[scene.id]]}</span>}<span className={s.pill} data-readiness={readiness} data-status={status}>{boardStatusNames[status]}</span></span>
+              <span className={s.cardKind}>{kind !== "scene" && <b>{boardBlockTypes[kind].label}</b>}{isOptionalBlock(scene.board) && kind !== "optional" && <i>optional</i>}{scene.board?.plot === "side" && <i>Nebenhandlung</i>}{scene.board?.priority === "high" && <i>Priorität hoch</i>}{scene.board?.minutes && <i><Clock size={11} aria-hidden="true" />{formatMinutes(scene.board.minutes)}</i>}</span>
               <strong>{scene.title}</strong>
               <span className={s.cardPlace}><MapPin size={12} aria-hidden="true" />{scene.placeId ? nameOf.get(scene.placeId) || "Schauplatz nicht verfügbar" : "Noch kein Schauplatz"}</span>
-              <span className={s.cardText}>{excerpt || <em>Noch kein Vorlesetext – bisher nur eine Idee.</em>}</span>
+              <span className={s.cardText}>{excerpt || scene.board?.premise || <em>Noch kein Vorlesetext – bisher nur eine Idee.</em>}</span>
               <span className={s.cardAreas} aria-label={"Vorhandene Inhalte: " + (sections.map(key => preparationSections[key as keyof typeof preparationSections]).join(", ") || "noch keine")}>
                 {(Object.keys(preparationSections) as (keyof typeof preparationSections)[]).map(key => <i key={key} data-on={sections.includes(key) || undefined} title={preparationSections[key]}>{cardAreaShort[key]}</i>)}
               </span>
               <span className={s.cardFacts}>
                 <span><Users size={12} aria-hidden="true" />{people.length ? people.slice(0, 2).join(", ") + (people.length > 2 ? ` +${people.length - 2}` : "") : "Keine NPCs"}</span>
                 <span><FileText size={12} aria-hidden="true" />{materials.length ? `${materials.length} ${materials.length === 1 ? "Material" : "Materialien"}` : "Kein Material"}</span>
+                {!!scene.board?.links?.length && <span><Link2 size={12} aria-hidden="true" />{(() => { const next = nextScenes(scene, scenes); return "→ " + (next[0].scene?.title || "nicht verfügbar") + (next[0].scene?.archived ? " (archiviert)" : "") + (next.length > 1 ? ` +${next.length - 1}` : ""); })()}</span>}
               </span>
             </button>
             <span className={s.cardMove}>
@@ -468,101 +764,190 @@ export function Storyboard({ a, onDirty, onClassic }: { a: Actor; onDirty?: (dir
           <form onSubmit={event => { event.preventDefault(); void saveIdea(true); }}>
             <span className={s.cardTop}><span className={s.cardNo}>{String(eveningScenes.length + 1).padStart(2, "0")}</span><span className={s.pill} data-readiness="idea"><Lightbulb size={12} aria-hidden="true" />Neue Szene</span></span>
             <label><span className={s.srOnly}>Titel der neuen Szene</span><input ref={ideaInput} value={ideaTitle} maxLength={200} onChange={event => setIdeaTitle(event.target.value)} placeholder="Titel der Szene …" /></label>
+            <label><span className={s.srOnly}>Typ des Eintrags</span><select className={s.ideaKind} value={ideaKind} onChange={event => setIdeaKind(event.target.value as BoardBlockKind)}>{boardBlockKinds.map(key => <option key={key} value={key}>{boardBlockTypes[key].label}</option>)}</select></label>
             <label><span className={s.srOnly}>Grobe Idee</span><textarea value={ideaText} maxLength={2000} onChange={event => setIdeaText(event.target.value)} placeholder="Grobe Idee in einem Satz (optional) …" rows={3} /></label>
-            <button type="submit" disabled={busy || !ideaTitle.trim()}><Plus size={15} aria-hidden="true" />Szene anlegen</button>
+            <button type="submit" disabled={busy || !ideaTitle.trim()}><Plus size={15} aria-hidden="true" />{ideaKind === "scene" ? "Szene anlegen" : "Eintrag anlegen"}</button>
           </form>
         </li>
       </ol>
+      {playLog && <EveningPlay log={playLog} planned={eveningScenes} scenes={scenes} evenings={sortEvenings(sessions.filter(item => item.id !== evening.id && item.document.status !== "archived" && item.document.status !== "completed"))} busy={busy} onOpenScene={id => void openLinked(id)} onMove={(ids, targetId) => void moveUnplayed(ids, targetId)} />}
       {book && <IdeaTray scenes={unplacedBookScenes(book.id, sessions, scenes)} onOpen={id => void go({ ...route, scene: id })} onPlace={id => void placeScene(id)} busy={busy} />}
+      </>}
     </section> : level === "scene" && open ? <section className={s.stage} aria-labelledby="sb-scene">
-      {eveningScenes.length > 0 && <ol className={s.miniStrip} aria-label="Szenenfolge des Abends">
-        {eveningScenes.map((scene, index) => <li key={scene.id}><button type="button" aria-current={scene.id === open.id ? "step" : undefined} data-readiness={sceneReadiness(scene)} onClick={() => void go({ ...route, scene: scene.id })} title={scene.title}><span>{index + 1}</span>{scene.title}</button></li>)}
-      </ol>}
       <header className={s.stageHead}>
-        <button type="button" className={s.back} onClick={() => void go({ ...route, scene: "" })}><LayoutGrid size={16} aria-hidden="true" />{evening ? "Zum Storyboard" : "Zurück"}</button>
+        {!evening && <button type="button" className={s.back} onClick={() => void go({ ...route, scene: "" })}><LayoutGrid size={16} aria-hidden="true" />Zurück</button>}
         <div className={s.stageTitle}>
-          <p className={s.eyebrow}>{sceneIndex >= 0 ? `Szene ${sceneIndex + 1} von ${eveningScenes.length}` : "Szene ohne Spielabend"}</p>
+          <p className={s.eyebrow}>Vorbereitung · {sceneIndex >= 0 ? `Szene ${sceneIndex + 1} von ${eveningScenes.length}` : "Szene ohne Spielabend"}</p>
           <label><span className={s.srOnly}>Szenentitel</span><TitleArea id="sb-scene" className={s.sceneTitle} value={open.document.title} onChange={title => change({ title })} onBlur={() => { if (!open.document.title.trim()) change({ title: "Neue Szene" }); }} /></label>
         </div>
+        <span className={s.saveState} data-state={busy ? "saving" : dirty ? "dirty" : "saved"} role="status">{busy ? "Speichert …" : dirty ? "Ungespeichert" : "Gespeichert"}</span>
         <span className={s.stepper}>
           <button type="button" aria-label="Vorherige Szene" disabled={sceneIndex <= 0} onClick={() => void go({ ...route, scene: eveningScenes[sceneIndex - 1].id })}><ChevronLeft size={18} aria-hidden="true" /></button>
           <button type="button" aria-label="Nächste Szene" disabled={sceneIndex < 0 || sceneIndex >= eveningScenes.length - 1} onClick={() => void go({ ...route, scene: eveningScenes[sceneIndex + 1].id })}><ChevronRight size={18} aria-hidden="true" /></button>
         </span>
+        {/* Rarely used actions live behind "⋯" so the head stays calm. */}
+        <details className={s.moreMenu}>
+          <summary aria-label="Weitere Aktionen"><MoreHorizontal size={18} aria-hidden="true" /></summary>
+          <div role="menu" onClick={event => { (event.currentTarget.parentElement as HTMLDetailsElement).open = false; }}>
+            <button type="button" role="menuitem" onClick={() => void save().then(ok => ok && onClassic(open.id))}><Wrench size={14} aria-hidden="true" />Klassische Ansicht</button>
+            {evening && sceneIndex >= 0 && <button type="button" role="menuitem" disabled={busy} onClick={() => void removeFromEvening()}><Undo2 size={14} aria-hidden="true" />Aus dem Spielabend nehmen</button>}
+            <button type="button" role="menuitem" className={s.danger} disabled={busy} onClick={() => void archiveScene()}><Archive size={14} aria-hidden="true" />Szene archivieren</button>
+          </div>
+        </details>
       </header>
-      <nav className={s.areas} aria-label="Die acht Bereiche der Szene – jeder ist freiwillig">
-        {sceneGuideSteps.map((step, index) => <button key={step.id} type="button" aria-current={area === step.id ? "step" : undefined} data-filled={areaFilled(open.document, step.id) || undefined} data-private={privateAreas.has(step.id) || undefined} onClick={() => switchArea(step.id)}>
-          <span className={s.areaNo}>{index + 1}</span><span className={s.areaName}>{areaShort[step.id]}</span>
-        </button>)}
-      </nav>
-      <div className={s.shelf} data-area={area}>
-        <div className={`${s.page} ${privateAreas.has(area) ? s.privatePage : ""}`}>
-          <header className={s.areaHead}>
-            <p className={s.eyebrow}>Bereich {areaIndex + 1} von {sceneGuideSteps.length}</p>
-            <h3>{currentStep.label}</h3>
-            <p>{currentStep.hint}</p>
-            {privateAreas.has(area) && <p className={s.privateNote}><Lock size={14} aria-hidden="true" />Nur für die Spielleitung. Wird nie automatisch an Spieler freigegeben.</p>}
-          </header>
+      <div className={s.workshop}>
+        <WorkshopNav active={wsArea} fill={{ ...workshopFill(open.document), notes: workshopFill(open.document).notes + noteCount }} primary={primaryWorkshopAreas(boardBlockTypes[boardKind(open.document.board)].areas)} onSelect={selectArea} />
+        <div className={s.wsPage}>
+          <WorkshopHead area={wsArea} />
 
-          {area === "narration" && <label className={s.field}><span>Zentraler Schauplatz</span>
-            <select value={open.document.placeId} onChange={event => change({ placeId: event.target.value })}>
-              <option value="">Kein Schauplatz</option>
-              {open.document.placeId && !refs.some(ref => ref.id === open.document.placeId && isCentralPreparationPlace(ref)) && <option value={open.document.placeId} disabled>{nameOf.get(open.document.placeId) || "Bestehender Schauplatz"} · bisherige Zuordnung</option>}
-              {refs.filter(ref => isCentralPreparationPlace(ref)).map(ref => <option key={ref.id} value={ref.id}>{ref.title}</option>)}
-            </select>
-          </label>}
+          {wsArea === "overview" && <>
+            <ContextEditor value={open.document.context} onChange={context => change({ context })} />
+            <BoardPanel key={open.id} board={open.document.board} derived={sceneStatus({ preparation: scenePreparation(open.document), board: undefined })} onChange={changeBoard}>
+              <SceneThreads sceneId={open.id} joined={open.document.board?.threads || []} threads={threads} busy={busy} onJoin={ids => changeBoard({ threads: ids.length ? ids : undefined })} onOpenThread={openThread}
+                onCreate={title => void newThread(open.document.storyId || book?.id || "", title, open.id)} onStrandChanged={thread => setThreads(list => list.map(item => item.id === thread.id ? thread : item))} />
+            </BoardPanel>
+          </>}
 
-          {area === "atmosphere" && <div className={s.tools}>
-            <SceneBackdropPicker fileId={open.document.backdropFileId} files={files} onChange={backdropFileId => change({ backdropFileId })} onUploaded={uploaded} />
-            <SceneYoutubePicker tracks={open.document.youtube || []} onChange={youtube => change({ youtube })} />
-          </div>}
+          {wsArea === "places" && <PlacesEditor places={open.document.places || []} placesOpen={!!open.document.placesOpen} references={refs} offers={offers.places}
+            onChange={(places, placesOpen) => change({ places, ...(placesOpen === undefined ? {} : { placesOpen: placesOpen || undefined }) })}
+            onTakeover={id => change(takeOverPlace(open.document, id))} onAsk={question => confirmation.ask(question)} />}
 
-          {area === "dialogueNotes" && <div className={s.tools}>
-            <PreparationNPCs references={refs} values={open.document.npcIds} onChange={npcIds => change({ npcIds })} />
-            <PreparationFigures values={open.document.standardFigures} onChange={standardFigures => change({ standardFigures })} files={files} onUploaded={uploaded} />
-          </div>}
+          {wsArea === "cast" && <>
+            <CastEditor cast={open.document.cast || []} references={refs} persons={offers.persons} dialogues={offers.dialogues} onChange={cast => change({ cast })}
+              onTakeoverPerson={id => change(takeOverPerson(open.document, id))} onTakeoverDialogue={(id, castId) => change(takeOverDialogue(open.document, id, castId))} onAsk={question => confirmation.ask(question)} />
+            <h4 className={s.wsSub}>Namenlose Figuren</h4>
+            <div className={s.tools}><PreparationFigures values={open.document.standardFigures} onChange={standardFigures => change({ standardFigures })} files={files} onUploaded={uploaded} /></div>
+            <LegacyText label="Allgemeine Dialognotizen" filled={!!richTextToPlainText(String(open.document.dialogueNotes || "")).trim()}>{textArea("dialogueNotes")}</LegacyText>
+          </>}
 
-          {area === "interactions" && <section className={s.materials} aria-labelledby="sb-materials">
-            <div className={s.materialsHead}>
-              <h4 id="sb-materials">Spielmaterial dieser Szene <small>{open.document.elements.length}</small></h4>
-              <a className={s.ghost} href={"/sl/command-center?bereich=vorbereitung&material=szenen&szene=" + encodeURIComponent(open.id)} target="_blank" rel="noopener noreferrer"><FileText size={15} aria-hidden="true" />Spielmaterial in eigenem Fenster bearbeiten</a>
-            </div>
-            {open.document.elements.length ? <ul className={s.materialGrid}>{open.document.elements.map(element => {
+          {wsArea === "passages" && <PassagesEditor passages={open.document.passages || []} moods={open.document.moods || []} onChange={passages => change({ passages })} onAsk={question => confirmation.ask(question)} />}
+
+          {wsArea === "moods" && <>
+            <MoodsEditor moods={open.document.moods || []} passages={open.document.passages || []} files={files} onUploaded={uploaded} onChange={(moods, passages) => change({ moods, ...(passages ? { passages } : {}) })} />
+            <LegacyText label="Atmosphäre in eigenen Worten" filled={!!richTextToPlainText(String(open.document.atmosphere || "")).trim()}>{textArea("atmosphere")}</LegacyText>
+          </>}
+
+          {wsArea === "interactions" && <>
+            <InteractionCardsEditor cards={open.document.interactionCards || []} doc={open.document} references={refs} onChange={interactionCards => change({ interactionCards })} onAsk={question => confirmation.ask(question)} />
+            <LegacyText label="Freie Notizen zu Interaktionen" filled={!!richTextToPlainText(String(open.document.interactions || "")).trim()}>{textArea("interactions")}</LegacyText>
+          </>}
+
+          {wsArea === "material" && <section className={s.materials} aria-labelledby="sb-materials">
+            <h4 id="sb-materials" className={s.srOnly}>Material</h4>
+            <MaterialArea elements={open.document.elements} uses={open.document.materialUses || []} cast={open.document.cast || []} references={refs} files={files} actorId={a.id}
+              classicHref={"/sl/command-center?bereich=vorbereitung&material=szenen&szene=" + encodeURIComponent(open.id)}
+              onFilesChange={next => setFiles(next)}
+              onUses={next => {
+                // A use that leaves the scene takes its copy with it; the library entry stays.
+                const gone = new Set((open.document.materialUses || []).filter(u => !next.some(n => n.id === u.id)).map(u => u.id));
+                change({ materialUses: next, ...(gone.size ? { elements: open.document.elements.filter(e => !gone.has(e.id)) } : {}) });
+              }}
+              onBeforeLibrarySave={save} onLibrarySaved={reloadOpenScene} onAsk={question => confirmation.ask(question)} />
+            {open.document.elements.some(element => element.kind !== "check" && !isMaterialElement(element)) && <>
+            <h4 className={s.wsSub}>Weitere Bausteine der klassischen Szene</h4>
+            <ul className={s.materialGrid}>{open.document.elements.filter(element => element.kind !== "check" && !isMaterialElement(element)).map(element => {
               const file = element.fileId ? files.find(item => item.id === element.fileId) : undefined;
               return <li key={element.id} data-kind={element.kind}>
                 {file?.mime.startsWith("image/") ? <img src={"/api/files?id=" + encodeURIComponent(file.id) + "&size=thumb"} alt="" loading="lazy" /> : <span className={s.materialIcon} aria-hidden="true"><FileText size={22} /></span>}
-                <span><small>{elementKindNames[element.kind] || "Baustein"}</small><strong>{element.title}</strong>
+                <span><small>{elementKindNames[element.kind] || "Baustein"}{element.material?.takeable === false ? " · nicht einsteckbar" : ""}</small><strong>{element.title}</strong>
                   {file && <em>{file.name}</em>}{!file && element.fileId && <em>Datei nicht verfügbar</em>}{element.referenceId && <em>{nameOf.get(element.referenceId) || "Verknüpfung nicht verfügbar"}</em>}</span>
               </li>;
-            })}</ul> : <p className={s.planBlank}>Noch kein Spielmaterial angelegt. Lege es im eigenen Fenster an – sobald du hierher zurückkehrst, erscheint es in dieser Liste.</p>}
+            })}</ul></>}
           </section>}
 
-          {area === "visions"
-            ? <PreparationWhispers scene={open.document} players={players} files={files} onChange={change} onSave={save} onUploaded={uploaded}>{textArea("visions")}</PreparationWhispers>
-            : textArea(area)}
+          {wsArea === "checks" && <>
+            <ChecksEditor checks={open.document.checks || []} freeText={freeTextChecks(open.document)} players={players} onChange={checks => change({ checks })} onAsk={question => confirmation.ask(question)} />
+            <LegacyText label="Freie Notizen zu Folgen" filled={!!richTextToPlainText(String(open.document.possibleConsequences || "")).trim()}>{textArea("possibleConsequences")}</LegacyText>
+          </>}
 
-          {area === "possibleConsequences" && <section className={s.branches} aria-label="Optionale Abzweigungen">
-            <h4>Optionale Abzweigungen</h4>
-            <p>Alternative Verläufe bleiben Möglichkeiten. Ihre Vorbereitung löst nichts aus.</p>
-            <div className={s.branchGrid}>{open.document.possibilities.map((item, index) => <div className={s.branch} key={item.id}>
-              <label className={s.field}><span>Titel der Abzweigung</span><input maxLength={200} value={item.title} onChange={event => change({ possibilities: open.document.possibilities.map((value, i) => i === index ? { ...value, title: event.target.value } : value) })} /></label>
-              <label className={s.field}><span>Was passiert dann?</span><textarea maxLength={3000} rows={3} value={item.text} onChange={event => change({ possibilities: open.document.possibilities.map((value, i) => i === index ? { ...value, text: event.target.value } : value) })} /></label>
-              <button type="button" className={s.ghost} onClick={() => change({ possibilities: open.document.possibilities.filter(value => value.id !== item.id) })}>Abzweigung entfernen</button>
-            </div>)}</div>
-            <div><button type="button" className={s.ghost} disabled={open.document.possibilities.length >= 50} onClick={() => change({ possibilities: [...open.document.possibilities, { id: crypto.randomUUID(), title: "Neue Abzweigung", text: "" }] })}><Plus size={15} aria-hidden="true" />Abzweigung hinzufügen</button></div>
-          </section>}
+          {wsArea === "insights" && <>
+            <InsightsEditor insights={open.document.insights || []} references={refs} onChange={insights => change({ insights })} onAsk={question => confirmation.ask(question)} />
+            <LegacyText label="Weitere Geheimnisse (Freitext)" filled={!!richTextToPlainText(String(open.document.secrets || "")).trim()}>{textArea("secrets")}</LegacyText>
+          </>}
+
+          {wsArea === "visions" && <PreparationWhispers scene={open.document} players={players} files={files} onChange={change} onSave={save} onUploaded={uploaded}>{textArea("visions")}</PreparationWhispers>}
+
+          {wsArea === "events" && <>
+            <EventsEditor events={open.document.events || []} onChange={events => change({ events })} onAsk={question => confirmation.ask(question)} />
+            <p className={s.viewHint}>Am Tisch hältst du fest, was mit einem Ereignis geschah (ausgelöst, verschoben, übersprungen, verworfen). Das Protokoll gehört zum Spielverlauf, nicht zur Vorbereitung.</p>
+          </>}
+
+          {wsArea === "exits" && <>
+            <BoardLinks key={"links:" + open.id} sceneId={open.id} board={open.document.board} onChange={changeBoard} onOpen={id => void openLinked(id)} onCreateSuccessor={(title, kind) => void createSuccessor(title, kind)} busy={busy}
+              candidates={linkCandidates(open)}
+              incoming={scenes.filter(scene => scene.id !== open.id).flatMap(scene => (scene.board?.links || []).filter(link => link.to === open.id).map(link => ({ id: scene.id, title: scene.title, kind: link.kind })))} />
+            {open.document.possibilities.length > 0 && <section className={s.branches} aria-label="Ältere Abzweigungen">
+              <h4>Ältere Abzweigungen <small>{open.document.possibilities.length}</small></h4>
+              <p>Diese Textnotizen stammen aus dem alten System. Wandle sie um: Jede wird eine Szenenidee in der Ideenablage, mit dieser Szene als Alternative verbunden. Titel und Text bleiben vollständig erhalten.</p>
+              <ul className={s.legacyList}>{open.document.possibilities.map(item => <li key={item.id}>
+                <span><strong>{item.title}</strong>{item.text && <small>{item.text}</small>}</span>
+                <button type="button" className={s.ghost} disabled={busy} onClick={() => void convertPossibilities([item.id])}>In Szene umwandeln</button>
+              </li>)}</ul>
+              {open.document.possibilities.length > 1 && <div><button type="button" className={s.primary} disabled={busy} onClick={() => void convertPossibilities(open.document.possibilities.map(item => item.id))}>Alle {open.document.possibilities.length} umwandeln</button></div>}
+            </section>}
+          </>}
+
+          {wsArea === "notes" && <>
+            <NotesArea key={"notes:" + open.id} sceneId={open.id} sessionId={route.evening || ""} cast={open.document.cast || []} places={open.document.places || []} references={refs}
+              onCount={setNoteCount} onAsk={question => confirmation.ask(question)} />
+            <LegacyText label="Freie SL-Notizen zur Szene" filled={!!richTextToPlainText(String(open.document.gmNotes || "")).trim()}>{textArea("gmNotes")}</LegacyText>
+          </>}
         </div>
       </div>
-      <footer className={s.areaNav}>
-        <button type="button" className={s.ghost} disabled={areaIndex === 0} onClick={() => switchArea(sceneGuideSteps[areaIndex - 1].id)}><ChevronLeft size={16} aria-hidden="true" />Zurück</button>
-        {areaIndex < sceneGuideSteps.length - 1 && <button type="button" className={s.skip} onClick={() => switchArea(sceneGuideSteps[areaIndex + 1].id)}>Bereich überspringen</button>}
-        {areaIndex < sceneGuideSteps.length - 1
-          ? <button type="button" className={s.primary} disabled={busy} onClick={() => void save().then(ok => { if (ok) switchArea(sceneGuideSteps[areaIndex + 1].id); })}>Speichern & weiter<ChevronRight size={16} aria-hidden="true" /></button>
-          : <button type="button" className={s.primary} disabled={busy} onClick={() => void go({ ...route, scene: "" })}>{evening ? "Speichern & zum Spielabend" : "Speichern & zurück"}<ChevronRight size={16} aria-hidden="true" /></button>}
-      </footer>
-      <p className={s.classicScene}><button type="button" onClick={() => void save().then(ok => ok && onClassic(open.id))}><Wrench size={14} aria-hidden="true" />Diese Szene in der klassischen Ansicht öffnen</button></p>
+      {!!open.document.board?.links?.length && <nav className={s.nextBar} aria-label="Weiter laut Verbindungen">
+        <span>Weiter laut Verbindungen</span>
+        {nextScenes({ id: open.id, title: open.document.title, board: open.document.board }, scenes).map(({ link, scene }) => <button key={link.id} type="button" className={s.ghost} disabled={!scene} onClick={() => scene && void openLinked(scene.id)}>
+          <small>{boardLinkKindNames[link.kind]}</small>{scene?.title || "Szene nicht verfügbar"}{scene?.archived ? " · archiviert" : ""}<ChevronRight size={14} aria-hidden="true" />
+        </button>)}
+      </nav>}
     </section> : <p className={s.empty}>Diese Akte ist nicht mehr verfügbar. <button type="button" onClick={() => void go({ book: "", evening: "", scene: "" })}>Zur Chronik</button></p>}
-    <p className={s.classic}><button type="button" onClick={() => onClassic()}>Klassische Vorbereitungsansicht öffnen</button></p>
+    {level !== "scene" && <p className={s.classic}><button type="button" onClick={() => onClassic()}>Klassische Vorbereitungsansicht öffnen</button></p>}
   </div>;
+}
+
+/** Storyboard 2.0: type and status always in reach, every further property optional and folded away. */
+function BoardPanel({ board, derived, onChange, children }: { board: SceneBoard | undefined; derived: BoardStatus; onChange: (patch: Partial<SceneBoard>) => void; children?: ReactNode }) {
+  const b = board || {}, kind = boardKind(board);
+  const [startOpen] = useState(() => [b.premise, b.plot, b.optional, b.triggers, b.minutes, b.priority].some(value => value !== undefined && value !== "" && value !== false));
+  const extras = [b.premise, b.plot, b.optional, b.triggers, b.minutes, b.priority].filter(value => value !== undefined && value !== "" && value !== false).length;
+  return <section className={s.boardPanel} aria-label="Storyboard-Angaben dieser Szene">
+    <div className={s.boardRow}>
+      <label className={s.statusPick}><span>Typ</span>
+        <select value={kind} onChange={event => onChange({ kind: event.target.value as BoardBlockKind })}>
+          {boardBlockKinds.map(key => <option key={key} value={key}>{boardBlockTypes[key].label}</option>)}
+        </select>
+      </label>
+      <label className={s.statusPick}><span>Vorbereitungsstatus</span>
+        <select value={b.status || ""} data-status={b.status || derived} onChange={event => onChange({ status: (event.target.value || undefined) as BoardStatus | undefined })}>
+          <option value="">Automatisch · {boardStatusNames[derived]}</option>
+          {boardStatuses.map(key => <option key={key} value={key}>{boardStatusNames[key]}</option>)}
+        </select>
+      </label>
+      <p className={s.boardHint}>{boardBlockTypes[kind].hint} Der Status beschreibt nur die Vorbereitung, nicht den Spielverlauf.</p>
+    </div>
+    <details className={s.boardMore} open={startOpen || undefined}>
+      <summary>Weitere Angaben{extras ? ` · ${extras} ausgefüllt` : " · alle freiwillig"}</summary>
+      <div className={s.boardGrid}>
+        <label className={`${s.field} ${s.boardWide}`}><span>Grobe Idee</span><textarea rows={2} maxLength={boardTextMax} value={b.premise || ""} onChange={event => onChange({ premise: event.target.value })} placeholder="Worum geht es in einem Satz? …" /></label>
+        <label className={s.field}><span>Handlung</span>
+          <select value={b.plot || ""} onChange={event => onChange({ plot: (event.target.value || undefined) as SceneBoard["plot"] })}>
+            <option value="">Nicht festgelegt</option>
+            {(Object.keys(boardPlotNames) as (keyof typeof boardPlotNames)[]).map(key => <option key={key} value={key}>{boardPlotNames[key]}</option>)}
+          </select>
+        </label>
+        <label className={s.field}><span>Priorität</span>
+          <select value={b.priority || ""} onChange={event => onChange({ priority: (event.target.value || undefined) as SceneBoard["priority"] })}>
+            <option value="">Nicht festgelegt</option>
+            {boardPriorities.map(key => <option key={key} value={key}>{boardPriorityNames[key]}</option>)}
+          </select>
+        </label>
+        <label className={s.field}><span>Geschätzte Spieldauer (Minuten)</span><input type="number" inputMode="numeric" min={1} max={boardMinutesMax} step={5} value={b.minutes ?? ""} onChange={event => { const n = Math.trunc(Number(event.target.value)); onChange({ minutes: event.target.value && n >= 1 ? Math.min(boardMinutesMax, n) : undefined }); }} placeholder="z. B. 30" /></label>
+        <label className={s.check}><input type="checkbox" checked={b.optional === true || kind === "optional"} disabled={kind === "optional"} onChange={event => onChange({ optional: event.target.checked })} /><span>Optional – darf ausgelassen werden</span></label>
+        <label className={`${s.field} ${s.boardWide}`}><span>Voraussetzungen und Auslöser</span><textarea rows={2} maxLength={boardTextMax} value={b.triggers || ""} onChange={event => onChange({ triggers: event.target.value })} placeholder="Wann oder wodurch kommt es zu dieser Szene? …" /></label>
+      </div>
+    </details>
+    {children}
+  </section>;
 }
 
 function EditableTitle({ value, label, onCommit }: { value: string; label: string; onCommit: (title: string) => void }) {
@@ -579,11 +964,13 @@ function TitleArea({ value, onChange, onBlur, onEscape, className, id }: { value
   return <textarea ref={ref} id={id} rows={1} className={className} value={value} maxLength={200} onChange={event => onChange(event.target.value.replace(/\s*[\r\n]+\s*/g, " "))} onBlur={onBlur} onKeyDown={event => { if (event.key === "Enter") { event.preventDefault(); event.currentTarget.blur(); } if (event.key === "Escape") onEscape?.(); }} />;
 }
 
-function ProgressBar({ progress }: { progress: { total: number; idea: number; draft: number; ready: number } }) {
+const progressOrder: BoardStatus[] = ["ready", "review", "working", "idea", "deferred"];
+function ProgressBar({ progress }: { progress: EveningStatusProgress }) {
   if (!progress.total) return <p className={s.progressText}>Noch keine Szene geplant.</p>;
-  return <div className={s.progress} aria-label={`${progress.ready} von ${progress.total} Szenen spielbereit, ${progress.draft} im Entwurf, ${progress.idea} Ideen`}>
-    <span className={s.progressBar}>{(["ready", "draft", "idea"] as const).map(key => progress[key] ? <span key={key} data-readiness={key} style={{ flexGrow: progress[key] }} /> : null)}</span>
-    <small>{progress.ready}/{progress.total} spielbereit · {progress.draft} im Entwurf · {progress.idea} {progress.idea === 1 ? "Idee" : "Ideen"}</small>
+  const parts = progressOrder.filter(key => progress[key]).map(key => `${progress[key]} ${boardStatusNames[key]}`);
+  return <div className={s.progress} aria-label={`${progress.ready} von ${progress.total} Szenen spielbereit. ${parts.join(", ")}`}>
+    <span className={s.progressBar}>{progressOrder.map(key => progress[key] ? <span key={key} data-readiness={statusTone[key]} data-status={key} style={{ flexGrow: progress[key] }} /> : null)}</span>
+    <small>{progress.ready}/{progress.total} spielbereit{progressOrder.filter(key => key !== "ready" && progress[key]).map(key => ` · ${progress[key]} ${boardStatusNames[key]}`).join("")}</small>
   </div>;
 }
 
@@ -592,11 +979,11 @@ function EveningShelf({ title, sessions, scenes, onOpen, onCreate, busy }: { tit
   return <section className={s.shelfBlock}>
     {title && <h3>{title}</h3>}
     <ul className={s.eveningGrid}>{sessions.map(session => {
-      const list = orderedSessionScenes(session.id, session.document, scenes), progress = eveningProgress(session.id, session.document, scenes);
+      const list = orderedSessionScenes(session.id, session.document, scenes), progress = eveningStatusProgress(session.id, session.document, scenes);
       return <li key={session.id}><button type="button" className={s.eveningCard} onClick={() => onOpen(session.id)}>
         <span className={s.eyebrow}>{preparationStatusNames[session.document.status]}{session.document.date ? " · " + session.document.date.slice(0, 10) : ""}</span>
         <strong>{session.document.title}</strong>
-        <span className={s.thumbs} aria-hidden="true">{list.slice(0, 8).map(scene => <span key={scene.id} data-readiness={sceneReadiness(scene)} />)}{list.length > 8 && <em>+{list.length - 8}</em>}</span>
+        <span className={s.thumbs} aria-hidden="true">{list.slice(0, 8).map(scene => <span key={scene.id} data-readiness={statusTone[sceneStatus(scene)]} />)}{list.length > 8 && <em>+{list.length - 8}</em>}</span>
         <ProgressBar progress={progress} />
       </button></li>;
     })}</ul>
@@ -608,8 +995,8 @@ function IdeaTray({ scenes, onOpen, onPlace, busy }: { scenes: SceneSummary[]; o
   if (!scenes.length) return null;
   return <section className={s.tray} aria-label="Ideenablage">
     <h3><Lightbulb size={16} aria-hidden="true" />Ideenablage <small>Szenen dieses Buchs ohne Spielabend</small></h3>
-    <ul>{scenes.map(scene => <li key={scene.id} data-readiness={sceneReadiness(scene)}>
-      <button type="button" className={s.trayOpen} onClick={() => onOpen(scene.id)}><strong>{scene.title}</strong><small>{sceneReadinessNames[sceneReadiness(scene)]}</small></button>
+    <ul>{scenes.map(scene => <li key={scene.id} data-readiness={statusTone[sceneStatus(scene)]}>
+      <button type="button" className={s.trayOpen} onClick={() => onOpen(scene.id)}><strong>{scene.title}</strong><small>{boardKind(scene.board) !== "scene" ? boardBlockTypes[boardKind(scene.board)].label + " · " : ""}{boardStatusNames[sceneStatus(scene)]}</small></button>
       {onPlace && <button type="button" className={s.trayPlace} disabled={busy} onClick={() => onPlace(scene.id)} aria-label={`In den Abend holen: ${scene.title}`}><Plus size={14} aria-hidden="true" />In den Abend</button>}
     </li>)}</ul>
   </section>;

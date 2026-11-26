@@ -7,6 +7,31 @@ import { gmOnly, HttpError } from '@/server/access';
 import { loadEntitiesForIds, parseObject, grantsFor, projectEntity, type EntityRow, type CharacterKnowledgeContext, type GrantRow } from '@/server/entities';
 import { characterKnowledgeContext } from '@/server/character-knowledge';
 import { readStory, validateCommandReferences } from '@/server/command-workspace';
+import { validateSceneThreads } from '@/server/plot-threads';
+import { withWorkshopMirrors } from '@/domain/scene-workshop';
+import { withMaterialCopies } from '@/domain/material-library';
+import { possibilityRefProblem } from '@/domain/scene-possibilities';
+import { materialsByIds } from '@/server/material-library';
+
+/** Szene 2.0, Etappe 3: after a library material changed, every scene that uses it gets fresh copies (a normal save
+ * with history and CAS). A scene that changed at the same moment is skipped and reported; its copy refreshes on its
+ * next save. */
+export async function refreshScenesUsingMaterial(db: D1Database, a: Actor, materialId: string): Promise<{ refreshed: string[]; skipped: string[] }> {
+  gmOnly(a);
+  const rows = (await db.prepare(`SELECT id FROM entities WHERE campaign_id=? AND ${predicate} AND instr(gm_body,?)>0 LIMIT 200`).bind(a.campaignId, JSON.stringify(materialId)).all<{ id: string }>()).results;
+  const refreshed: string[] = [], skipped: string[] = [];
+  for (const { id } of rows) {
+    try {
+      const scene = await readScene(db, a, id);
+      if (!scene.document.materialUses?.some(u => u.materialId === materialId)) continue;
+      const fresh = withMaterialCopies(scene.document, scene.document, await materialsByIds(db, a, [materialId]));
+      if (JSON.stringify(fresh.elements) === JSON.stringify(scene.document.elements)) continue;
+      await executeScene(db, a, { action: 'save', id, version: scene.version, document: scene.document });
+      refreshed.push(id);
+    } catch { skipped.push(id); }
+  }
+  return { refreshed, skipped };
+}
 
 const predicate = "type='SCENE' AND canon_status='WORKING' AND visibility='sl' AND legacy_record_id IS NULL AND json_extract(content,'$.documentKind')='story_scene'";
 function decode(row: EntityRow): SceneView {
@@ -36,17 +61,46 @@ async function validateDocument(db: D1Database, a: Actor, d: SceneDocument, scen
   }
   const children=await db.prepare("SELECT gm_body FROM entities WHERE campaign_id=? AND type='SCENE' AND json_extract(CASE WHEN json_valid(gm_body) THEN gm_body ELSE '{}' END,'$.parentId')=?").bind(a.campaignId,sceneId).all<{gm_body:string}>();
   if(children.results.some(c=>parseObject(c.gm_body).storyId!==d.storyId))throw new HttpError(400,'Ein Handlungsstrangwechsel würde Unter-Szenen abtrennen. Vorhandene Verknüpfungen bleiben geschützt.');
+  // Storyboard 2.0: connections point to other scenes of this campaign. Missing targets are rejected on save; a target removed later stays linked and shows as unavailable.
+  const linkTargets=[...new Set((d.board?.links||[]).map(l=>l.to))];
+  if(linkTargets.includes(sceneId))throw new HttpError(400,'Eine Szene kann nicht mit sich selbst verbunden werden.');
+  if(linkTargets.length){
+    const found=await db.prepare(`SELECT id FROM entities WHERE campaign_id=? AND id IN (${linkTargets.map(()=>'?').join(',')}) AND ${predicate}`).bind(a.campaignId,...linkTargets).all<{id:string}>();
+    const known=new Set(found.results.map(r=>r.id)),before=await db.prepare(`SELECT gm_body FROM entities WHERE campaign_id=? AND id=? AND ${predicate}`).bind(a.campaignId,sceneId).first<{gm_body:string}>();
+    const kept=new Set(((parseObject(before?.gm_body??'{}').board as {links?:{to?:string}[]}|undefined)?.links||[]).map(l=>l?.to).filter(Boolean));
+    if(linkTargets.some(id=>!known.has(id)&&!kept.has(id)))throw new HttpError(400,'Eine verbundene Szene ist nicht verfügbar.');
+  }
+  // Storyboard 2.0, Phase 3: plot threads a scene joins must exist; ones already stored may stay when a thread disappears.
+  if(d.board?.threads?.length){
+    const prior=await db.prepare(`SELECT gm_body FROM entities WHERE campaign_id=? AND id=? AND ${predicate}`).bind(a.campaignId,sceneId).first<{gm_body:string}>();
+    const kept=((parseObject(prior?.gm_body??'{}').board as {threads?:unknown}|undefined)?.threads);
+    await validateSceneThreads(db,a,d.board.threads,Array.isArray(kept)?kept.filter((v):v is string=>typeof v==='string'):[]);
+  }
   for(const sid of d.sessionIds){if(!await db.prepare("SELECT id FROM records WHERE campaign_id=? AND id=? AND kind='sitzungen'").bind(a.campaignId,sid).first())throw new HttpError(404,'Verknüpfter Spielabend nicht verfügbar.');}
   const elementRefs=d.elements.filter(e=>e.referenceId);
-  const ids = [d.placeId, ...d.npcIds, ...d.clueIds,...elementRefs.map(e=>e.referenceId)].filter(Boolean);
+  // Szene 2.0, Etappe 2: scene places are nodes of the place tree; cast members are mirrored into npcIds (checked below).
+  const scenePlaceIds=(d.places||[]).map(p=>p.placeId);
+  const ids = [d.placeId, ...d.npcIds, ...d.clueIds,...scenePlaceIds,...elementRefs.map(e=>e.referenceId)].filter(Boolean);
   await validateCommandReferences(db, a, ids);
   const entities = await loadEntitiesForIds(db, a.campaignId, ids);
   if (d.placeId && !entities.some(e => e.id === d.placeId && e.type === 'PLACE') ||
+    scenePlaceIds.some(id => !entities.some(e => e.id === id && e.type === 'PLACE')) ||
     d.npcIds.some(id => !entities.some(e => e.id === id && e.type === 'NPC')) ||
     d.clueIds.some(id => !entities.some(e => e.id === id && ['CLUE', 'HANDOUT'].includes(e.type))))
     throw new HttpError(400, 'Eine Akte passt nicht zu diesem Szenenbereich.');
   for(const e of elementRefs){const target=entities.find(n=>n.id===e.referenceId);const expected=e.kind==='place'?['PLACE']:e.kind==='person'?['NPC','CHARACTER']:e.kind==='clue'?['CLUE']:e.kind==='handout'?['HANDOUT']:e.kind==='puzzle'?['RULE','HANDOUT']:[];if(!expected.includes(target?.type||''))throw new HttpError(400,'Verknüpfung passt nicht zum Elementtyp.');}
-  await validatePreparationMedia(db,a,[d.narration,d.atmosphere,d.gmNotes,d.dialogueNotes,d.interactions,d.secrets,d.visions,...d.whispers.map(w=>w.text),d.possibleConsequences,...d.elements.map(e=>e.text)],[...d.elements.filter(e=>e.fileId).map(e=>({id:e.fileId,kind:e.kind})),...d.whispers.flatMap(w=>w.fileIds.map(id=>({id,kind:'image'}))),...d.whispers.flatMap(w=>w.audioFileId?[{id:w.audioFileId,kind:'audio'}]:[]),...d.visionFileIds.map(id=>({id,kind:'handout'})),...(d.backdropFileId?[{id:d.backdropFileId,kind:'image'}]:[])]);
+  // Szene 2.0, Etappe 4: cards refer only to parts of this scene; an insight may name a clue or handout dossier.
+  const refProblem=possibilityRefProblem(d);
+  if(refProblem)throw new HttpError(400,refProblem);
+  const clueRefs=[...new Set((d.insights||[]).map(i=>i.clueId).filter(Boolean))];
+  if(clueRefs.length){
+    await validateCommandReferences(db,a,clueRefs);
+    if((await loadEntitiesForIds(db,a.campaignId,clueRefs)).some(e=>!['CLUE','HANDOUT'].includes(e.type)))throw new HttpError(400,'Eine Erkenntnis kann nur auf eine Hinweis- oder Handout-Akte verweisen.');
+  }
+  // Szene 2.0: passages refer only to moods of this scene.
+  const moodIds=new Set((d.moods||[]).map(m=>m.id));
+  if((d.passages||[]).some(p=>p.moodId&&!moodIds.has(p.moodId)))throw new HttpError(400,'Ein Abschnitt verweist auf eine Stimmung, die es in dieser Szene nicht gibt.');
+  await validatePreparationMedia(db,a,[...(d.passages||[]).map(p=>p.text),...(d.insights||[]).map(i=>i.text),d.narration,d.atmosphere,d.gmNotes,d.dialogueNotes,d.interactions,d.secrets,d.visions,...d.whispers.map(w=>w.text),d.possibleConsequences,...d.elements.map(e=>e.text)],[...d.elements.filter(e=>e.fileId).map(e=>({id:e.fileId,kind:e.kind})),...d.whispers.flatMap(w=>w.fileIds.map(id=>({id,kind:'image'}))),...d.whispers.flatMap(w=>w.audioFileId?[{id:w.audioFileId,kind:'audio'}]:[]),...d.visionFileIds.map(id=>({id,kind:'handout'})),...(d.backdropFileId?[{id:d.backdropFileId,kind:'image'}]:[]),...(d.moods||[]).flatMap(m=>m.backdropFileId?[{id:m.backdropFileId,kind:'image'}]:[])]);
   const whisperRecipientIds=d.whispers.flatMap(w=>w.recipientIds);
   const pagerRecipientIds=d.elements.flatMap(e=>e.pager?.recipientIds||[]);
   if(d.visionRecipientIds.length||pagerRecipientIds.length||whisperRecipientIds.length){
@@ -80,6 +134,21 @@ export async function executeScene(db: D1Database, a: Actor, command: SceneComma
   if(command.action==='restore'){
     const historic=(await sceneHistory(db,a,id)).find(h=>h.id===command.historyId);if(!historic)throw new HttpError(404,'Historischer Stand nicht verfügbar.');document=await withoutDeletedFiles(db,a.campaignId,historic.document);
     // Restore preparation only; do not restore historic runs or audience releases.
+  }
+  // Szene 2.0: the workshop parts are the source, the old fields their mirrors (a legacy edit of a mirror wins, see scene-workshop.ts).
+  if (create || command.action === 'save' || command.action==='restore') document = withWorkshopMirrors(document, command.action === 'save' ? before!.document : null);
+  // Szene 2.0, Etappe 3: material uses point to the library; each becomes a classic element (copy) for the current Regie.
+  if ((create || command.action === 'save' || command.action==='restore') && document.materialUses) {
+    const prior = command.action === 'save' ? before!.document : null;
+    const kept = new Set((before?.document.materialUses || []).map(u => u.materialId));
+    const library = await materialsByIds(db, a, document.materialUses.map(u => u.materialId));
+    if (document.materialUses.some(u => !library.has(u.materialId) && !kept.has(u.materialId))) throw new HttpError(400, 'Ein verwendetes Material ist in der Bibliothek nicht verfügbar.');
+    const givers = [...new Set(document.materialUses.map(u => u.byNpcId).filter(Boolean))];
+    if (givers.length) {
+      await validateCommandReferences(db, a, givers);
+      if ((await loadEntitiesForIds(db, a.campaignId, givers)).some(e => e.type !== 'NPC')) throw new HttpError(400, 'Übergeben kann Material nur ein NSC.');
+    }
+    document = withMaterialCopies(document, prior, library);
   }
   if (create || command.action === 'save' || command.action==='restore') await validateDocument(db, a, document,id);
   if (command.action === 'activate') {

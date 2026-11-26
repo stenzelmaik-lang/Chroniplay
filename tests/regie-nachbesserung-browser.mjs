@@ -46,7 +46,7 @@ try{
   const choice=sl.locator('section',{has:sl.getByRole('heading',{level:2})}).filter({has:sl.getByRole('button',{name:/Regie öffnen|Nur privat lesen/})}).first();
   const sceneTitle=(await choice.getByRole('heading').textContent()).replace(/^\d\d/,'');
   const opened=gm.waitForEvent('page');await choice.getByRole('button',{name:/Regie öffnen|Nur privat lesen/}).click();
-  const regie=watch(await opened,'Regie');await regie.waitForURL(/\/sl\/regie/);await regie.getByRole('heading',{name:/Texte zum Vorlesen/}).waitFor();
+  const regie=watch(await opened,'Regie');await regie.waitForURL(/\/sl\/regie/);await regie.getByRole('heading',{name:/^Erzählung$/}).waitFor();
   assert.equal(await sl.getByRole('complementary',{name:'Regie',exact:true}).count(),0,name+': no drawer opened on the table');
   await regie.getByRole('heading',{name:sceneTitle.trim()}).first().waitFor();
   pass(name+': scene choice opens the Regie window on that scene, no drawer, no top-right button');
@@ -117,7 +117,7 @@ try{
  // 5. Players at 375 px: the pager fits on a phone. (YouTube ambience: tests/ambiente-browser.mjs.)
  phase='375';
  const [gm,a]=await Promise.all([account('command-gm',viewports[1]),account('command-a',mobile)]);
- const regie=watch(await gm.newPage(),'Regie');await regie.goto(base+'/sl/regie');await regie.getByRole('heading',{name:/Texte zum Vorlesen/}).waitFor();
+ const regie=watch(await gm.newPage(),'Regie');await regie.goto(base+'/sl/regie');await regie.getByRole('heading',{name:/^Erzählung$/}).waitFor();
  const pa=await table(a,'A375');
  const text='Pager 375 · '+Date.now();await regie.getByLabel('Pager-Nachricht').fill(text);await regie.getByRole('button',{name:'Pager senden'}).click();
  await pa.getByRole('region',{name:'Pager'}).waitFor();await pa.waitForTimeout(900);const pager=await pa.locator('[aria-roledescription="Pager"]').boundingBox();

@@ -58,7 +58,7 @@ try{
   await stage({action:'youtube',video:null});await stage({action:'activateScene',sceneId:second.id});
   const [gm,a,b]=await Promise.all([account('command-gm',options),account('command-a',options),account('command-b',{...options,reducedMotion:'reduce'},true)]);
   const [sl,pa,pb]=await Promise.all([table(gm,'SL'),table(a,'A'),table(b,'B')]);
-  const regie=watch(await gm.newPage(),'Regie');await regie.goto(base+'/sl/regie');await regie.getByRole('heading',{name:/Texte zum Vorlesen/}).waitFor();
+  const regie=watch(await gm.newPage(),'Regie');await regie.goto(base+'/sl/regie');await regie.getByRole('heading',{name:/^Erzählung$/}).waitFor();
   // Scene start with automatic playlist: the GM starts the first scene from the Regie window.
   await regie.getByLabel('Szene in der Regie').selectOption(first.id);
   await regie.locator('header').getByRole('button',{name:'Szene starten'}).first().click();
@@ -80,7 +80,7 @@ try{
   assert.equal(await record(pb).locator('span').first().evaluate(e=>getComputedStyle(e).animationName),'none','Reduced motion: still record');
   pass(name+': scene start plays its playlist; drawer from the corner, record turns, folded keeps playing; tap hint when blocked');
   // GM controls for everyone: pause stops the record, next track fades over, base volume, personal volume stays personal.
-  await regie.getByRole('navigation',{name:'Bereiche der Szene'}).getByRole('button',{name:'Ton & Musik',exact:true}).click();
+  await regie.getByRole('navigation',{name:'Arbeitsansichten der Regie'}).getByRole('button',{name:'Stimmung',exact:true}).click();await regie.getByRole('navigation',{name:'Werkzeuge: Stimmung'}).getByRole('button',{name:'Ambiente',exact:true}).click();
   await regie.getByRole('button',{name:'Pause für alle'}).click();
   await record(pa).and(pa.locator('[data-spinning=false]')).waitFor();await fake(pa).and(pa.locator('[data-state="2"]')).waitFor({state:'attached'});
   await regie.getByRole('button',{name:'Abspielen für alle'}).click();await record(pa).and(pa.locator('[data-spinning=true]')).waitFor();

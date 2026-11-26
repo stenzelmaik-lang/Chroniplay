@@ -21,7 +21,7 @@ const soundProbe=(blocked=false)=>{window.__pagerSounds=[];window.__soundBlocked
  const start=AudioBufferSourceNode.prototype.start;AudioBufferSourceNode.prototype.start=function(...rest){const n=this.buffer&&names.get(this.buffer);if(n)window.__pagerSounds.push(n);return start.apply(this,rest);};};
 async function account(id,options){const context=await browser.newContext(options);await context.addInitScript(soundProbe);const login=await context.request.post(base+'/api/auth/login',{headers:{Origin:base},data:{email:id+'@example.invalid',password:'ChroniPlay-Demo-2036!'}});assert.equal(login.status(),200);return context;}
 async function table(context,label){const p=await context.newPage();pages.push([label,p]);p.setDefaultTimeout(15000);p.on('pageerror',e=>errors.push(label+': '+e.message));await p.goto(base+'/spielbereich?bereich=sitzung');await p.getByRole('button',{name:'Notizzettel',exact:true}).waitFor();return p;}
-async function regieWindow(context,label){const p=await context.newPage();pages.push([label,p]);p.setDefaultTimeout(15000);p.on('pageerror',e=>errors.push(label+': '+e.message));await p.goto(base+'/sl/regie');await p.getByRole('heading',{name:/Texte zum Vorlesen/}).waitFor();return p;}
+async function regieWindow(context,label){const p=await context.newPage();pages.push([label,p]);p.setDefaultTimeout(15000);p.on('pageerror',e=>errors.push(label+': '+e.message));await p.goto(base+'/sl/regie');await p.getByRole('heading',{name:/^Erzählung$/}).waitFor();return p;}
 const noHorizontalScroll=async(p,label)=>{const [w,inner]=await p.evaluate(()=>[document.documentElement.scrollWidth,window.innerWidth]);assert.ok(w<=inner+1,label+': no horizontal page scroll ('+w+' > '+inner+')');};
 const sounds=p=>p.evaluate(()=>window.__pagerSounds.slice());
 const view=p=>p.locator('[aria-roledescription="Pager"] [data-view]').getAttribute('data-view');
@@ -65,7 +65,7 @@ try{
   await pa.evaluate(()=>{try{localStorage.removeItem('chroniplay:pager-ton:command-a');}catch{/* ignore */}});
 
   // Prepared in the Command Center, listed in the Regie with its intended recipient, then played.
-  const prepared=regie.getByRole('list',{name:'Vorbereitete Pager'});
+  await regie.getByRole('navigation',{name:'Arbeitsansichten der Regie'}).getByRole('button',{name:'Interaktion',exact:true}).click();await regie.getByRole('navigation',{name:'Werkzeuge: Interaktion'}).getByRole('button',{name:'Pager vorbereitet',exact:true}).click();const prepared=regie.getByRole('list',{name:'Vorbereitete Pager'});
   const suedtor=prepared.locator('li',{hasText:'SÜDTOR'});
   await suedtor.waitFor();
   assert.equal(await suedtor.getByRole('group',{name:/Empfänger/}).getByRole('button',{name:nameA}).getAttribute('aria-pressed'),'true',name+': prepared recipient A is preselected');
@@ -107,6 +107,7 @@ try{
   const launcher=pa.getByRole('button',{name:/^Pager öffnen/});await launcher.waitFor();
   const before=(await sounds(pa)).length;
   const text='Spontan '+name+' '+Date.now();
+  await regie.getByRole('button',{name:/^Pager.*Alt P/}).click();// the quick tool 'Pager' (Pager · spontan), not the prepared tab
   const form=regie.locator('form',{has:regie.getByLabel('Pager-Nachricht')});
   await form.getByRole('group',{name:'Empfänger: Pager'}).getByRole('button',{name:nameA}).click();
   await form.getByRole('group',{name:'Empfänger: Pager'}).getByRole('button',{name:nameB}).click();
@@ -143,7 +144,7 @@ try{
  phase='375';
  const [gm,a]=await Promise.all([account('command-gm',{viewport:{width:1440,height:900}}),account('command-a',mobile)]);
  const regie=await regieWindow(gm,'375 Regie');const pa=await table(a,'375 A');
- await regie.getByRole('list',{name:'Vorbereitete Pager'}).locator('li',{hasText:'LAGE'}).getByRole('button',{name:'Ausspielen'}).click();
+ await regie.getByRole('navigation',{name:'Arbeitsansichten der Regie'}).getByRole('button',{name:'Interaktion',exact:true}).click();await regie.getByRole('navigation',{name:'Werkzeuge: Interaktion'}).getByRole('button',{name:'Pager vorbereitet',exact:true}).click();await regie.getByRole('list',{name:'Vorbereitete Pager'}).locator('li',{hasText:'LAGE'}).getByRole('button',{name:'Ausspielen'}).click();
  await pa.getByRole('region',{name:'Pager'}).getByText('LAGE').waitFor();await pa.waitForTimeout(900);
  const phone=await deviceGeometry(pa,'375 A',mobile.viewport);
  assert.ok(phone.x>=56,'375: the device is not covered by the 56 px tool rail (x='+phone.x+')');

@@ -1,7 +1,7 @@
 /* eslint-disable @next/next/no-img-element -- Images use the protected authenticated file API. */
 "use client";
 
-import { useId, useLayoutEffect, useMemo, useRef, useState, type ClipboardEvent, type MouseEvent, type ReactNode } from "react";
+import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type ClipboardEvent, type MouseEvent, type ReactNode } from "react";
 import {
   encodeRichText,
   htmlToRichText, htmlTextToRichText, inspectRichTextSource, richHtmlPrefix, richTextToHtml, htmlImportNotes, htmlAuthoringGuide,
@@ -121,7 +121,10 @@ export function RichTextEditor({
   const lastEditorHtml = useRef('');
   const savedRange = useRef<Range | null>(null);
   const [link, setLink] = useState("");
-  const [extraTools,setExtraTools]=useState(!compactTools),[linkOpen,setLinkOpen]=useState(!compactTools),[imageOpen,setImageOpen]=useState(!compactTools),[imageSearch,setImageSearch]=useState('');
+  const [extraTools,setExtraTools]=useState(!compactTools&&(!htmlSource||preparationTools)),[linkOpen,setLinkOpen]=useState(!compactTools),[imageOpen,setImageOpen]=useState(!compactTools),[imageSearch,setImageSearch]=useState('');
+  // Table row only while the cursor is inside a table, so the default view stays short.
+  const [inTable,setInTable]=useState(false);
+  useEffect(()=>{const update=()=>{const node=window.getSelection()?.anchorNode;const element=node instanceof Element?node:node?.parentElement;setInTable(!!element&&!!editorRef.current?.contains(element)&&!!element.closest('table'));};document.addEventListener('selectionchange',update);return()=>document.removeEventListener('selectionchange',update);},[]);
   const [plainLength, setPlainLength] = useState(initialSource?initialSource.plainLength??0:richTextToPlainText(value).length);
   const [limitExceeded, setLimitExceeded] = useState((initialSource?.plainLength??0)>maximumPlainLength);
   const initialValueRef = useRef(value.startsWith(richHtmlPrefix)?canonicalRichText(value):value);
@@ -254,16 +257,17 @@ export function RichTextEditor({
     if(!result.error&&result.value)onChange(result.value);
     else if(htmlSource)onChange(richHtmlPrefix+raw);
   }
+  const modeButtons=(htmlSource||advanced&&extraTools)?<>
+      {!sourceOnly&&<button type="button" aria-pressed={!htmlMode&&!preview} disabled={htmlMode&&!!htmlError} onClick={()=>{setPreview(false);setHtmlMode(false);}}>Visuell</button>}
+      <button type="button" aria-pressed={htmlMode&&!preview} onClick={()=>{if(!htmlMode)setHtmlDraft(value.startsWith(richHtmlPrefix)?value.slice(richHtmlPrefix.length):richTextToHtml(value));setPreview(false);setHtmlMode(true);}}>{htmlSource?'HTML-Quelltext':'HTML · Expertenansicht'}</button>
+      {htmlSource&&<button type="button" aria-pressed={preview} disabled={!!htmlError} onClick={()=>setPreview(true)} title="Zeigt, wie der Text aussieht. Veröffentlicht nichts.">Vorschau</button>}
+      {htmlSource&&htmlMode&&!preview&&<button type="button" title="Kopiert eine Anleitung, damit eine andere KI HTML schreibt, das hier seine Gestaltung behält." onClick={()=>{void navigator.clipboard?.writeText(htmlAuthoringGuide).then(()=>{setGuideCopied(true);setTimeout(()=>setGuideCopied(false),2500);}).catch(()=>undefined);}}>{guideCopied?'Vorlage kopiert':'Vorlage für andere KI'}</button>}
+      {!preparationTools&&!htmlSource&&<small>Nur sichere Struktur; Bilder aus dem geschützten Dateispeicher.</small>}
+</>:null;
   return <div className={`${styles.editor} ${htmlSource?styles.sourceEditor:''} ${preparationTools?styles.preparationEditor:''}`}>
     {htmlSource&&!preparationTools&&<strong className={styles.editorLabel}>{label}</strong>}
     {compactTools&&!preparationTools&&<div className={styles.toolbar}>{advanced&&<button type="button" aria-expanded={linkOpen} onMouseDown={preserveSelection} onClick={()=>setLinkOpen(!linkOpen)}>Link</button>}{advanced&&<button type="button" aria-expanded={imageOpen} onMouseDown={preserveSelection} onClick={()=>setImageOpen(!imageOpen)}>Bild</button>}<button type="button" aria-expanded={extraTools} onClick={()=>setExtraTools(!extraTools)}>Weitere Formatierung</button></div>}
-    {(htmlSource||advanced&&extraTools)&&<div className={styles.toolbar} aria-label={`${label} Ansicht`}>
-      {!sourceOnly&&<button type="button" aria-pressed={!htmlMode&&!preview} disabled={htmlMode&&!!htmlError} onClick={()=>{setPreview(false);setHtmlMode(false);}}>Visuell</button>}
-      <button type="button" aria-pressed={htmlMode&&!preview} onClick={()=>{if(!htmlMode)setHtmlDraft(value.startsWith(richHtmlPrefix)?value.slice(richHtmlPrefix.length):richTextToHtml(value));setPreview(false);setHtmlMode(true);}}>{htmlSource?'HTML-Quelltext':'HTML · Expertenansicht'}</button>
-      {htmlSource&&<button type="button" aria-pressed={preview} disabled={!!htmlError} onClick={()=>setPreview(true)}>Vorschau</button>}
-      {htmlSource&&htmlMode&&!preview&&<button type="button" title="Kopiert eine Anleitung, damit eine andere KI HTML schreibt, das hier seine Gestaltung behält." onClick={()=>{void navigator.clipboard?.writeText(htmlAuthoringGuide).then(()=>{setGuideCopied(true);setTimeout(()=>setGuideCopied(false),2500);}).catch(()=>undefined);}}>{guideCopied?'Vorlage kopiert':'Vorlage für andere KI'}</button>}
-      {!preparationTools&&<small>{htmlSource?'Vorschau veröffentlicht nichts.':'Nur sichere Struktur; Bilder aus dem geschützten Dateispeicher.'}</small>}
-    </div>}
+    {(htmlSource||advanced&&extraTools)&&(htmlMode||preview)&&<div className={styles.toolbar} aria-label={`${label} Ansicht`}>{modeButtons}</div>}
     {preparationTools&&<div className={styles.preparationTools}>{inlineGallery&&<ProtectedImageGallery files={files} disabled={disabled||!!htmlError||preview} onOpen={preserveSelection} onSelect={id=>{const markup='<img src="/api/files?id='+id.replace(/[^a-zA-Z0-9_.-]/g,'')+'" alt="Szenenbild"><p><br></p>';if(htmlMode)sourceChange(htmlDraft+markup);else command('insertHTML',markup);}}/>}{!htmlMode&&!preview&&<button type="button" aria-expanded={extraTools} onClick={()=>setExtraTools(!extraTools)}>Weitere Formatierung</button>}</div>}
     {preview?<section className={styles.preview} data-custom-prose={proseClassName ? true : undefined} aria-label={`${label} Vorschau`}><RichTextView value={previewValue ?? value} readable flowing={Boolean(proseClassName)} className={proseClassName}/></section>:htmlMode?<>
       <textarea disabled={disabled} aria-label={label+' HTML'} aria-describedby={preparationTools?undefined:helpId} aria-invalid={!!htmlError} spellCheck={false} value={htmlDraft} onChange={e=>sourceChange(e.target.value)} rows={sourceOnly?7:16}/>
@@ -271,6 +275,7 @@ export function RichTextEditor({
       {sourceOnly?<p className={styles.sourceHelp} id={helpId}>HTML für Absätze, Überschriften, Listen und Tabellen. Die Vorschau veröffentlicht nichts.</p>:htmlSource&&!preparationTools&&<p className={styles.sourceHelp} id={helpId}>Erlaubt: Überschriften, Absätze, Hervorhebungen, Listen, Zitate, Links, Trennlinien, Tabellen mit Kopfzeilen und aufklappbare Abschnitte. Klassen: <code>cp-intro</code>, <code>cp-highlight</code>, <code>cp-note</code>, <code>cp-divider</code>. Beispiel: <code>{'<p class="cp-intro">Ein erster Eindruck.</p>'}</code></p>}
     </>:<>
     <div className={styles.toolbar} role="toolbar" aria-label={`${label} formatieren`}>
+      {modeButtons}{modeButtons&&<span aria-hidden="true" />}
       <button type="button" onMouseDown={preserveSelection} onClick={() => command("undo")} aria-label="Rückgängig" title="Rückgängig">↶</button>
       <button type="button" onMouseDown={preserveSelection} onClick={() => command("redo")} aria-label="Wiederholen" title="Wiederholen">↷</button>
       <span aria-hidden="true" />
@@ -278,6 +283,10 @@ export function RichTextEditor({
       <span aria-hidden="true" />
       <button type="button" onMouseDown={preserveSelection} onClick={() => command("bold")} aria-label="Fett" title="Fett"><strong>F</strong></button>
       <button type="button" onMouseDown={preserveSelection} onClick={() => command("italic")} aria-label="Kursiv" title="Kursiv"><em>K</em></button>
+      <button type="button" onMouseDown={preserveSelection} onClick={() => command("insertUnorderedList")} aria-label="Aufzählung" title="Aufzählung">• Liste</button>
+      {htmlSource&&!preparationTools&&!compactTools&&<button type="button" aria-expanded={extraTools} onClick={()=>setExtraTools(!extraTools)}>{extraTools?'Weniger':'Mehr Formatierung'}</button>}
+    </div>
+    {extraTools&&<div className={styles.toolbar} aria-label={`${label} weitere Formatierung`}>
       <button type="button" onMouseDown={preserveSelection} onClick={() => command("underline")} aria-label="Unterstrichen" title="Unterstrichen"><u>U</u></button>
       <button type="button" onMouseDown={preserveSelection} onClick={() => command("strikeThrough")} aria-label="Durchgestrichen" title="Durchgestrichen"><s>S</s></button>
       <span aria-hidden="true" />
@@ -285,7 +294,6 @@ export function RichTextEditor({
       <button type="button" onMouseDown={preserveSelection} onClick={() => align("center")} aria-label="Zentriert" title="Zentriert">≡</button>
       <button type="button" onMouseDown={preserveSelection} onClick={() => align("right")} aria-label="Rechtsbündig" title="Rechtsbündig">⯈</button>
       <span aria-hidden="true" />
-      <button type="button" onMouseDown={preserveSelection} onClick={() => command("insertUnorderedList")} aria-label="Aufzählung" title="Aufzählung">• Liste</button>
       <button type="button" onMouseDown={preserveSelection} onClick={() => command("insertOrderedList")} aria-label="Nummerierte Liste" title="Nummerierte Liste">1. Liste</button>
       <button type="button" onMouseDown={preserveSelection} onClick={() => command("insertHorizontalRule")} aria-label="Trennlinie" title="Trennlinie">―</button>
       {((htmlSource&&!preparationTools)||advanced&&extraTools)&&<><button type="button" onMouseDown={preserveSelection} onClick={()=>command('insertHTML','<table><tbody><tr><th>Spalte 1</th><th>Spalte 2</th></tr><tr><td>Inhalt</td><td>Inhalt</td></tr></tbody></table><p><br></p>')}>Tabelle</button><button type="button" onMouseDown={preserveSelection} onClick={()=>command('insertHTML','<details><summary>Weiterlesen</summary><p>Beschreibung</p></details><p><br></p>')}>Aufklappbarer Abschnitt</button><button type="button" onMouseDown={preserveSelection} onClick={()=>command('insertHTML','<p class="cp-note">Hinweis</p>')}>Hinweiskasten</button></>}
@@ -295,8 +303,8 @@ export function RichTextEditor({
         <label className={styles.wheel} title="Eigene Farbe wählen"><span className={styles.srOnly}>Eigene Textfarbe</span><input type="color" aria-label="Eigene Textfarbe" defaultValue="#d6b36f" onMouseDown={keepSelection} onFocus={keepSelection} onChange={event => command("foreColor", event.target.value)} /></label>
       </div>
       <button type="button" onMouseDown={preserveSelection} onClick={() => command("removeFormat")} aria-label="Formatierung entfernen" title="Formatierung entfernen">⌫ Format</button>
-    </div>
-    {htmlSource&&(!preparationTools||extraTools)&&!htmlMode&&!preview&&<div className={styles.toolbar} aria-label="Tabelle bearbeiten">{([['row','Zeile +'],['column','Spalte +'],['removeRow','Zeile entfernen'],['removeColumn','Spalte entfernen'],['header','Kopfzeile']] as const).map(([action,title])=><button type="button" key={action} onMouseDown={preserveSelection} onClick={()=>tableEdit(action)}>{title}</button>)}</div>}
+    </div>}
+    {htmlSource&&extraTools&&inTable&&!htmlMode&&!preview&&<div className={styles.toolbar} aria-label="Tabelle bearbeiten">{([['row','Zeile +'],['column','Spalte +'],['removeRow','Zeile entfernen'],['removeColumn','Spalte entfernen'],['header','Kopfzeile']] as const).map(([action,title])=><button type="button" key={action} onMouseDown={preserveSelection} onClick={()=>tableEdit(action)}>{title}</button>)}</div>}
     {!preparationTools&&!sourceOnly&&advanced&&linkOpen&&<div className={styles.linkRow}><label><span>Link zur Auswahl</span><input type="text" value={link} onChange={event => setLink(event.target.value)} onMouseDown={() => { const selection = window.getSelection(); if(selection?.rangeCount&&editorRef.current?.contains(selection.anchorNode))savedRange.current=selection.getRangeAt(0).cloneRange(); }} placeholder={advanced?"https://… oder /sl/command-center?story=…":"https://…"}/></label><button type="button" onMouseDown={preserveSelection} onClick={insertLink}>Link setzen</button></div>}
     {!preparationTools&&advanced&&imageOpen&&<div className={styles.linkRow}><label>Geschütztes Bild<input aria-label={label+' Bilder suchen'} placeholder="Dateiname oder ID …" value={imageSearch} onChange={e=>setImageSearch(e.target.value)}/><select aria-label={label+' Bild'} value={imageId} onChange={e=>setImageId(e.target.value)}><option value="">Vorhandenes Bild auswählen</option>{files.filter(f=>f.mime.startsWith('image/')&&(f.name+' '+f.id).toLowerCase().includes(imageSearch.toLowerCase())).map(f=><option key={f.id} value={f.id}>{f.name} · {f.id}{f.visibility ? ` · Dateiregel: ${f.visibility==='group'?'Gruppe':f.visibility==='sl'?'SL':'Eigentümer'}` : ''}</option>)}</select></label><button type="button" disabled={!imageId} onMouseDown={preserveSelection} onClick={()=>{command('insertHTML','<img src="/api/files?id='+imageId.replace(/[^a-zA-Z0-9_.-]/g,'')+'" alt="SL-Unterlage"><p><br></p>');setImageId('');}}>Bild einfügen</button></div>}
     {!preparationTools&&advanced&&imageOpen&&imageId&&<figure><img src={'/api/files?id='+encodeURIComponent(imageId)} alt="Vorschau des ausgewählten geschützten Bildes" style={{maxWidth:180,maxHeight:140,objectFit:'contain'}}/><figcaption>Geschützter Dateispeicher · Dateiregel: {files.find(file=>file.id===imageId)?.visibility==='group'?'Gruppe':files.find(file=>file.id===imageId)?.visibility==='sl'?'SL':files.find(file=>file.id===imageId)?.visibility==='private'?'Eigentümer':'nicht angegeben'}. Auswahl veröffentlicht nichts; der Server prüft den tatsächlichen Zugriff.</figcaption></figure>}

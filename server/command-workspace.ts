@@ -1,6 +1,6 @@
 import { validatePreparationMedia } from './preparation-media';
 import type { Actor } from '@/domain/types';
-import { workspaceSchema, defaultWorkspace, storyDocumentSchema, type StoryView, type StoryHistory, type WorkspaceMode, type CommandWorkspace, type MomentView, type CommandReference } from '@/domain/command-workspace';
+import { workspaceSchema, defaultWorkspace, storyDocumentSchema, type StoryView, type StoryHistory, type WorkspaceMode, type CommandWorkspace, type MomentView, type CommandReference, eventStates, type EventState } from '@/domain/command-workspace';
 import { HttpError } from '@/server/database';
 import { gmOnly, canRead } from '@/server/access';
 import { loadEntitiesForIds, parseObject, type EntityRow } from '@/server/entities';
@@ -86,7 +86,7 @@ export async function writeStory(db: D1Database, a: Actor, args: { id: string; v
 export async function listMoments(db: D1Database, a: Actor, sessionId?: string): Promise<MomentView[]> {
   gmOnly(a);
   const rows = await db.prepare("SELECT * FROM entities WHERE campaign_id=? AND type='NOTE' AND canon_status='GM_SECRET' AND visibility='sl' AND legacy_record_id IS NULL AND json_extract(content,'$.documentKind')='session_moment'" + (sessionId ? " AND json_extract(content,'$.sessionId')=?" : '') + ' ORDER BY created_at DESC,id DESC LIMIT 150').bind(a.campaignId, ...(sessionId ? [sessionId] : [])).all<EntityRow>();
-  return rows.results.map(r => { const c = parseObject(r.content); return { id: r.id, text: String(c.text || ''), sessionId: String(c.sessionId || ''), storyId: String(c.storyId || ''), sceneId: String(c.sceneId || ''), runId: String(c.runId || ''), references: Array.isArray(c.references) ? c.references.filter((v): v is string => typeof v === 'string') : [], occurredAt: r.created_at }; });
+  return rows.results.map(r => { const c = parseObject(r.content); return { id: r.id, kind: c.kind === 'decision' || c.kind === 'skipped' || c.kind === 'event' ? c.kind : 'note', ...(c.kind === 'event' && typeof c.eventId === 'string' && typeof c.eventState === 'string' && (eventStates as readonly string[]).includes(c.eventState) ? { eventId: c.eventId, eventState: c.eventState as EventState } : {}), text: String(c.text || ''), sessionId: String(c.sessionId || ''), storyId: String(c.storyId || ''), sceneId: String(c.sceneId || ''), runId: String(c.runId || ''), references: Array.isArray(c.references) ? c.references.filter((v): v is string => typeof v === 'string') : [], occurredAt: r.created_at }; });
 }
 export async function commandReferences(db: D1Database, a: Actor): Promise<CommandReference[]> {
   gmOnly(a);

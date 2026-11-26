@@ -55,3 +55,6 @@ next-env.d.ts
 
 # Vision-Engine-Prototyp: Originalbilder und Töne nur lokal
 /prototypes/vision-engine/local-assets/
+
+# Szene-2.0-Entwurf: echter Referenzfall mit SL-Geheimnissen nur lokal (ins Repo kommt nur das neutrale Beispiel)
+/prototypes/szene-2/*.local.js

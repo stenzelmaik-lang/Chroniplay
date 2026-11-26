@@ -56,7 +56,7 @@ try{
   await sl.screenshot({path:output+'/'+name+'-sl.png'});await pb.screenshot({path:output+'/'+name+'-spieler-b.png'});
   pass(name+': player damage flashes at the entry for SL and B, damage level shown');
   // 1. Regie window: the SL corrects with quick actions.
-  const regie=watch(await gm.newPage(),'Regie');await regie.goto(base+'/sl/regie');await regie.getByRole('heading',{name:/Texte zum Vorlesen/}).waitFor();
+  const regie=watch(await gm.newPage(),'Regie');await regie.goto(base+'/sl/regie');await regie.getByRole('heading',{name:/^Erzählung$/}).waitFor();
   await regie.getByRole('navigation',{name:'Bereiche der Szene'}).getByRole('button',{name:'Zustände',exact:true}).click();
   const entry=regie.locator('[data-vitals-character="'+ca.id+'"]');await entry.waitFor();
   await entry.getByRole('button',{name:ca.title+': 1 Stufe heilen'}).click();
