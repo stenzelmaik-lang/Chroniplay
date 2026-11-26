@@ -2,12 +2,12 @@
 
 import {Children,isValidElement,useCallback,useEffect,useLayoutEffect,useRef,useState,type ReactNode} from 'react';
 import {createPortal} from 'react-dom';
-import {ArrowLeft,ArrowRight,BookOpen,ChevronRight,Dices,EyeOff,Layers,LayoutGrid,Maximize2,Minimize2,PanelRightClose,Radio,RotateCcw,StretchHorizontal,Volume2,X,Zap,Keyboard,Pencil,Users} from 'lucide-react';
+import {ArrowLeft,ArrowRight,BookOpen,ChevronRight,Dices,EyeOff,Layers,LayoutGrid,Maximize2,Minimize2,PanelRightClose,Radio,RotateCcw,StretchHorizontal,Volume2,X,Zap,Keyboard,Pencil,Users,ListOrdered} from 'lucide-react';
 import {regieGroups,regieAreaLabels,regieAreaOf,regieGroupOf,type RegieGroup} from '@/domain/regie-studio';
 import {Block,type TileProps,type useRegieLayout} from './regie-tiles';
 import styles from './regie-studio.module.css';
 
-const groupIcons={scene:BookOpen,interaction:Layers,mood:Volume2,checks:Dices,players:Users,table:LayoutGrid};
+const groupIcons={scene:BookOpen,interaction:Layers,mood:Volume2,checks:Dices,players:Users,table:LayoutGrid,evening:ListOrdered};
 const quickTools=[['Szenenmaterial','Material',Layers,'M'],['effects','Effekte',Zap,'E'],['Pager · spontan','Pager',Radio,'P']] as const;
 const readingAreas=regieGroups[0].areas as readonly string[];
 

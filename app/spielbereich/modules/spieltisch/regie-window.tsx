@@ -1,6 +1,10 @@
 "use client";
 /* eslint-disable @next/next/no-img-element -- Authenticated GM media must never use a public optimization proxy. */
 import {DeliveryDesk} from './delivery-desk';
+import {RegieLinks} from './regie-links';
+import {RegieLocations} from './regie-locations';
+import {RegieMilestones} from './regie-milestones';
+import {RegieEvening} from './regie-evening';
 import {memo,useCallback,useEffect,useRef,useState} from 'react';
 import {Eye,EyeOff,Lock,Clapperboard,Image as ImageIcon,FileText,Music,Film,Search,X,RotateCcw,CloudRain,CloudFog,CloudLightning,Snowflake,Flame,Moon,Lightbulb,UserPlus,UserMinus,Send,Undo2,MonitorPlay,Minus,Plus,Square,Radio,BookOpen,Users,LayoutGrid as LayoutGridIcon,ChevronUp,MoonStar,FlameKindling,Sparkles} from 'lucide-react';
 import type {Actor} from '@/domain/types';
@@ -327,6 +331,7 @@ export function RegieWindow({a,sessionHint}:{a:Actor;sessionHint:string}){
      <span><LayoutGridIcon/>{objects.length} auf dem Tisch</span>
     </>}>
 
+    <Block title="Abendfolge" area="evening"><RegieEvening sessionId={room!.sessionId} stageSceneId={snapshot?.stageSceneId||""} busy={busy} activate={activate}/></Block>
     <Block title="Szenenmaterialien" area={sceneMaterialArea}>
      <p>Aus der Kommandozentrale für die ausgewählte Szene vorbereitet.</p>
      {context.materials?.length?<RegieMaterials heading={false} materials={context.materials} objects={snapshot?.objects||[]} crew={crew} busy={busy} run={(body,done)=>run(body,null,done)}/>:<p className={regieStyles.empty}>Für diese Szene ist noch kein Szenenmaterial vorbereitet.</p>}
@@ -349,8 +354,10 @@ export function RegieWindow({a,sessionHint}:{a:Actor;sessionHint:string}){
      {checksShown&&<Block title="Proben" area="checks"><div style={{fontSize:textSize+'em'}} data-text-area="checks"><section className={styles.textArea} aria-label="Proben"><h3>Proben</h3>{snapshot?.checksSwitch&&<ChecksSwitch on={snapshot.checksSwitch.on} busy={busy} onSwitch={(body,target)=>run(body,target,snapshot.checksSwitch?.on?'Charakterproben ausgeschaltet.':'Charakterproben eingeschaltet.')}/>}<CheckDesk sceneId={s!.id} notes={context.notes} crew={crew} figures={snapshot?.vitals?.round} checks={snapshot?.checks||[]} events={snapshot?checkRolls(snapshot):[]} checksEnabled={!!snapshot?.checksEnabled} busy={busy} onIssue={(body,target)=>run(body,target,'Probe ausgegeben.')}/></section></div></Block>}
      <Block title="Visionen & Briefe" area="whispers"><div style={{fontSize:textSize+'em'}} data-text-area="whispers"><DeliveryDesk items={context.whispers||[]} sceneId={s!.id} version={s!.version} sessionId={room!.sessionId} crew={crew} objects={objects} onCommand={body=>run(body,null)}/></div></Block>
      <Block title="Geheimnisse" area="secrets"><div style={{fontSize:textSize+'em'}} data-text-area="secrets"><section className={styles.textArea} aria-label="Geheimnisse"><h3>Geheimnisse · nur SL</h3><Text value={s!.secrets} empty="Keine Geheimnisse hinterlegt."/>{s!.visions.trim()&&<><h4>Visionen</h4><Text value={s!.visions} empty=""/></>}</section></div></Block>
-     <Block title="Folgen" area="consequences"><div style={{fontSize:textSize+'em'}} data-text-area="consequences"><section className={styles.textArea} aria-label="Folgen"><h3>Mögliche Folgen</h3><Text value={s!.possibleConsequences} empty="Keine Folgen vorbereitet."/>{s!.possibilities.map(p=><article key={p.id} className={regieStyles.note}><h4>{p.title}</h4><p>{p.text}</p></article>)}</section></div></Block>
+     <Block title="Folgen" area="consequences"><div style={{fontSize:textSize+'em'}} data-text-area="consequences"><section className={styles.textArea} aria-label="Folgen"><h3>Mögliche Folgen</h3><Text value={s!.possibleConsequences} empty="Keine Folgen vorbereitet."/><RegieLinks links={s!.links} pending={s!.pending} noteClassName={regieStyles.note} headingLevel={4}/>{s!.possibilities.map(p=><article key={p.id} className={regieStyles.note}><h4>{p.title}</h4><p>{p.text}</p></article>)}</section></div></Block>
      <Block title="SL-Notizen" area="notes"><div style={{fontSize:textSize+'em'}} data-text-area="notes"><section className={styles.textArea} aria-label="SL-Notizen"><h3>SL-Notizen</h3><Text value={s!.gmNotes} empty="Keine SL-Notizen."/></section></div></Block>
+      <Block title="Orte der Szene" area="locations"><RegieLocations key={s!.id+":"+(context.locations||[]).map(l=>l.id+":"+l.revision+":"+l.worldState).join("|")} sessionId={room!.sessionId} sceneId={s!.id} locations={context.locations||[]}/></Block>
+      <Block title="Meilensteine" area="milestones"><RegieMilestones/></Block>
 
 
     <Block title="Tonaufnahmen · Kassette" area="recordings">{sceneAudio.length?sceneAudio.map(m=>media(m,Music,'audio')):<p className={regieStyles.empty}>Keine Tonaufnahme mit dieser Szene verknüpft.</p>}</Block>

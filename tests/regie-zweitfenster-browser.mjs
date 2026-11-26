@@ -40,7 +40,7 @@ try{
 
   // Pager to A only: A sees it float in, B does not.
   const text='Ruf an, '+name+' – '+Date.now();
-  const pager=regie.getByRole('group',{name:'Empfänger: Pager'});
+  await regie.getByRole('button',{name:/^Pager.*Alt P/}).click();const pager=regie.getByRole('group',{name:'Empfänger: Pager'});
   await pager.getByRole('button',{name:nameA}).click();
   await regie.getByLabel('Pager-Nachricht').fill(text);await regie.getByRole('button',{name:'Pager senden'}).click();
   await pa.getByRole('region',{name:'Pager'}).getByText(text,{exact:true}).waitFor();

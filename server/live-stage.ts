@@ -8,8 +8,19 @@ import {archivedCheckRolls,liveEvents} from './live-commands';
 import type {LiveEvent} from '@/domain/live-game';
 import {loadEntities,loadEntitiesForIds} from './entities';
 import {listScenes,readScene} from './story-scenes';
+import {listThreads} from './plot-threads';
+import {recordSceneRun} from './scene-play';
+import {stateName,strandKinds,strandsForScene} from '@/domain/plot-threads';
 import {preparedSession} from './story-preparation';
 import {emptyScenePager,type SceneSummary} from '@/domain/story-scene';
+import {regieTexts} from '@/domain/scene-possibilities';
+import {sceneLocationsFrom,type SceneLocationRow} from '@/domain/regie-locations';
+async function sceneLocations(db:D1Database,campaignId:string,ids:string[],main:Set<string>){
+ if(!ids.length)return [];
+ const rows=(await db.prepare(`SELECT n.entity_id,n.location_id,n.level,n.revision,n.world_state,n.attributes,e.title FROM location_nodes n JOIN entities e ON e.campaign_id=n.campaign_id AND e.id=n.entity_id WHERE n.campaign_id=? AND n.entity_id IN (${ids.map(()=>'?').join(',')})`).bind(campaignId,...ids).all<SceneLocationRow>()).results;
+ return sceneLocationsFrom(rows,ids,main);
+}
+
 import {liveSceneChoice} from '@/domain/session-overview';
 import {stageSchema,emptyStage,stageVisible,pagerVisible,changeStageObjects,stageSourceToken,stageMediaOf,startYoutube,youtubePlaylist,type StageCommand,type StageState,type StageObject,type StageBackdrop,type StageMusic} from '@/domain/live-stage';
 import {reportForStoredV20Roll} from '@/domain/w10';
@@ -59,14 +70,20 @@ export async function stageSource(a:Actor,id:string,kind:'entity'|'file'|'record
 export async function stageRegie(a:Actor,sessionId:string,sceneId:string){
  gmOnly(a);await stageRoom(a,sessionId);
  const db=database(),scene=await readScene(db,a,sceneId),d=scene.document;
- const refs=[d.placeId,...d.npcIds,...d.clueIds,...d.elements.map(e=>e.referenceId)].filter(Boolean);
+ const refs=[d.placeId,...d.npcIds,...d.clueIds,...d.elements.map(e=>e.referenceId),...(d.insights||[]).map(i=>i.clueId)].filter(Boolean);
  const fileIds=[...new Set([d.backdropFileId,...d.elements.map(e=>e.fileId)].filter(Boolean))];
  const [entities,files]=await Promise.all([loadEntitiesForIds(db,a.campaignId,refs),fileIds.length?db.prepare(`SELECT id,name,mime FROM files WHERE campaign_id=? AND id IN (${fileIds.map(()=>'?').join(',')})`).bind(a.campaignId,...fileIds).all<{id:string;name:string;mime:string}>():Promise.resolve({results:[] as {id:string;name:string;mime:string}[]})]);
  const entity=(id:string)=>entities.find(e=>e.id===id),text=(v:unknown)=>typeof v==='string'?v:'';
  const npcIds=[...new Set([...d.npcIds,...d.elements.filter(e=>e.kind==='person'&&entity(e.referenceId)?.type==='NPC').map(e=>e.referenceId)])];
  const handoutIds=[...new Set([...d.clueIds,...d.elements.filter(e=>e.kind==='handout'&&e.referenceId).map(e=>e.referenceId)])];
+ // Storyboard 2.0: prepared connections of this scene with the target titles (SL only, like the whole Regie context).
+ const linkIds=[...new Set((d.board?.links||[]).map(l=>l.to))];
+ const linkTitles=linkIds.length?(await db.prepare(`SELECT id,title FROM entities WHERE campaign_id=? AND type='SCENE' AND id IN (${linkIds.map(()=>'?').join(',')})`).bind(a.campaignId,...linkIds).all<{id:string;title:string}>()).results:[];
+ const links=(d.board?.links||[]).map(l=>({to:l.to,title:linkTitles.find(t=>t.id===l.to)?.title||'',kind:l.kind,label:l.label,condition:l.condition}));
+ // Phase 3: what plot threads have prepared for exactly this scene (open strands only). SL only; nothing is revealed.
+ const pending=strandsForScene((await listThreads(db,a)).threads,scene.id).map(p=>({id:p.strand.id,thread:p.threadTitle,kind:strandKinds[p.strand.kind].label,title:p.strand.title,text:p.strand.text,state:stateName(p.strand),deadline:p.strand.deadline}));
  return {
-  scene:{id:scene.id,version:scene.version,title:d.title,standardFigures:d.standardFigures,narration:d.narration,atmosphere:d.atmosphere,dialogueNotes:d.dialogueNotes,interactions:d.interactions,secrets:d.secrets,visions:d.visions,possibleConsequences:d.possibleConsequences,gmNotes:d.gmNotes,possibilities:d.possibilities},
+  scene:{id:scene.id,version:scene.version,title:d.title,standardFigures:d.standardFigures,narration:d.narration,atmosphere:d.atmosphere,dialogueNotes:d.dialogueNotes,...regieTexts(d,new Map(entities.map(e=>[e.id,e.title]))),visions:d.visions,gmNotes:d.gmNotes,possibilities:d.possibilities,links,pending},
   place:entity(d.placeId)?{id:d.placeId,title:entity(d.placeId)!.title}:null,
   backdrop:files.results.filter(f=>f.id===d.backdropFileId&&f.mime.startsWith('image/')).map(f=>({fileId:f.id,name:f.name}))[0]||null,
   npcs:npcIds.flatMap(id=>{const e=entity(id);return e&&e.type==='NPC'?[{id,title:e.title,summary:text(e.content.text),gmBody:e.gmBody||'',image:'/api/live-stage/asset?sessionId='+encodeURIComponent(sessionId)+'&catalogId='+encodeURIComponent(id),cue:d.elements.filter(x=>x.referenceId===id).map(x=>x.text).join('')}]:[];}),
@@ -80,6 +97,9 @@ export async function stageRegie(a:Actor,sessionId:string,sceneId:string){
   youtube:d.youtube||[],
   // Spielmaterial 3.0: every material of the scene as one object with its files, display asset and effect (GM only).
   materials:await regieMaterials(a,scene),
+  // Orte: the places of this scene with their state on site, so the Regie can switch it (open, closed, ...).
+  // SL only like the whole context; switching uses the existing version-protected /api/locations/state route.
+  locations:await sceneLocations(db,a.campaignId,[...new Set([...(d.places||[]).map(p=>p.placeId),d.placeId].filter(Boolean))],new Set((d.places||[]).filter(p=>p.main).map(p=>p.placeId).concat(d.placeId?[d.placeId]:[]))),
  };
 }
 function diceEvent(e:LiveEvent,index:number,runId:string){
@@ -186,6 +206,8 @@ export async function stageMutation(a:Actor,sessionId:string,runId:string,expect
  const whisperBindings=whisperGuard&&source?[source.sourceId.slice(14,source.sourceId.lastIndexOf(':')),a.campaignId,source.sourceVersion!]:[];
  const result=await database().prepare("UPDATE records SET body=json_set(body,'$.stage',json(?)),version=version+1,updated_at=? WHERE id=? AND campaign_id=? AND version=? AND json_extract(body,'$.runId')=? AND json_extract(body,'$.open')=1"+sourceGuard+whisperGuard).bind(JSON.stringify(next),new Date().toISOString(),row.id,a.campaignId,row.version,runId,...sourceBindings,...whisperBindings).run();
  if(!result.meta.changes)throw new HttpError(409,'Spielstand inzwischen geändert. Deine Änderung wurde nicht überschreibend gespeichert.');
+ // Storyboard 2.0, Phase 4: starting a scene on the table records the actual play (scene runs of this evening).
+ if(c.action==='activateScene')await recordSceneRun(a,sessionId,state.sceneId||'',c.sceneId,(await preparedSession(database(),a,sessionId).catch(()=>null))?.view.document.title||'');
 }
 type StageRow=Awaited<ReturnType<typeof stageRoom>>['row'];
 async function saveStage(a:Actor,row:StageRow,runId:string,next:StageState){

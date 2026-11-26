@@ -1,0 +1,7 @@
+/* Spieltisch, Etappe 3: reached milestones as calm tiles above the map. */
+.tiles{display:grid;gap:8px;padding:10px 12px 4px}
+.tiles h3{margin:0;font-size:11px;letter-spacing:.08em;text-transform:uppercase;opacity:.7;font-weight:500}
+.tiles ul{display:flex;flex-wrap:wrap;gap:8px;margin:0;padding:0;list-style:none}
+.tiles li{display:grid;gap:2px;min-width:170px;padding:8px 10px;border:1px solid rgba(214,179,111,.35);border-radius:4px;background:rgba(214,179,111,.07)}
+.tiles strong{font-weight:500}
+.tiles small{font-size:12px;opacity:.75}

@@ -14,6 +14,7 @@ import {CheckDesk,ChecksSwitch} from './check-issue-form';
 import {pendingTargets,isTablePlayer} from '@/domain/live-checks';
 
 import {RegiePlayers} from './regie-players';
+import {RegieLinks} from './regie-links';
 export const regieTabs=[['narration','Erzählung'],['atmosphere','Atmosphäre'],['dialogue','Dialoge'],['interactions','Interaktionen'],['players','Spieler am Tisch'],['checks','Proben'],['whispers','Visionen & Briefe'],['secrets','Geheimnisse'],['consequences','Folgen'],['notes','SL-Notizen'],['material','Material']] as const;
 export type RegieTab=typeof regieTabs[number][0];
 
@@ -85,7 +86,7 @@ export function Regie({crew,onCommand,onIssue,checksEnabled,checksSwitch,checkSt
    {tab==='checks'&&<CheckDesk sceneId={s.id} notes={context.notes} crew={crew} figures={checkState?.figures} checks={checkState?.checks||[]} events={checkState?.events||[]} checksEnabled={checksEnabled} busy={busy} onIssue={onIssue} onShow={checkState?.onShow}/>}
    {tab==='whispers'&&<DeliveryDesk items={context.whispers||[]} sceneId={s.id} version={s.version} sessionId={sessionId} crew={crew} objects={table.objects} onCommand={onCommand}/>}
    {tab==='secrets'&&<><Text value={s.secrets} empty="Keine Geheimnisse hinterlegt."/>{s.visions.trim()&&<><h3>Visionen</h3><Text value={s.visions} empty=""/></>}</>}
-   {tab==='consequences'&&<><Text value={s.possibleConsequences} empty="Keine Folgen vorbereitet."/>{s.possibilities.map(p=><article key={p.id} className={styles.note}><h3>{p.title}</h3><p>{p.text}</p></article>)}</>}
+   {tab==='consequences'&&<><Text value={s.possibleConsequences} empty="Keine Folgen vorbereitet."/><RegieLinks links={s.links} pending={s.pending} noteClassName={styles.note}/>{s.possibilities.map(p=><article key={p.id} className={styles.note}><h3>{p.title}</h3><p>{p.text}</p></article>)}</>}
    {tab==='notes'&&<Text value={s.gmNotes} empty="Keine SL-Notizen."/>}
    {tab==='material'&&<>
     <section className={styles.backdrop} aria-label="Szenenbild">

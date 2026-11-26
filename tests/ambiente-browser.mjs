@@ -80,7 +80,7 @@ try{
   assert.equal(await record(pb).locator('span').first().evaluate(e=>getComputedStyle(e).animationName),'none','Reduced motion: still record');
   pass(name+': scene start plays its playlist; drawer from the corner, record turns, folded keeps playing; tap hint when blocked');
   // GM controls for everyone: pause stops the record, next track fades over, base volume, personal volume stays personal.
-  await regie.getByRole('navigation',{name:'Bereiche der Szene'}).getByRole('button',{name:'Ton & Musik',exact:true}).click();
+  await regie.getByRole('navigation',{name:'Arbeitsansichten der Regie'}).getByRole('button',{name:'Stimmung',exact:true}).click();await regie.getByRole('navigation',{name:'Werkzeuge: Stimmung'}).getByRole('button',{name:'Ambiente',exact:true}).click();
   await regie.getByRole('button',{name:'Pause für alle'}).click();
   await record(pa).and(pa.locator('[data-spinning=false]')).waitFor();await fake(pa).and(pa.locator('[data-state="2"]')).waitFor({state:'attached'});
   await regie.getByRole('button',{name:'Abspielen für alle'}).click();await record(pa).and(pa.locator('[data-spinning=true]')).waitFor();
