@@ -322,7 +322,7 @@ export default function Workspace({
         </div>
       )}
       {worldExperienceActive ? (
-        <WorldExperience a={a} dataScope={dataScope} />
+        <WorldExperience a={a} dataScope={dataScope} playerOnly />
       ) : section === "ortscms" ? (
         <LocationCMS a={a} dataScope={dataScope} />
       ) : section === "regelwerk" ? (

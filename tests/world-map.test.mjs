@@ -73,7 +73,9 @@ test("MapLibre retains its regional start frame and manages a generic marker col
   assert.match(experience, /visibleWorldPlaces\(mapHub, view === "sl"\)/);
   assert.match(experience, /return safeMapPlaces\.filter/);
   assert.match(experience, /mapMarkersForPlaces\(matchingMapPlaces, view === "sl"\)/);
-  assert.match(experience, /useState<"player" \| "sl">\(a\.gm \? "sl" : "player"\)/);
+  assert.match(experience, /useState<"player" \| "sl">\(a\.gm && !playerOnly \? "sl" : "player"\)/);
+  // Schauplätze is the player area: the SL sees the group view there and works in the Command Center (26.11.2026).
+  assert.match(workspace, /<WorldExperience a=\{a\} dataScope=\{dataScope\} playerOnly \/>/);
   assert.doesNotMatch(experience, /place\.electric-taberna|prototype-test-coordinate|6\.13827/);
   assert.match(mapModule, /https:\/\/tiles\.openfreemap\.org\/styles\/dark/);
   assert.match(mapModule, /new Map<string/);

@@ -20,6 +20,7 @@ import { api } from "./api-client";
 import { useLocationDialog } from "./location-dialog";
 import { DiscoverySteps } from "./location-discovery-steps";
 import { LocationWorldState } from "./location-world-state";
+import { LocationPreparedActions } from "./location-prepared-actions";
 import { LocationMilestoneLink } from "./location-milestone-link";
 import { openLocationPreviewChannel,type LocationPreviewMessage } from "./location-preview-channel";
 import { WorldMapLibre } from "./world-maplibre";
@@ -423,7 +424,7 @@ export function LocationCMS({a,dataScope}:{a:Actor;dataScope:string}){
           </header>
 
           {inactiveNode&&<p className={cmsStyles.inlineNotice} role="status">Dieser Eintrag liegt {node.lifecycle==="deleted"?"im Papierkorb":"im Archiv"}. Zum Bearbeiten kannst du ihn unter „Weitere Einstellungen“ und „Archiv, Papierkorb & Struktur“ wiederherstellen.</p>}
-          {!inactiveNode&&publisher&&scope==="gm"&&node.visibility==="gm"&&<p className={cmsStyles.inlineNotice}>Dieser {node.level==="area"?"Bereich":node.level==="room"?"Raum":"Eintrag"} gehört nur dir. Die Spieler sehen ihn nicht und haben dafür keinen eigenen Text. Unten legst du deine Notizen an.</p>}{!inactiveNode&&publisher&&scope==="gm"&&node.level!=="information"&&<LocationWorldState key={node.id+":"+node.revision} placeId={placeId} entry={node} onChanged={async()=>{const tree=await api<{nodes:NodeOption[]}>(`/api/cms/locations?place=${encodeURIComponent(placeId)}${includeInactive?"&includeInactive=1":""}`);setNodes(tree.nodes);setPreviewTick(tick=>tick+1);}}/>}{!inactiveNode&&publisher&&scope==="gm"&&<LocationChapters key={node.id} entityId={node.id} onDirty={setChapterDirty}/>}
+          {!inactiveNode&&publisher&&scope==="gm"&&node.visibility==="gm"&&<p className={cmsStyles.inlineNotice}>Dieser {node.level==="area"?"Bereich":node.level==="room"?"Raum":"Eintrag"} gehört nur dir. Die Spieler sehen ihn nicht und haben dafür keinen eigenen Text. Unten legst du deine Notizen an.</p>}{!inactiveNode&&publisher&&scope==="gm"&&node.level!=="information"&&<LocationWorldState key={node.id+":"+node.revision} placeId={placeId} entry={node} onChanged={async()=>{const tree=await api<{nodes:NodeOption[]}>(`/api/cms/locations?place=${encodeURIComponent(placeId)}${includeInactive?"&includeInactive=1":""}`);setNodes(tree.nodes);setPreviewTick(tick=>tick+1);}}/>}{!inactiveNode&&publisher&&scope==="gm"&&isRoot&&<LocationPreparedActions key={placeId} placeId={placeId} disabled={busy}/>}{!inactiveNode&&publisher&&scope==="gm"&&<LocationChapters key={node.id} entityId={node.id} onDirty={setChapterDirty}/>}
           {hasWork&&["public","group","player"].includes(scope)&&<>
             <nav className={cmsStyles.sectionTabs} aria-label="Redaktionsbereiche" role="tablist">
               {sections.map(section=><button key={section.id} type="button" role="tab" aria-selected={activeSection===section.id} className={activeSection===section.id?cmsStyles.sectionTabActive:cmsStyles.sectionTab} onClick={()=>setActiveSection(section.id)}>{section.label}</button>)}

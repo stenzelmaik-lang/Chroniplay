@@ -350,6 +350,9 @@
 .stateChip svg{color:var(--or-gold,#d6b36f)}
 .worldStatePanel{display:grid;gap:8px;padding:12px 14px;border:1px solid var(--or-line,#2b3a40);border-radius:4px;background:var(--or-panel-2,#16242a)}
 .worldStatePanel>p{margin:0;color:var(--or-ink,#e9e6df)}
+.preparedAction{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 0;border-top:1px solid var(--or-line,#2b3a40)}
+.preparedAction>span{display:grid;gap:2px;min-width:0}
+.preparedAction strong{font-weight:500;color:var(--or-ink,#e9e6df)}
 .worldStatePanel>p strong{font-weight:500}
 .worldStatePanel small{font-size:12.5px;color:var(--or-mute,#a7aeb0)}
 .worldStateRow{display:flex;flex-wrap:wrap;border:1px solid var(--or-line,#2b3a40);border-radius:4px;overflow:hidden;width:max-content;max-width:100%}
