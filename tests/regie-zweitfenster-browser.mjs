@@ -83,18 +83,17 @@ try{
   await pb.getByRole('region',{name:'Freigegebene Erzählung',exact:true}).waitFor({state:'detached'});
   const second=await regie.getByLabel('Szene in der Regie').locator('option').nth(1);const secondId=await second.getAttribute('value'),secondTitle=(await second.textContent()).replace(/^\d+ · /,'').replace(/ · läuft$/,'');
   await regie.getByLabel('Szene in der Regie').selectOption(secondId);
-  await sl.getByRole('button',{name:'Szenen des Abends',exact:true}).click();await sl.getByRole('complementary',{name:'Szenen des Abends',exact:true}).getByRole('button',{name:/^(Regie öffnen|Nur privat lesen)$/}).click();
-  await sl.locator('[data-scene="'+secondId+'"]').waitFor();
-  assert.ok(await sl.getByRole('heading',{name:secondTitle}).first().isVisible(),'Table drawer follows the Regie scene');
-  await sl.getByRole('button',{name:'Werkzeug schließen'}).click();
+  // Rule of 09.11.2026: the SL chooses and starts scenes in the Regie; the table has no scene panel to open.
+  assert.equal(await regie.getByLabel('Szene in der Regie').inputValue(),secondId,'Regie shows the chosen scene');
+  await regie.getByRole('heading',{name:secondTitle}).first().waitFor();
   await regie.getByLabel('Szene in der Regie').selectOption(await regie.getByLabel('Szene in der Regie').locator('option').first().getAttribute('value'));
   pass(name+': narration to B only from the text column; scene focus shared with the table drawer');
 
   // Reset for the next viewport.
-  await regie.getByRole('button',{name:'Musik stoppen'}).click();
+  await regie.getByRole('navigation',{name:'Arbeitsansichten der Regie'}).getByRole('button',{name:'Stimmung'}).click();await regie.getByRole('navigation',{name:'Werkzeuge: Stimmung'}).getByRole('button',{name:'Hintergrundmusik',exact:true}).click();await regie.getByRole('button',{name:'Musik stoppen'}).click();
   await regie.getByRole('navigation',{name:'Arbeitsansichten der Regie'}).getByRole('button',{name:'Stimmung'}).click();await regie.getByRole('navigation',{name:'Werkzeuge: Stimmung'}).getByRole('button',{name:'Effekte',exact:true}).click();await regie.locator('#regie-bereich-effects').getByRole('button',{name:'Regen',exact:true}).click();await regie.locator('#regie-bereich-effects').getByRole('button',{name:'Nebel',exact:true}).click();
   await pa.locator('[data-effect]').first().waitFor({state:'detached'});
-  await regie.getByRole('button',{name:'Pager zurückziehen'}).first().click();
+  await regie.getByRole('button',{name:/^Pager.*Alt P/}).click();await regie.getByRole('button',{name:'Pager zurückziehen'}).first().click();
   await Promise.all([gm,a,b].map(c=>c.close()));
  }
  // Player on a phone: pager and music fit in 375 px.
@@ -103,7 +102,7 @@ try{
  const regie=await gm.newPage();regie.setDefaultTimeout(15000);await regie.goto(base+'/sl/regie');await regie.getByRole('heading',{name:/^Erzählung$/}).waitFor();
  const pa=await table(a,'375 A');
  const text='Treffpunkt Tor 3 – mobil '+Date.now();
- await regie.getByRole('group',{name:'Empfänger: Pager'}).getByRole('button',{name:nameA}).click();
+ await regie.getByRole('button',{name:/^Pager.*Alt P/}).click();await regie.getByRole('group',{name:'Empfänger: Pager'}).getByRole('button',{name:nameA}).click();
  await regie.getByLabel('Pager-Nachricht').fill(text);await regie.getByRole('button',{name:'Pager senden'}).click();
  await regie.getByRole('navigation',{name:'Arbeitsansichten der Regie'}).getByRole('button',{name:'Stimmung'}).click();await regie.getByRole('navigation',{name:'Werkzeuge: Stimmung'}).getByRole('button',{name:'Hintergrundmusik',exact:true}).click();await regie.locator('li',{hasText:'Regennacht'}).getByRole('button').click();
  const box=null;
@@ -115,7 +114,7 @@ try{
  const music=await pa.getByRole('group',{name:'Hintergrundmusik'}).boundingBox();assert.ok(music.x+music.width<=375+1,'Music controls fit');
  await noHorizontalScroll(pa,'375 player');
  await pa.screenshot({path:output+'/375-spieler-a.png'});
- await regie.getByRole('button',{name:'Musik stoppen'}).click();await regie.getByRole('button',{name:'Pager zurückziehen'}).first().click();
+ await regie.getByRole('button',{name:'Musik stoppen'}).click();await regie.getByRole('button',{name:/^Pager.*Alt P/}).click();await regie.getByRole('button',{name:'Pager zurückziehen'}).first().click();
  pass('375: pager and music fit a phone');
  await Promise.all([gm,a].map(c=>c.close()));
  assert.deepEqual(errors,[],'No page errors');
