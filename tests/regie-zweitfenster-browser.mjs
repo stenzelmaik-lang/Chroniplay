@@ -63,7 +63,7 @@ try{
   pass(name+': rain and fog for the round, reduced motion respected');
 
   // Background music: personal volume, browser decides about autoplay (start button otherwise).
-  await regie.locator('li',{hasText:'Regennacht'}).getByRole('button').click();
+  await regie.getByRole('navigation',{name:'Arbeitsansichten der Regie'}).getByRole('button',{name:'Stimmung'}).click();await regie.getByRole('navigation',{name:'Werkzeuge: Stimmung'}).getByRole('button',{name:'Hintergrundmusik',exact:true}).click();await regie.locator('li',{hasText:'Regennacht'}).getByRole('button').click();
   for(const p of [pa,pb])await p.getByRole('group',{name:'Hintergrundmusik'}).waitFor();
   await pa.getByLabel('Eigene Musiklautstärke').fill('0.2');
   assert.equal(await pb.getByLabel('Eigene Musiklautstärke').inputValue(),'0.5','Volume is personal');
@@ -104,7 +104,7 @@ try{
  const text='Treffpunkt Tor 3 – mobil '+Date.now();
  await regie.getByRole('group',{name:'Empfänger: Pager'}).getByRole('button',{name:nameA}).click();
  await regie.getByLabel('Pager-Nachricht').fill(text);await regie.getByRole('button',{name:'Pager senden'}).click();
- await regie.locator('li',{hasText:'Regennacht'}).getByRole('button').click();
+ await regie.getByRole('navigation',{name:'Arbeitsansichten der Regie'}).getByRole('button',{name:'Stimmung'}).click();await regie.getByRole('navigation',{name:'Werkzeuge: Stimmung'}).getByRole('button',{name:'Hintergrundmusik',exact:true}).click();await regie.locator('li',{hasText:'Regennacht'}).getByRole('button').click();
  const box=null;
  await pa.getByText(text,{exact:true}).waitFor();await pa.getByRole('group',{name:'Hintergrundmusik'}).waitFor();
  await pa.waitForTimeout(1200);// the pager has floated in
