@@ -113,7 +113,9 @@ export async function publicWorldIntegration({ req, check, base, ids }) {
   const shownEntry = await chronicle('gm', 'Die Versammlung ' + tag, 'group', { type: 'ereignis', date: '2026-03-12', text: chronicleText, showOnWebsite: true, sessionId: secret + '_SESSION' }, { gmBody: secret + '_GM_BODY' });
   const draftEntry = await chronicle('gm', secret + '_DRAFT', 'sl', { type: 'ereignis', date: '2026-03-13', text: 'Entwurf', showOnWebsite: true });
   const unmarkedEntry = await chronicle('gm', secret + '_UNMARKED_ENTRY', 'group', { type: 'ereignis', date: '2026-03-14', text: 'Nur für die Runde' });
-  check([shownEntry, draftEntry, unmarkedEntry].every(r => r.s === 200), 'PUBLIC-WORLD synthetic chronicle entries created by the SL');
+  // An old entry with plain HTML (no rich-text prefix): image and internal link must not survive as text either.
+  const legacyEntry = await chronicle('gm', 'Alte Nachricht ' + tag, 'group', { date: '2025-12-01', text: '<p>Ein Brief aus alter Zeit.</p><img src="/api/files?id=' + secret + '_LEGACY_FILE"><p><a href="/spielbereich?bereich=chronik">Zum Archiv</a> /api/files?id=' + secret + '_PASTED</p>', showOnWebsite: true });
+  check([shownEntry, draftEntry, unmarkedEntry, legacyEntry].every(r => r.s === 200), 'PUBLIC-WORLD synthetic chronicle entries created by the SL');
   check((await chronicle('a', secret + '_PLAYER_ENTRY', 'group', { text: 'x', showOnWebsite: true })).s === 403, 'PUBLIC-WORLD players cannot write a marked chronicle entry');
   const playerNote = await req('/api/records', 'a', 'POST', { kind: 'notizen', title: secret + '_PLAYER_NOTE', visibility: 'group', body: { text: 'x', showOnWebsite: true } });
   check(playerNote.s === 200, 'PUBLIC-WORLD a player may still write a personal note carrying the flag key');
@@ -130,7 +132,9 @@ export async function publicWorldIntegration({ req, check, base, ids }) {
   check(fox.name === visiblePerson.title && fox.alias === 'Die Füchsin' && fox.role === 'Informantin' && fox.clan === '' && fox.summary.includes('Kennt die Gassen.'), 'PUBLIC-WORLD the NPC shows only released fields (unreleased clan stays empty)');
   const entries = pub.d.chronicle;
   const assembly = entries.find(item => item.id === shownEntry.d.id);
-  check(entries.length === 1 && !!assembly && assembly.date === '2026-03-12' && assembly.kind === 'ereignis' && assembly.text.includes('Der Prinz rief zur Versammlung.'), 'PUBLIC-WORLD only the group-released, marked chronicle entry is public');
+  const legacy = entries.find(item => item.id === legacyEntry.d.id);
+  check(!!legacy && legacy.text.includes('Ein Brief aus alter Zeit.') && legacy.text.includes('Zum Archiv'), 'PUBLIC-WORLD an old HTML entry keeps its readable text');
+  check(entries.length === 2 && !!assembly && assembly.date === '2026-03-12' && assembly.kind === 'ereignis' && assembly.text.includes('Der Prinz rief zur Versammlung.'), 'PUBLIC-WORLD only group-released, marked chronicle entries are public');
   check(Object.keys(assembly).sort().join() === 'date,id,kind,text,title', 'PUBLIC-WORLD the chronicle entry carries only allowlisted fields');
   const forbidden = [secret, '/api/files', '/api/cms/media', '/api/locations/media', '/spielbereich', 'SYNTHETIC_UNGRANTED_PLACE', 'SYNTHETIC_SECRET_ROOM', 'Isolated QA action', 'sprint1-'];
   for (const value of forbidden) check(!pub.text.includes(value), 'PUBLIC-WORLD the public API never contains ' + value);
@@ -154,6 +158,6 @@ export async function publicWorldIntegration({ req, check, base, ids }) {
     const current = await node(id);
     if (current?.showOnWebsite) check((await mark('gm', id, current.revision, false)).s === 200, 'PUBLIC-WORLD fixture flag removed again: ' + id);
   }
-  for (const entry of [shownEntry, draftEntry, unmarkedEntry]) await req('/api/records', 'gm', 'DELETE', { id: entry.d.id, version: entry.d.version });
+  for (const entry of [shownEntry, draftEntry, unmarkedEntry, legacyEntry]) await req('/api/records', 'gm', 'DELETE', { id: entry.d.id, version: entry.d.version });
   await req('/api/records', 'a', 'DELETE', { id: playerNote.d.id, version: playerNote.d.version });
 }

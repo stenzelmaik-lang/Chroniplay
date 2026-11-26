@@ -3,7 +3,7 @@
 // subset of what the whole group may see; the explicit website flag alone never discloses anything.
 // Note: "public" in the location model means "generally known inside the game", not "shown on the website".
 // The website release therefore uses its own flag keys below.
-import { encodeRichText, readRichText, type RichTextBlock, type RichTextDocument, type RichTextInline } from "./location-rich-text.ts";
+import { encodeRichText, htmlToRichText, readRichText, richTextPrefix, type RichTextBlock, type RichTextDocument, type RichTextInline } from "./location-rich-text.ts";
 
 /** Stored flag keys, one per source. Each lives in an existing JSON field, so no migration is needed. */
 export const websiteFlagKeys = {
@@ -64,9 +64,27 @@ export function publicStaticImage(value: unknown): string {
 const cleanLine = (value: unknown, max = 200) => typeof value === "string" ? value.replace(/\s+/g, " ").trim().slice(0, max) : "";
 const cleanList = (value: unknown) => Array.isArray(value) ? value.map(item => cleanLine(item)).filter(Boolean).slice(0, 20) : [];
 
+// Addresses that need a login (uploads, the protected app) or carry internal IDs. Old entries may contain them as plain
+// text or in pasted HTML/Markdown; guests get neither the address nor a broken image.
+const protectedAddress = String.raw`(?:https?://[^\s"'<>()]*?)?/(?:api/(?:files|cms/media|locations/media)|spielbereich|sl/command-center)(?:[?#][^\s"'<>()]*)?`;
+const protectedAddresses = new RegExp(protectedAddress, "gi");
+const isProtectedAddress = new RegExp("^" + protectedAddress + "$", "i");
+const markdownImages = /!\[[^\]]*\]\([^)]*\)/g;
+const scrub = (text: string) => text.replace(markdownImages, "").replace(protectedAddresses, "");
+
+/** Current documents are read as stored; old HTML goes through the existing converter (images become image blocks). */
+function readPublicDocument(value: string): RichTextDocument {
+  if (value.startsWith(richTextPrefix) || !/<\/?[a-z][^>]*>/i.test(value)) return readRichText(value);
+  try { return readRichText(htmlToRichText(value)); }
+  catch { return readRichText(value.replace(/<[^>]*>/g, " ")); }
+}
+
 function publicInlines(parts: RichTextInline[]): RichTextInline[] {
   // Internal links lead into the protected app (and carry entry IDs); keep their text, drop the target.
-  return parts.map(({ href, ...rest }) => href && /^(https?:|mailto:)/i.test(href) ? { ...rest, href } : rest);
+  return parts.map(({ href, text, ...rest }) => {
+    const clean = { ...rest, text: scrub(text) };
+    return href && /^(https?:|mailto:)/i.test(href) && !isProtectedAddress.test(href) ? { ...clean, href } : clean;
+  });
 }
 
 function publicBlocks(blocks: RichTextBlock[]): RichTextBlock[] {
@@ -75,7 +93,7 @@ function publicBlocks(blocks: RichTextBlock[]): RichTextBlock[] {
     if (block.type === "image") return [];
     if (block.type === "details") {
       const content: RichTextDocument = { version: 1, blocks: publicBlocks(block.content.blocks) };
-      return content.blocks.length ? [{ ...block, content }] : [];
+      return content.blocks.length ? [{ ...block, summary: scrub(block.summary), content }] : [];
     }
     if (block.type === "bulletList" || block.type === "orderedList") return [{ ...block, items: block.items.map(publicInlines) }];
     if (block.type === "table") return [{ ...block, rows: block.rows.map(row => row.map(publicInlines)) }];
@@ -97,7 +115,7 @@ function documentText(blocks: RichTextBlock[]): string {
 /** Rich text for guests: images removed (also inside collapsible blocks), internal links reduced to their text. */
 export function publicRichText(value: unknown): string {
   if (typeof value !== "string" || !value.trim()) return "";
-  const blocks = publicBlocks(readRichText(value).blocks);
+  const blocks = publicBlocks(readPublicDocument(value).blocks);
   if (!documentText(blocks).trim()) return "";
   return encodeRichText({ version: 1, blocks });
 }
@@ -105,7 +123,7 @@ export function publicRichText(value: unknown): string {
 /** Plain teaser of a (public) rich text value. */
 export function publicTeaser(value: unknown, max = 220): string {
   if (typeof value !== "string" || !value.trim()) return "";
-  const text = documentText(readRichText(value).blocks).replace(/\s+/g, " ").trim();
+  const text = documentText(publicBlocks(readPublicDocument(value).blocks)).replace(/\s+/g, " ").trim();
   return text.length > max ? text.slice(0, max).replace(/\s\S*$/, "") + " …" : text;
 }
 

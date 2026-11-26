@@ -47,6 +47,25 @@ test("public rich text drops images (also nested) and internal links, keeps exte
   assert.ok(publicRichText("Schlichter alter Text").includes("Schlichter alter Text"), "legacy plain text stays readable");
 });
 
+test("old entries (HTML, plain text, Markdown) lose protected file addresses and internal links", () => {
+  const cases = {
+    html: '<p>Vor dem Tor <a href="/spielbereich?bereich=schauplaetze&ort=FILE_A">Dossier</a></p><img src="/api/files?id=FILE_B" alt="Plan"><p>Ende <a href="https://example.invalid/kleve">extern</a></p>',
+    plain: "Siehe Bild: /api/files?id=FILE_C und https://chroniplay.cc/api/cms/media?id=FILE_D&entityId=e sowie /sl/command-center?bereich=FILE_E",
+    markdown: "Text ![Plan](/api/locations/media?id=FILE_F) weiter",
+    absoluteLink: '<p><a href="https://chroniplay.cc/api/files?id=FILE_G">Bild</a></p>',
+  };
+  for (const [name, value] of Object.entries(cases)) {
+    for (const out of [publicRichText(value), publicTeaser(value)]) {
+      assert.ok(!/FILE_|\/api\/|spielbereich|command-center|<img|<p>/.test(out), name + ": " + out);
+    }
+  }
+  assert.equal(publicTeaser(cases.html), "Vor dem Tor Dossier Ende extern", "HTML keeps its readable text");
+  const htmlDocument = readRichText(publicRichText(cases.html));
+  assert.ok(htmlDocument.blocks.some(block => block.children?.some(part => part.href === "https://example.invalid/kleve")), "external links survive");
+  assert.equal(publicTeaser(cases.markdown), "Text weiter");
+  assert.equal(publicRichText('<img src="/api/files?id=FILE_H">'), "", "an old image-only text is empty");
+});
+
 test("teasers are plain and bounded", () => {
   const value = rich([{ type: "paragraph", children: [{ text: "Eins zwei drei vier fünf sechs" }] }]);
   assert.equal(publicTeaser(value, 100), "Eins zwei drei vier fünf sechs");
