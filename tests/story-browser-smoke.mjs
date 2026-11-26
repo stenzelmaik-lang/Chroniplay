@@ -127,13 +127,15 @@ async function openClassicPreparation(){
   phase = "create Spielabend from SL UI";
   await page.goto(base + "/sl/command-center", { waitUntil: "domcontentloaded" });
   const management=page.getByRole("navigation",{name:"Verwaltungsbereiche"});
-  assert.ok(await management.getByRole("button",{name:/Spieler & Charaktere/}).isVisible(), "the start page lists the modules");
+  // The overview is decided on the client (no `bereich` in the address), so wait for it instead of checking at once.
+  await management.getByRole("button",{name:/Spieler & Charaktere/}).waitFor({timeout:15000}).catch(()=>{throw new Error("the start page lists the modules");});
   await openModule(/Orte/);
   await page.waitForFunction(()=>new URLSearchParams(location.search).get("bereich")==="ortscms");
   await openModule(/Spielabende & Szenen/);
+  await openClassicPreparation();// the storyboard is the default view; this flow checks the classic workspace, as on main
   await page.getByRole("heading", {name:"Spielabend & Story",exact:true}).waitFor();
-  assert.ok(await page.getByRole("region",{name:"Handlungsstränge",exact:true}).isVisible());
-  assert.ok(await page.getByRole("region",{name:"Freie Szenen",exact:true}).isVisible());
+  await page.getByRole("region",{name:"Handlungsstränge",exact:true}).waitFor();
+  await page.getByRole("region",{name:"Freie Szenen",exact:true}).waitFor();
   await page.getByRole("button", { name: "+ Spielabend anlegen" }).click();
   await page.waitForFunction(() => new URLSearchParams(location.search).has("session"));
   const sessionId = new URL(page.url()).searchParams.get("session");
@@ -186,6 +188,7 @@ async function openClassicPreparation(){
   assert.ok((await overview.innerText()).includes("Eine stille Nacht in Kleve."),"Scene summary is visible before editing");
   assert.equal(await page.getByRole("region",{name:"Weitere Vorbereitungen"}).count(),0,"Independent preparations remain on the home overview");
   await openModule(/Spielabende & Szenen/);
+  await openClassicPreparation();// opening a module resets the address, so the classic view is chosen again
   await page.getByRole("region",{name:"Alle Spielabende",exact:true}).waitFor();
   await page.getByRole("button",{name:`Spielabend öffnen: ${sessionTitle}`,exact:true}).click();
   await overview.waitFor();
