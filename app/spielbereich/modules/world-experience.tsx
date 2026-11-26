@@ -103,6 +103,8 @@ export function WorldExperience({
   const embeddedDossier = projectionOverride !== undefined;
   const [view, setView] = useState<"player" | "sl">(a.gm && !playerOnly ? "sl" : "player");
   const slTools = a.gm && !playerOnly;
+  const [turnedCards, setTurnedCards] = useState<string[]>([]);
+  const toggleCard = (id: string) => setTurnedCards(list => list.includes(id) ? list.filter(item => item !== id) : [...list, id]);
   const target = a.gm ? "group" : "player";
   const activeHubKey = hubKey(view, target);
   const scopedHubKey = `${dataScope}\u0000${activeHubKey}`;
@@ -564,11 +566,13 @@ export function WorldExperience({
       </details>}
     </article> : <>
       <article className={styles.locationPage} aria-labelledby="location-title">
-        <section className={styles.locationHero}>
+        <section className={styles.locationHero} data-world-state={location.worldState}>
           {location.image && <img className={styles.locationHeroImage} src={location.image} alt={`${location.title} in der Spielwelt`} fetchPriority="high" />}
           <div className={styles.heroVeil} />
+          {/* Orte, A: the state of the place, deliberately quiet (owner, 26.11.2026). Still image under reduced motion. */}
+          {location.worldState !== "active" && <span className={styles.stateEffect} data-state={location.worldState} aria-hidden="true">{location.worldState === "destroyed" && <><svg className={styles.stateCrack} viewBox="0 0 120 220" preserveAspectRatio="none" focusable="false"><path d="M118 0 L86 44 L99 69 L61 117 L76 141 L38 220"/></svg><span className={styles.stateStamp}>Zerstört</span></>}</span>}
           <div className={styles.heroTopline}><button type="button" className={styles.backLink} onClick={returnToMap}><ArrowLeft size={16} />{embeddedDossier ? "Zur Redaktion" : "Zur Karte"}</button>{location.district && <span className={styles.heroLocation}><MapPin size={14} />{location.district}</span>}</div>
-          <div className={styles.heroContent}><div><p className={styles.kicker}>{location.subtitle && <>{location.subtitle} <span>·</span> </>}<DiscoveryIcon state={location.discovery} size={13}/>{discoveryLabel(location.discovery).toUpperCase()}</p><h1 id="location-title">{location.title}</h1>{location.summary && <div className={styles.heroSummary}><RichTextView value={location.summary}/></div>}<div className={styles.heroActions}>{!embeddedDossier&&<a className={styles.imageAction} href="#eigene-ortsnotizen"><NotebookPen size={15}/> Eigene Erkenntnis notieren</a>}{areaList.length > 0 && <button type="button" className={styles.primaryAction} onClick={() => { if(areaList[0])chooseArea(areaList[0].viewKey); document.getElementById("known-areas")?.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? "instant" : "smooth", block: "start" }); }}><Compass size={16} />Bekannte Bereiche <ArrowDownRight size={15} /></button>}{location.image && <button type="button" className={styles.imageAction} onClick={event=>openImage(event,location.image!,location.title)}><Maximize2 size={15} />Bild ansehen</button>}</div></div><div className={styles.heroAside}><span className={styles.statePip} />{discoveryLabel(location.discovery)}<small>{stateLabel(location.worldState)}</small></div></div>
+          <div className={styles.heroContent}><div><p className={styles.kicker}>{location.subtitle && <>{location.subtitle} <span>·</span> </>}<DiscoveryIcon state={location.discovery} size={13}/>{discoveryLabel(location.discovery).toUpperCase()}</p><h1 id="location-title">{location.title}</h1>{location.worldState !== "active" && <p className={styles.stateChip} data-state={location.worldState}><WorldStateIcon state={location.worldState} size={14}/>{stateLabel(location.worldState)}</p>}{location.summary && <div className={styles.heroSummary}><RichTextView value={location.summary}/></div>}<div className={styles.heroActions}>{!embeddedDossier&&<a className={styles.imageAction} href="#eigene-ortsnotizen"><NotebookPen size={15}/> Eigene Erkenntnis notieren</a>}{areaList.length > 0 && <button type="button" className={styles.primaryAction} onClick={() => { if(areaList[0])chooseArea(areaList[0].viewKey); document.getElementById("known-areas")?.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? "instant" : "smooth", block: "start" }); }}><Compass size={16} />Bekannte Bereiche <ArrowDownRight size={15} /></button>}{location.image && <button type="button" className={styles.imageAction} onClick={event=>openImage(event,location.image!,location.title)}><Maximize2 size={15} />Bild ansehen</button>}</div></div><div className={styles.heroAside}><span className={styles.statePip} />{discoveryLabel(location.discovery)}<small>{stateLabel(location.worldState)}</small></div></div>
           <span className={styles.heroIndex} aria-hidden="true">01 <i>/</i> ORT</span>
         </section>
 
@@ -624,7 +628,14 @@ export function WorldExperience({
             <LocationKnowledgeSearch onNavigate={openLocationReference} placeId={location.id} view={projection.view} viewerId={previewViewerId}/>
             {location.knownInformation.length > 0 && <section className={styles.informationSection}>
               <header className={styles.detailSectionHeader}><div><p className={styles.kicker}>FREIGEGEBENE ERKENNTNISSE</p><h2>Was hängen blieb</h2></div><BookOpen size={19} /></header>
-              <div className={styles.informationList}>{location.knownInformation.map((info) => <button type="button" className={styles.informationRow} key={info.id} onClick={(event) => { lastOverlayTrigger.current = event.currentTarget; setOverlay({ kind: "clue", title: info.title, text: info.text,media:info.media }); }}><span><Sparkles size={15} /></span><span><strong>{info.title}</strong><small>{richTextToPlainText(info.text)}</small></span><ArrowUpRight size={15} /></button>)}</div>
+              {/* Orte, B: known information as cards. Turning shows the text; "Ganz lesen" opens the existing reader with media. */}
+              <div className={styles.informationCards}>{location.knownInformation.map((info) => { const turned = turnedCards.includes(info.id), plain = richTextToPlainText(info.text); return <article className={styles.infoCard} data-turned={turned || undefined} key={info.id} aria-label={info.title}>
+                <div className={styles.infoCardInner}>
+                  <div className={styles.infoCardFront} aria-hidden={turned} inert={turned}><p className={styles.infoKicker}><Sparkles size={12} aria-hidden="true"/>{noteKindLabel(info.noteType)}</p><h3>{info.title}</h3>{plain && <p className={styles.infoTeaser}>{plain}</p>}</div>
+                  <div className={styles.infoCardBack} aria-hidden={!turned} inert={!turned}><p className={styles.infoKicker}>{info.title}</p><div className={styles.infoBackText}>{plain || "Kein weiterer Text."}</div></div>
+                </div>
+                <div className={styles.infoCardActions}><button type="button" aria-pressed={turned} onClick={() => toggleCard(info.id)}>Umdrehen</button><button type="button" onClick={(event) => { lastOverlayTrigger.current = event.currentTarget; setOverlay({ kind: "clue", title: info.title, text: info.text, media: info.media }); }}>Ganz lesen <ArrowUpRight size={14} aria-hidden="true"/></button></div>
+              </article>; })}</div>
             </section>}
 
             {groupVisibilityFor(projection.location.id)}
@@ -676,6 +687,11 @@ export function WorldExperience({
 function discoveryLabel(value: string) {
   const labels: Record<string, string> = { hidden: "Verborgen", rumored: "Gerücht", known: "Bekannt", visited: "Besucht", investigated: "Untersucht" };
   return labels[value] ?? "Bekannt";
+}
+
+function noteKindLabel(kind: string) {
+  const labels: Record<string, string> = { note: "Hinweis", suspicion: "Verdacht", insight: "Erkenntnis", question: "Frage", task: "Aufgabe", memory: "Erinnerung", theory: "Theorie" };
+  return labels[kind] ?? "Erkenntnis";
 }
 
 function stateLabel(value: string) {
