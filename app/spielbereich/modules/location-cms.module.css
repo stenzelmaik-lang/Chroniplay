@@ -83,6 +83,7 @@
 .directoryHead h2 { margin: 5px 0 0; color: #eee5d3; font: normal 22px Georgia, serif; }
 .directoryHead .button { min-width: 40px; padding: 9px; }
 .locationSelect { margin: 0; }
+.newPlaceButton { justify-self: start; display: inline-flex; align-items: center; gap: 6px; min-height: 34px; padding: 0 12px; font-size: 13px; }
 .directorySearch { display: flex; align-items: center; gap: 9px; min-height: 42px; padding: 0 12px; border: 1px solid rgba(182, 174, 154, .22); color: #cbb780; background: rgba(7, 12, 14, .68); }
 .directorySearch input { width: 100%; min-width: 0; border: 0; outline: 0; color: #e9e3d7; background: transparent; }
 .directorySearch input::placeholder { color: #838883; }
