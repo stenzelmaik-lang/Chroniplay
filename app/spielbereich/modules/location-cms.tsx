@@ -22,6 +22,7 @@ import { DiscoverySteps } from "./location-discovery-steps";
 import { LocationWorldState } from "./location-world-state";
 import { LocationPreparedActions } from "./location-prepared-actions";
 import { LocationMilestoneLink } from "./location-milestone-link";
+import { LocationWebsiteToggle } from "./website-release";
 import { openLocationPreviewChannel,type LocationPreviewMessage } from "./location-preview-channel";
 import { WorldMapLibre } from "./world-maplibre";
 import type { WorldMapMarker } from "./world-map-contract";
@@ -32,7 +33,7 @@ import { WorldExperience } from "./world-experience";
 
 type Scope="gm"|"public"|"group"|"player";
 type LocationOption={id:string;title:string;position:number;lifecycle?:string};
-type NodeOption={id:string;locationId:string;parentId:string|null;level:"location"|"area"|"room"|"information";position:number;revision:number;groupDiscovery:string;groupPublication:string;lifecycle:string;title:string;visibility?:string;unlockMilestone?:string|null};
+type NodeOption={id:string;locationId:string;parentId:string|null;level:"location"|"area"|"room"|"information";position:number;revision:number;groupDiscovery:string;groupPublication:string;lifecycle:string;title:string;visibility?:string;unlockMilestone?:string|null;showOnWebsite?:boolean};
 type PlayerOption={id:string;name:string};
 // Tree status for the group of players. A section never handled by the CMS (no release row) shows its original
 // text (Grundfassung) once discovered; the server projection treats it the same way.
@@ -489,6 +490,7 @@ export function LocationCMS({a,dataScope}:{a:Actor;dataScope:string}){
 
             {activeSection==="release"&&<section className={"panel "+cmsStyles.editorPanel} role="tabpanel">
               <div className={cmsStyles.panelIntro}><h3>{scope==="gm"?"Interne SL-Prüfung":"So sehen es die Spieler"}</h3><p>{publisher&&scope==="group"?"Jeder Abschnitt lässt sich einzeln freischalten. Gold heißt: Die Spieler sehen ihn.":"Die Vorschau zeigt den Ort genau so wie im Spielerbereich. Spieler sehen nur den freigegebenen Stand."}</p></div>
+              {publisher&&scope==="group"&&isRoot&&node.level==="location"&&!inactiveNode&&<LocationWebsiteToggle key={node.id+":"+node.revision} node={node} disabled={busy} onSaved={async()=>{const tree=await api<{nodes:NodeOption[]}>(`/api/cms/locations?place=${encodeURIComponent(placeId)}${includeInactive?"&includeInactive=1":""}`);setNodes(tree.nodes);}}/>}
               {publisher&&scope==="group"&&placeId&&<LocationReleaseOverview key={placeId+":"+release.currentVersion+":"+(release.discovery?.version??0)} placeId={placeId} selectedId={node.id} nodes={orderedNodes} disabled={busy||dirty} onOpen={id=>openSection(id,"content")} onFinish={id=>openSection(id,"release")} onShowPlayers={()=>void inspectPublished()} onChanged={async()=>{invalidatePlayerData(dataScope);clearDossierViews();setPreviewTick(tick=>tick+1);const tree=await api<{nodes:NodeOption[]}>(`/api/cms/locations?place=${encodeURIComponent(placeId)}${includeInactive?'&includeInactive=1':''}`);setNodes(tree.nodes);await refreshRelease();}}/>}
               {publisher&&scope==="group"&&node.visibility!=="gm"&&selectedDraft?.status==="draft"&&<div className={cmsStyles.releaseCurrent}><p>„{node.title}“ hat einen gespeicherten Entwurf, den die Spieler noch nicht sehen.</p><button type="button" className="button primary" disabled={busy||dirty} onClick={()=>void saveAndPublish()}><Check size={16}/> Entwurf fertigstellen und freigeben</button></div>}
               {publisher&&scope==="group"&&node.visibility!=="gm"&&!selectedDraft&&<p className={cmsStyles.releaseCurrent}>Für „{node.title}“ gibt es noch keinen Text. Schreib ihn unter „{isRoot?"Grunddaten":node.level==="information"?"Hinweis":"Inhalt"}“ und speichere ihn.</p>}

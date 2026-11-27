@@ -94,6 +94,8 @@ jobs:
             app/spielbereich/modules/preparation-whispers.tsx app/spielbereich/modules/message-center.tsx app/spielbereich/modules/personal-message-body.tsx
             app/api/messages/route.ts app/api/files/route.ts domain/personal-message.ts server/personal-message-files.ts
             server/preparation-recipients.ts domain/preparation-guide.ts tests/story-preparation.test.mjs tests/preparation-guide-browser.mjs
+            domain/public-world.ts server/public-world.ts app/api/public-world/route.ts app/api/cms/location-website/route.ts app/kampagne/welt/page.tsx
+            app/kampagne/welt/public-rich-text.tsx app/spielbereich/modules/website-release.tsx tests/public-world.test.mjs tests/public-world-integration.mjs
           )
           if [[ -f domain/w10-c1-ordinary.ts ]]; then files+=(domain/w10-c1-ordinary.ts); fi
           if [[ -f tests/w10-c1-ordinary.test.mjs ]]; then files+=(tests/w10-c1-ordinary.test.mjs); fi
