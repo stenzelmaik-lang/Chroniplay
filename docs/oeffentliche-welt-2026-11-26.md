@@ -1,6 +1,6 @@
 # Öffentliche Welt – Übergabe (26.11.2026)
 
-**Branch:** `claude/funny-clarke-dc9430` · **Basis:** `e701030` (main, live v2.6.0) · **Stand:** PR offen, nicht gemergt, nicht deployt.
+**Branch:** `claude/funny-clarke-dc9430` · **Basis:** `e701030` (main, live v2.6.0) · **Geprüfter Stand:** `1b944fb` · PR offen, nicht gemergt, nicht deployt.
 
 ## Was neu ist
 
@@ -23,7 +23,7 @@ Gruppenfreigaben werden nie automatisch öffentlich. Spielerbezogene Freigaben (
 
 Zusätzlich gilt: Ein NSC ohne freigegebenen Namen erscheint nicht; archivierte, gelöschte, unbekannte oder nur gerüchteweise bekannte Orte erscheinen nicht; Chronik-Entwürfe (`visibility='sl'`) erscheinen nicht.
 
-**Bilder und Links:** Ausgegeben werden nur mitgelieferte statische Bilder (`/images/…`). Hochgeladene Bilder (`/api/files`, `/api/cms/media`, `/api/locations/media`) verlangen eine Anmeldung und werden serverseitig entfernt, ebenso eingebettete Bilder im Fließtext (auch in aufklappbaren Blöcken) und interne Links in den Spielbereich (Text bleibt, Ziel entfällt).
+**Bilder und Links:** Ausgegeben werden nur mitgelieferte statische Bilder (`/images/…`). Hochgeladene Bilder (`/api/files`, `/api/cms/media`, `/api/locations/media`) verlangen eine Anmeldung und werden serverseitig entfernt, ebenso eingebettete Bilder im Fließtext (auch in aufklappbaren Blöcken) und interne Links in den Spielbereich (Text bleibt, Ziel entfällt). Alte Einträge ohne Rich-Text-Format laufen durch denselben Schutz: HTML geht über den vorhandenen Konverter (`htmlToRichText`), als Klartext eingefügte Adressen geschützter Dateien oder des Spielbereichs sowie Markdown-Bilder werden entfernt.
 
 > Achtung Begriff: „public“ im Ortsmodell heißt „im Spiel allgemein bekannt“. Die Website-Freigabe nutzt deshalb eigene Schlüssel (`showOnWebsite` / `show_on_website`).
 
@@ -48,15 +48,31 @@ Zusätzlich gilt: Ein NSC ohne freigegebenen Namen erscheint nicht; archivierte,
 
 Keine Datenbank-Migration, keine neue Abhängigkeit, keine Änderung an Dateiberechtigungen.
 
-## Prüfungen (lokal, Windows)
+## Prüfungen (lokal, Windows, Stand `1b944fb`)
 
-Siehe PR-Beschreibung für die beobachteten Ergebnisse.
+| Prüfung | Ergebnis |
+|---|---|
+| `npm run typecheck` | Exit 0 |
+| ESLint (alle geänderten/neuen Dateien) | Exit 0 |
+| `npm test` | 788/788 bestanden |
+| `node --experimental-strip-types --test tests/*.test.mjs` (134 Dateien) | 890/890 bestanden |
+| `npm run test:integration` (Build + isolierte lokale D1/R2) | Exit 0 · 2630 Integrationsprüfungen, davon 83 `PUBLIC-WORLD` · Rollen-Grundlage 46 · atomarer Batch-Rollback bestanden |
+
+Die neuen Integrationsprüfungen decken je neuer Route Gast, Spieler und SL ab: anonyme Lesung ohne Login und ohne Cookie; leerer Ausgangszustand; `POST/PUT/PATCH/DELETE` auf `/api/public-world` → 405 für alle; Orts-Markierung Gast 401, Spieler 403, veraltete Revision 409, Nicht-Hauptort 400; identische Antwort für Gast, Spieler und SL; markierte, aber der Gruppe unbekannte, nicht freigegebene oder archivierte Orte bleiben unsichtbar; gesperrte, namenlose oder nicht markierte NSC bleiben unsichtbar; Chronik-Entwürfe bleiben unsichtbar; alter HTML-Eintrag behält Text, verliert Bild und interne Links; Marker-Texte, `/api/files`, `/api/cms/media`, `/api/locations/media`, `/spielbereich`, Mitglieds-IDs erscheinen weder in der API noch im HTML der Gastseite; ein normales NSC-Speichern behält die Markierung; Entmarkieren entfernt den Eintrag.
+
+**Browserprüfung** (App-Browser, `scripts/test-local.mjs --command-center`, frischer temporärer Bestand, nur 127.0.0.1, synthetische Konten):
+- Desktop: Als synthetische SL über die Oberfläche markiert – Ort (Orte-Werkstatt → „Für Spieler“), Chronik-Eintrag (Rückblicke & Chronik, inkl. Hinweis vor der Freigabe) und NSC (NSC-Editor, Akte/Name/Kurzprofil freigegeben). Danach abgemeldet (`/api/members` → 401) und `/kampagne` sowie `/kampagne/welt` als Gast geprüft, inkl. „Weiterlesen“.
+- 375 px: `/kampagne` (Kachel) und `/kampagne/welt` ohne horizontales Überlaufen.
+- Nach zwei kleinen Korrekturen (Schalter im NSC-Editor einzeilig, Bereichsleiste auf 375 px) neu gebaut und gezielt nachgeprüft. In diesem zweiten Durchgang wurden die Testdaten **nicht** über die Oberfläche, sondern direkt über die SL-Routen angelegt; geprüft wurden nur Schalterdarstellung, Bereichsleiste und Initialen.
+
+Alle temporären Testbestände dieser Läufe wurden danach gelöscht.
 
 ## Prüfgrenzen
 
 - Keine Prüfung auf einem echten Mobilgerät; mobile Ansicht nur per 375-px-Emulation im App-Browser.
 - Keine Prüfung gegen Produktionsdaten. Welche echten Einträge die SL markieren möchte, ist offen.
 - Keine Last- oder Missbrauchsprüfung der anonymen Route (sie liest pro Aufruf die Ortsübersicht der Gruppe; bei viel Verkehr ggf. kurz cachen).
+- Die Rolle `campaign_editor` ist gegen `POST /api/cms/location-website` nicht per Integrationstest geprüft (das Testkonto hat keine Sitzung); der Server weist sie über `requireCmsPublisher` ab.
 
 ## Offene Punkte / Vorschläge
 
