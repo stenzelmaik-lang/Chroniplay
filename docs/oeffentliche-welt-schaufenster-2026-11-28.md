@@ -44,6 +44,14 @@ Die Grenzen gelten in `/api/public-world`, auf der Seite und in der Bildroute (e
 
 Die Biografie einer Persönlichkeit setzt sich aus den **für Spieler freigegebenen** erzählenden Blöcken der NSC-Akte zusammen (Kurzprofil als Anriss, falls kein Kurzprofil-Feld; Biografie, Vergangenheit, Beschreibung, Erzähltext, Persönlichkeit). SL-Blöcke und andere Arten bleiben ausgeschlossen. Das bleibt innerhalb von „Website ⊆ Gruppe“, weil die Gruppe genau diese Blöcke in der Akte liest.
 
+
+## Nachtrag: Ganzkörperbild und zentrale Freigabeliste (Wunsch des Eigentümers)
+
+- **Persönlichkeiten:** Gezeigt wird zuerst das **Sekundärbild** der NSC-Akte (Vollcharakter), sonst das Porträt – jeweils nur bei Feldfreigabe. Das Bild steht groß und unbeschnitten (der Rahmen passt sich dem Bild an), daneben Name, Beiname, Clan/Rolle und Anriss, darunter die aufklappbare Biografie. Die Figuren wechseln die Seite wie die Orte.
+- **Zentrale Freigabe:** Rückblicke & Chronik → **Website** zeigt alle Orte, Persönlichkeiten und Chronik-Einträge, die die Gruppe schon kennt, mit Häkchen. **„Für die Website freigeben“** (oben und unten) speichert alle Änderungen auf einmal (`POST /api/cms/public-world/release`, nur SL). Nur gelistete Einträge ändern sich; ein markierter, der Gruppe noch unbekannter Eintrag behält seine Markierung. Der Zähler zeigt die Obergrenzen, über der Grenze steht „über der Obergrenze“.
+- Die einzelnen Schalter in Orte-Werkstatt, NSC-Editor und Chronik-Editor sind entfernt; dort steht nur noch ein Hinweis mit Link zur Liste. Die gespeicherten Markierungen und `POST /api/cms/location-website` bleiben unverändert.
+- Hinweis: Eine Freigabe aus der Liste erhöht die Version des NSC bzw. Chronik-Eintrags. Ist derselbe Eintrag gleichzeitig im Editor offen, meldet dessen nächstes Speichern einen Konflikt (neu laden) statt zu überschreiben.
+
 ## Dateien
 
 Neu: `app/api/public-world/image/route.ts`, `app/api/cms/public-world/route.ts`, `app/kampagne/welt/content.ts`, `app/spielbereich/modules/public-world-desk.tsx` (+ CSS), `tests/public-world-showcase-integration.mjs`.
