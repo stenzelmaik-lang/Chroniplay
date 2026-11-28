@@ -4,8 +4,6 @@
 // Note: "public" in the location model means "generally known inside the game", not "shown on the website".
 // The website release therefore uses its own flag keys below.
 import { encodeRichText, htmlToRichText, readRichText, richTextPrefix, type RichTextBlock, type RichTextDocument, type RichTextInline } from "./location-rich-text.ts";
-import { npcPortraitSettings } from "./npc-presentation.ts";
-import type { JsonObject } from "./types.ts";
 
 /** Stored flag keys, one per source. Each lives in an existing JSON field, so no migration is needed. */
 export const websiteFlagKeys = {
@@ -42,8 +40,6 @@ export type PublicPerson = {
   affiliation: string[];
   /** A bundled static image (/images/…), the entry-addressed public image route for an upload, or "". */
   image: string;
-  /** Vertical focus of the portrait in percent (the SL's released crop setting). */
-  imageFocus: number;
 };
 export type PublicChronicleEntry = {
   id: string;
@@ -204,6 +200,9 @@ export const publicPersonBlockKinds = {
   biography: ["biography", "bio", "history", "description", "text", "personality"],
 } as const;
 export type PublicPersonBlock = { kind: string; content: string };
+/** Image order for a person: the full-body character (secondary image) first, then the portrait. Only released
+ * fields reach here, so an unreleased full-body image falls back to the released portrait. */
+export const publicPersonImageFields = ["image_secondary", "image_primary", "image"] as const;
 
 /** Plain teaser of a (public) rich text value. */
 export function publicTeaser(value: unknown, max = 220): string {
@@ -253,8 +252,7 @@ export function publicPerson(entity: { id: string; title: string; content: Recor
     description: joinPublicRichText([c.text, ...ofKinds(publicPersonBlockKinds.biography)]),
     knownFor: cleanList(c.known_for),
     affiliation: cleanList(c.affiliation),
-    image: publicImageSource("person", entity.id, [c.image_primary, c.image]).image,
-    imageFocus: npcPortraitSettings(c as JsonObject).position,
+    image: publicImageSource("person", entity.id, publicPersonImageFields.map(key => c[key])).image,
   };
 }
 

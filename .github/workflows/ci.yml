@@ -96,7 +96,7 @@ jobs:
             server/preparation-recipients.ts domain/preparation-guide.ts tests/story-preparation.test.mjs tests/preparation-guide-browser.mjs
             domain/public-world.ts server/public-world.ts app/api/public-world/route.ts app/api/cms/location-website/route.ts app/kampagne/welt/page.tsx
             app/kampagne/welt/public-rich-text.tsx app/spielbereich/modules/website-release.tsx tests/public-world.test.mjs tests/public-world-integration.mjs
-            app/api/public-world/image/route.ts app/api/cms/public-world/route.ts app/kampagne/welt/content.ts app/spielbereich/modules/public-world-desk.tsx tests/public-world-showcase-integration.mjs
+            app/api/public-world/image/route.ts app/api/cms/public-world/route.ts app/kampagne/welt/content.ts app/spielbereich/modules/public-world-desk.tsx tests/public-world-showcase-integration.mjs app/api/cms/public-world/release/route.ts
           )
           if [[ -f domain/w10-c1-ordinary.ts ]]; then files+=(domain/w10-c1-ordinary.ts); fi
           if [[ -f tests/w10-c1-ordinary.test.mjs ]]; then files+=(tests/w10-c1-ordinary.test.mjs); fi

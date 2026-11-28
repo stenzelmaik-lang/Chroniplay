@@ -41,14 +41,16 @@
 .showcaseText,.figureText{display:grid;align-content:center;gap:10px;min-width:0}
 .showcaseText h3,.figureText h3,.excerpt h3{margin:0;font:400 clamp(26px,2.6vw,36px)/1.1 Georgia,serif;overflow-wrap:anywhere}
 
-/* Persönlichkeiten: large portraits beside their introduction */
-.figureGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:clamp(20px,3vw,36px)}
-.figure{display:grid;grid-template-columns:minmax(170px,1fr) minmax(0,1.05fr);gap:clamp(16px,2.4vw,28px);align-items:start;min-width:0;padding:16px;border:1px solid var(--line);border-radius:12px;background:#0a1b25b3}
-.figureMedia{aspect-ratio:2/3;border-radius:8px;box-shadow:none}
-.figureMedia img{object-position:center top}
-.figureMedia span{display:grid;place-items:center;width:84px;height:84px;border:1px solid var(--gold);border-radius:50%;font:30px Georgia,serif;letter-spacing:2px;opacity:.8}
-.figureText{align-content:start;padding-top:6px}
-.figureText h3{font-size:clamp(24px,2.2vw,30px)}
+/* Persönlichkeiten: the full-body character large and uncropped, text beside it, biography below the text */
+.figureList{display:grid;gap:clamp(36px,6vw,80px)}
+.figure{display:grid;grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr);gap:clamp(20px,4vw,56px);align-items:center;min-width:0}
+.figure:nth-child(even) .figureMedia{order:2}
+.figureMedia{justify-self:center;width:min(100%,440px);aspect-ratio:3/4;border-radius:12px;background:radial-gradient(ellipse at 50% 85%,#e9b96e2e,transparent 60%),radial-gradient(circle at 30% 15%,#14303d,#081720 70%)}
+.figureMedia img{object-fit:contain;object-position:center bottom;filter:drop-shadow(0 18px 30px #000a)}
+.figureMedia span{display:grid;place-items:center;width:96px;height:96px;border:1px solid var(--gold);border-radius:50%;font:34px Georgia,serif;letter-spacing:2px;opacity:.8}
+.figureText{align-content:center}
+.figureText h3{font-size:clamp(30px,3.2vw,44px)}
+.figureText .teaser{font-size:17px;max-width:560px}
 
 /* In-place details: native details/summary, keyboard and focus without script */
 .more{margin-top:4px}
@@ -59,7 +61,7 @@
 .more summary:hover{color:var(--gold)}
 .whenOpen{display:none}.more[open] .whenOpen{display:inline}.more[open] .whenClosed{display:none}
 .moreBody{margin-top:16px;padding-top:16px;border-top:1px solid var(--line)}
-.showcase:has(.more[open]) .teaser,.figure:has(.more[open]) .teaser{display:none}
+.showcase:has(.more[open]) .teaser{display:none}
 @media (prefers-reduced-motion:no-preference){
   .more[open] .moreBody{animation:reveal .22s ease-out}
   .more summary::after{transition:transform .15s}
@@ -104,12 +106,12 @@
 .outlineAction{color:var(--bone);border:1px solid var(--gold);background:#06101866}
 .outlineAction:hover{color:var(--gold)}
 
-@media (max-width:1050px){.figureGrid{grid-template-columns:1fr}.excerptGrid{grid-template-columns:1fr}.cta{grid-template-columns:1fr;align-items:start}}
+@media (max-width:1050px){.excerptGrid{grid-template-columns:1fr}.cta{grid-template-columns:1fr;align-items:start}}
 @media (max-width:760px){
   .bar{padding:0 16px}.brand img{width:124px}
   .sectionNav{justify-content:flex-start;gap:6px;padding:10px 16px}.sectionNav a{gap:6px;padding:0 12px;font-size:13px}.sectionNav svg{display:none}
   .showcase{grid-template-columns:1fr;gap:16px}.showcase:nth-child(even) .showcaseMedia{order:0}
-  .figure{grid-template-columns:1fr;padding:12px}.figureMedia{aspect-ratio:4/5}
+  .figure{grid-template-columns:1fr;gap:16px}.figure:nth-child(even) .figureMedia{order:0}.figureMedia{width:min(100%,340px)}
   .ctaActions{display:grid}.ctaActions>*{width:100%}
   .storyText p:first-child::first-letter{font-size:3em}
 }

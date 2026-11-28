@@ -136,11 +136,13 @@ test("a person shows only allowlisted, already released fields", () => {
     known_for: ["Feste", 3, ""], affiliation: ["Camarilla"], location_note: "SECRET_WHEREABOUTS", npc_status: "SECRET_STATUS",
     image_primary: "/api/files?id=SECRET_FILE", image: "/images/kleve.png", show_on_website: true, field_visibility: { name: "player_visible" },
   } });
-  assert.deepEqual(Object.keys(person).sort(), ["affiliation", "alias", "clan", "description", "epithet", "id", "image", "imageFocus", "knownFor", "name", "role", "summary"]);
+  assert.deepEqual(Object.keys(person).sort(), ["affiliation", "alias", "clan", "description", "epithet", "id", "image", "knownFor", "name", "role", "summary"]);
   assert.equal(person.image, "/api/public-world/image?kind=person&id=npc-1", "the released primary portrait wins and is addressed by the entry");
-  assert.equal(person.imageFocus, 0);
   assert.equal(publicPerson({ id: "npc-3", title: "Ohne Upload", content: { image: "/images/kleve.png", hero_position: 40 } }).image, "/images/kleve.png");
-  assert.equal(publicPerson({ id: "npc-3", title: "Ohne Upload", content: { hero_position: 40 } }).imageFocus, 40);
+  const full = publicImageSource("person", "npc-7", ["/api/files?id=FULL_BODY", "/api/files?id=PORTRAIT"]);
+  assert.deepEqual(full.upload, { fileId: "FULL_BODY" }, "the full-body (secondary) image comes first");
+  assert.equal(publicPerson({ id: "npc-7", title: "Ganzkörper", content: { image_secondary: "/images/kleve.png", image_primary: "/api/files?id=PORTRAIT" } }).image, "/images/kleve.png");
+  assert.equal(publicPerson({ id: "npc-8", title: "Nur Porträt", content: { image_primary: "/api/files?id=PORTRAIT" } }).image, "/api/public-world/image?kind=person&id=npc-8", "without a released full-body image the portrait is used");
   assert.equal(publicPerson({ id: "npc-4", title: "Ohne Bild", content: {} }).image, "");
   assert.deepEqual(person.knownFor, ["Feste"]);
   assert.ok(!JSON.stringify(person).includes("SECRET"));

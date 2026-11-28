@@ -10,7 +10,7 @@ import { hasNPCFieldVisibility, npcFieldVisibility } from "@/domain/npc-profile"
 import {
   isMarkedForWebsite, parsePublicWorldIntro, publicChronicleEntry, publicImageSource, publicPerson, publicPlace, publicRichText,
   publicWorldIntroKey, publicWorldIntroMaxPlain, publicWorldIntroMaxSource, publicWorldLimits, publicWorldOrderHints,
-  publicPersonBlockKinds, sortPublicChronicle, websiteFlagKeys,
+  publicPersonBlockKinds, publicPersonImageFields, sortPublicChronicle, websiteFlagKeys,
   type PublicChronicleEntry, type PublicPersonBlock, type PublicImageKind, type PublicPerson, type PublicPlace, type PublicWorld, type PublicWorldIntro,
   type UploadRef,
 } from "@/domain/public-world";
@@ -46,7 +46,7 @@ async function groupGrants(db: D1Database, campaignId: string, ids: string[]): P
 /** One public entry plus the server-only reference to its uploaded image. The list, the image route and the SL overview
  * all use these ordered entries, so the image route can never serve an image the public page would not show. */
 type PublicEntry<T> = { item: T; upload: UploadRef | null };
-type Ranked<T> = { marked: number; entries: PublicEntry<T>[] };
+type Ranked<T> = { marked: number; entries: PublicEntry<T>[]; markedIds: Set<string> };
 
 const rootSql = "SELECT entity_id,attributes FROM location_nodes WHERE campaign_id=? AND level='location' AND parent_id IS NULL AND location_id=entity_id";
 function placeEntry(projection: PlaceProjection): PublicEntry<PublicPlace> | null {
@@ -55,28 +55,29 @@ function placeEntry(projection: PlaceProjection): PublicEntry<PublicPlace> | nul
   return item ? { item, upload: publicImageSource("place", item.id, [projection.location.image]).upload } : null;
 }
 
-/** All marked main places the group knows, in the order of the Orte-Werkstatt (position, then ID). Not capped. */
-async function rankPublicPlaces(db: D1Database, campaignId: string): Promise<Ranked<PublicPlace>> {
+/** Marked main places the group knows (or, for the SL list, every place the group knows), in the order of the
+ * Orte-Werkstatt (position, then ID). Not capped. */
+async function rankPublicPlaces(db: D1Database, campaignId: string, candidates = false): Promise<Ranked<PublicPlace>> {
   const roots = await db.prepare(rootSql).bind(campaignId).all<{ entity_id: string; attributes: string }>();
   // The flag is read from the stored attributes: a released place's projection uses its release payload instead.
   const marked = new Set(roots.results.filter(row => isMarkedForWebsite(parse(row.attributes), websiteFlagKeys.place)).map(row => row.entity_id));
-  if (!marked.size) return { marked: 0, entries: [] };
+  if (!marked.size && !candidates) return { marked: 0, entries: [], markedIds: marked };
   const projections = await loadLocationHub(db, publicViewer(campaignId), "player", "group");
-  return { marked: marked.size, entries: projections.flatMap(projection => {
-    const entry = marked.has(projection.location.id) ? placeEntry(projection) : null;
+  return { marked: marked.size, markedIds: marked, entries: projections.flatMap(projection => {
+    const entry = candidates || marked.has(projection.location.id) ? placeEntry(projection) : null;
     return entry ? [entry] : [];
   }) };
 }
 
-function personEntry(viewer: Actor, entity: Entity, grants: GrantRow[], blocks: PublicPersonBlock[]): PublicEntry<PublicPerson> | null {
-  if (entity.type !== "NPC" || !isMarkedForWebsite(entity.content, websiteFlagKeys.person)) return null;
+function personEntry(viewer: Actor, entity: Entity, grants: GrantRow[], blocks: PublicPersonBlock[], candidates = false): PublicEntry<PublicPerson> | null {
+  if (entity.type !== "NPC" || (!candidates && !isMarkedForWebsite(entity.content, websiteFlagKeys.person))) return null;
   // A person whose name is not released stays anonymous for the group; the website never shows anonymous figures.
   if (hasNPCFieldVisibility(entity.content) && npcFieldVisibility(entity.content, "name") !== "player_visible") return null;
   const safe = projectEntity(viewer, entity, grants);
   if (!safe) return null;
   const item = publicPerson({ id: safe.id, title: safe.title, content: safe.content }, blocks);
   // Field releases are already applied: an unreleased portrait is not in safe.content and yields no upload.
-  return item ? { item, upload: publicImageSource("person", item.id, [safe.content.image_primary, safe.content.image]).upload } : null;
+  return item ? { item, upload: publicImageSource("person", item.id, publicPersonImageFields.map(key => safe.content[key])).upload } : null;
 }
 
 /** Released narrative blocks (what players read in the dossier), never SL kinds; filtered in SQL. */
@@ -92,34 +93,34 @@ async function releasedPersonBlocks(db: D1Database, campaignId: string, ids: str
   return map;
 }
 
-/** All marked NPCs the group may see under their name, alphabetical by name. Not capped. */
-async function rankPublicPeople(db: D1Database, campaignId: string): Promise<Ranked<PublicPerson>> {
-  const rows = await db.prepare(`SELECT id FROM entities WHERE campaign_id=? AND type='NPC'
-    AND json_extract(CASE WHEN json_valid(content) THEN content ELSE '{}' END,'$.${websiteFlagKeys.person}')=1`)
-    .bind(campaignId).all<{ id: string }>();
-  const ids = rows.results.map(row => row.id);
-  if (!ids.length) return { marked: 0, entries: [] };
+/** Marked NPCs the group may see under their name (or, for the SL list, every such NPC), alphabetical. Not capped. */
+async function rankPublicPeople(db: D1Database, campaignId: string, candidates = false): Promise<Ranked<PublicPerson>> {
+  const rows = await db.prepare(`SELECT id,CASE WHEN json_extract(CASE WHEN json_valid(content) THEN content ELSE '{}' END,'$.${websiteFlagKeys.person}')=1 THEN 1 ELSE 0 END AS marked
+    FROM entities WHERE campaign_id=? AND type='NPC'`).bind(campaignId).all<{ id: string; marked: number }>();
+  const markedIds = new Set(rows.results.filter(row => row.marked === 1).map(row => row.id));
+  const ids = rows.results.filter(row => candidates || row.marked === 1).map(row => row.id);
+  if (!ids.length) return { marked: markedIds.size, entries: [], markedIds };
   const [entities, grants, blocks] = await Promise.all([loadEntitiesForIds(db, campaignId, ids), groupGrants(db, campaignId, ids), releasedPersonBlocks(db, campaignId, ids)]);
   const viewer = publicViewer(campaignId);
   const entries = entities.flatMap(entity => {
-    const entry = personEntry(viewer, entity, grants, blocks.get(entity.id) ?? []);
+    const entry = personEntry(viewer, entity, grants, blocks.get(entity.id) ?? [], candidates);
     return entry ? [entry] : [];
   });
   entries.sort((a, b) => a.item.name.localeCompare(b.item.name, "de-DE") || a.item.id.localeCompare(b.item.id));
-  return { marked: ids.length, entries };
+  return { marked: markedIds.size, entries, markedIds };
 }
 
 const privateContexts = ["table-material", "sl-message", "appointment-vote", "live-table", "live-table-signal", "live-table-event"];
-/** All marked chronicle entries released to the group, newest first. Drafts never qualify. Not capped. */
-async function rankPublicChronicle(db: D1Database, campaignId: string): Promise<Ranked<PublicChronicleEntry>> {
+/** Marked chronicle entries released to the group (or, for the SL list, every released one), newest first. Drafts
+ * never qualify. Not capped. */
+async function rankPublicChronicle(db: D1Database, campaignId: string, candidates = false): Promise<Ranked<PublicChronicleEntry>> {
   const rows = await db.prepare("SELECT id,title,body,visibility FROM records WHERE campaign_id=? AND kind='chronik'")
     .bind(campaignId).all<{ id: string; title: string; body: string; visibility: string }>();
-  const flagged = rows.results.filter(row => {
-    const body = parse(row.body);
-    return isMarkedForWebsite(body, websiteFlagKeys.chronicle) && !privateContexts.includes(String(body.context));
-  });
-  const released = flagged.filter(row => row.visibility === "group");
-  if (!released.length) return { marked: flagged.length, entries: [] };
+  const open = rows.results.filter(row => !privateContexts.includes(String(parse(row.body).context)));
+  const flagged = open.filter(row => isMarkedForWebsite(parse(row.body), websiteFlagKeys.chronicle));
+  const markedIds = new Set(flagged.map(row => row.id));
+  const released = (candidates ? open : flagged).filter(row => row.visibility === "group");
+  if (!released.length) return { marked: flagged.length, entries: [], markedIds };
   const ids = released.map(row => row.id);
   const [entities, grants] = await Promise.all([loadEntitiesForIds(db, campaignId, ids), groupGrants(db, campaignId, ids)]);
   const index = new Map(entities.map(entity => [entity.id, entity]));
@@ -130,7 +131,7 @@ async function rankPublicChronicle(db: D1Database, campaignId: string): Promise<
     const entry = safe ? publicChronicleEntry({ id: row.id, title: safe.title }, safe.content) : null;
     return entry ? [entry] : [];
   }));
-  return { marked: flagged.length, entries: items.map(item => ({ item, upload: null })) };
+  return { marked: flagged.length, entries: items.map(item => ({ item, upload: null })), markedIds };
 }
 
 async function readIntro(db: D1Database, campaignId: string): Promise<PublicWorldIntro> {
@@ -190,12 +191,58 @@ export async function loadPublicWorldOverview(db: D1Database, a: Actor) {
   const [intro, places, people, chronicle] = await Promise.all([
     readIntro(db, a.campaignId), rankPublicPlaces(db, a.campaignId), rankPublicPeople(db, a.campaignId), rankPublicChronicle(db, a.campaignId),
   ]);
+  const [placeCandidates, personCandidates, chronicleCandidates] = await Promise.all([
+    rankPublicPlaces(db, a.campaignId, true), rankPublicPeople(db, a.campaignId, true), rankPublicChronicle(db, a.campaignId, true),
+  ]);
+  const candidateList = <T extends { id: string },>(ranked: Ranked<T>, title: (item: T) => string) =>
+    ranked.entries.map(entry => ({ id: entry.item.id, title: title(entry.item), marked: ranked.markedIds.has(entry.item.id) }));
   return {
     intro: { text: intro.text, version: intro.version, publicText: publicRichText(intro.text) },
+    // Everything the group already sees, with its website mark: the SL releases from this one list.
+    candidates: {
+      places: candidateList(placeCandidates, item => item.title),
+      people: candidateList(personCandidates, item => item.name),
+      chronicle: candidateList(chronicleCandidates, item => (item.date ? item.date + " · " : "") + item.title),
+    },
     places: overviewSection(places, publicWorldLimits.places, publicWorldOrderHints.places, item => item.title),
     people: overviewSection(people, publicWorldLimits.people, publicWorldOrderHints.people, item => item.name),
     chronicle: overviewSection(chronicle, publicWorldLimits.chronicle, publicWorldOrderHints.chronicle, item => item.title),
   };
+}
+
+/** SL only: set the website marks from the central list in one go. `places`, `people` and `chronicle` are the complete
+ * sets the SL wants marked among the listed entries (those the group already sees). Unlisted entries are untouched.
+ * Each change is a guarded single-row update; places keep their revision protection. */
+export async function savePublicWorldMarks(db: D1Database, a: Actor, input: { places: string[]; people: string[]; chronicle: string[] }) {
+  requireCmsPublisher(a);
+  const [places, people, chronicle] = await Promise.all([
+    rankPublicPlaces(db, a.campaignId, true), rankPublicPeople(db, a.campaignId, true), rankPublicChronicle(db, a.campaignId, true),
+  ]);
+  const plan = <T extends { id: string },>(ranked: Ranked<T>, wanted: string[]) => {
+    const want = new Set(wanted), eligible = new Set(ranked.entries.map(entry => entry.item.id));
+    for (const id of want) if (!eligible.has(id)) throw new HttpError(400, "Nur Einträge, die die Gruppe schon kennt, können auf die Website.");
+    // Only listed entries change: a marked entry the group cannot see yet is not in the list and keeps its mark.
+    return { mark: [...want].filter(id => !ranked.markedIds.has(id)), unmark: [...ranked.markedIds].filter(id => eligible.has(id) && !want.has(id)) };
+  };
+  const placePlan = plan(places, input.places), personPlan = plan(people, input.people), chroniclePlan = plan(chronicle, input.chronicle);
+  const now = new Date().toISOString();
+  for (const [ids, show] of [[placePlan.mark, true], [placePlan.unmark, false]] as const) for (const id of ids) {
+    const node = await db.prepare("SELECT revision FROM location_nodes WHERE campaign_id=? AND entity_id=?").bind(a.campaignId, id).first<{ revision: number }>();
+    if (node) await setPlaceWebsite(db, a, { entityId: id, expectedRevision: node.revision, show });
+  }
+  const statements: D1PreparedStatement[] = [];
+  const flag = websiteFlagKeys.person, chronicleFlag = websiteFlagKeys.chronicle;
+  for (const id of personPlan.mark) statements.push(db.prepare(`UPDATE entities SET content=json_set(CASE WHEN json_valid(content) THEN content ELSE '{}' END,'$.${flag}',json('true')),version=version+1,updated_at=? WHERE campaign_id=? AND id=? AND type='NPC'`).bind(now, a.campaignId, id));
+  for (const id of personPlan.unmark) statements.push(db.prepare(`UPDATE entities SET content=json_remove(content,'$.${flag}'),version=version+1,updated_at=? WHERE campaign_id=? AND id=? AND type='NPC' AND json_valid(content)`).bind(now, a.campaignId, id));
+  for (const id of chroniclePlan.mark) statements.push(db.prepare(`UPDATE records SET body=json_set(CASE WHEN json_valid(body) THEN body ELSE '{}' END,'$.${chronicleFlag}',json('true')),version=version+1,updated_at=? WHERE campaign_id=? AND id=? AND kind='chronik'`).bind(now, a.campaignId, id));
+  for (const id of chroniclePlan.unmark) statements.push(db.prepare(`UPDATE records SET body=json_remove(body,'$.${chronicleFlag}'),version=version+1,updated_at=? WHERE campaign_id=? AND id=? AND kind='chronik' AND json_valid(body)`).bind(now, a.campaignId, id));
+  const changed = placePlan.mark.length + placePlan.unmark.length + statements.length;
+  if (statements.length) {
+    statements.push(db.prepare("INSERT INTO world_events(id,campaign_id,entity_id,actor_id,type,payload,created_at) VALUES(?,?,NULL,?,'website.marks.changed',?,?)")
+      .bind(crypto.randomUUID(), a.campaignId, a.id, JSON.stringify({ people: personPlan, chronicle: chroniclePlan }), now));
+    await db.batch(statements);
+  }
+  return { ok: true, changed };
 }
 
 /** SL only: save the website introduction. Version protected; a stale editor gets a conflict instead of an overwrite. */

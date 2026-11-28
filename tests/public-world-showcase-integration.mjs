@@ -63,7 +63,7 @@ export async function publicWorldShowcaseIntegration({ req, check, base, ids }) 
   check(introPage.text.includes('Kleve schläft nie ganz.') && !introPage.text.includes(defaultWorldIntro.slice(0, 40)), 'SHOWCASE the guest page shows the SL intro instead of the default');
 
   // 2. Images through the entry, from all three upload sources.
-  const bytesR = png('revision'), bytesM = png('medium'), bytesP = png('portrait'), bytesQ = png('hidden'), bytesZ = png('cut'), bytesC = png('cut-place'), bytesU = png('unmarked'), bytesK = png('unknown');
+  const bytesR = png('revision'), bytesM = png('medium'), bytesP = png('portrait'), bytesF = png('full-body'), bytesQ = png('hidden'), bytesZ = png('cut'), bytesC = png('cut-place'), bytesU = png('unmarked'), bytesK = png('unknown');
   const fileR = await upload('/api/cms/media', bytesR);
   const placeR = await create('Schaufenster Revision ' + tag);
   await publish(placeR, { title: placeR.title, subtitle: 'Mit Ortsbild', summary: 'Ein Ort mit veröffentlichtem Titelbild.' }, fileR);
@@ -81,8 +81,9 @@ export async function publicWorldShowcaseIntegration({ req, check, base, ids }) 
   check(draftK.s === 200, 'SHOWCASE an unreleased place carries a hero only in its draft');
   for (const id of [placeR.id, placeM.id, placeK.id]) check((await mark(id)).s === 200, 'SHOWCASE the SL marks a showcase candidate');
   const fileP = await upload('/api/files', bytesP, { visibility: 'sl' });
+  const fileF = await upload('/api/files', bytesF, { visibility: 'sl' });
   const fileQ = await upload('/api/files', bytesQ, { visibility: 'sl' });
-  const personP = await npc('Anna Porträt ' + tag, { summary: 'Mit freigegebenem Porträt.', image_primary: '/api/files?id=' + fileP, show_on_website: true, field_visibility: { name: 'player_visible', summary: 'player_visible', image_primary: 'player_visible' } });
+  const personP = await npc('Anna Porträt ' + tag, { summary: 'Mit freigegebenem Porträt.', image_primary: '/api/files?id=' + fileP, image_secondary: '/api/files?id=' + fileF, show_on_website: true, field_visibility: { name: 'player_visible', summary: 'player_visible', image_secondary: 'player_visible', image_primary: 'player_visible' } });
   const personQ = await npc('Bruno Ohne Bild ' + tag, { image_primary: '/api/files?id=' + fileQ, show_on_website: true, field_visibility: { name: 'player_visible' } });
   check(personP.s === 200 && personQ.s === 200, 'SHOWCASE synthetic people with released and unreleased portraits');
 
@@ -93,9 +94,9 @@ export async function publicWorldShowcaseIntegration({ req, check, base, ids }) 
   check(person(personP.d.id)?.image === '/api/public-world/image?kind=person&id=' + encodeURIComponent(personP.d.id), 'SHOWCASE a released portrait is addressed by the person, not the file');
   check(person(personQ.d.id)?.image === '', 'SHOWCASE an unreleased portrait leaves the person without an image');
   check(!place(placeU.id) && !place(placeK.id), 'SHOWCASE unmarked and unknown places stay off the website');
-  for (const secretId of [fileR, fileM, fileP, fileQ, fileU, fileK, medium.d.item.id]) check(!pub.text.includes(secretId), 'SHOWCASE the public JSON never contains an upload or medium ID');
+  for (const secretId of [fileR, fileM, fileP, fileF, fileQ, fileU, fileK, medium.d.item.id]) check(!pub.text.includes(secretId), 'SHOWCASE the public JSON never contains an upload or medium ID');
 
-  for (const [kind, id, bytes, label] of [['place', placeR.id, bytesR, 'revision hero'], ['place', placeM.id, bytesM, 'hero medium'], ['person', personP.d.id, bytesP, 'portrait']]) {
+  for (const [kind, id, bytes, label] of [['place', placeR.id, bytesR, 'revision hero'], ['place', placeM.id, bytesM, 'hero medium'], ['person', personP.d.id, bytesF, 'full-body image (preferred over the portrait)']]) {
     const shots = [await image(kind, id), await image(kind, id, 'a'), await image(kind, id, 'gm')];
     check(shots.every(shot => shot.s === 200 && shot.bytes.equals(bytes)), 'SHOWCASE guest, player and SL receive the same ' + label + ' bytes');
     const headers = shots[0].headers;
@@ -112,7 +113,7 @@ export async function publicWorldShowcaseIntegration({ req, check, base, ids }) 
   }
   for (const method of ['POST', 'PUT', 'PATCH', 'DELETE']) check((await image('place', placeR.id, undefined, method)).s === 405, 'SHOWCASE ' + method + ' on the image route is refused (405)');
   const imagePage = await page();
-  check(imagePage.text.includes('/api/public-world/image?kind=place') && imagePage.text.includes('Porträt von Anna Porträt ' + tag) && [fileR, fileM, fileP, fileQ].every(id => !imagePage.text.includes(id)), 'SHOWCASE the guest page shows images through the entry route with alt text, never a file ID');
+  check(imagePage.text.includes('/api/public-world/image?kind=place') && imagePage.text.includes('Bild von Anna Porträt ' + tag) && [fileR, fileM, fileP, fileF, fileQ].every(id => !imagePage.text.includes(id)), 'SHOWCASE the guest page shows images through the entry route with alt text, never a file ID');
 
   // 3. Fixed caps with a followable order; the SL overview shows the same selection.
   const extraPlaces = [];
@@ -148,6 +149,27 @@ export async function publicWorldShowcaseIntegration({ req, check, base, ids }) 
   check(guestJson.text === playerJson.text && guestJson.text === slJson.text, 'SHOWCASE guest, player and SL receive the identical capped projection');
   const cappedPage = await page();
   check(cappedPage.s === 200 && cappedPage.text.includes('Werde Teil der Chronik') && cappedPage.text.includes('href="/anmelden"') && !cappedPage.text.includes(cutPerson.d.id) && !/<form[\s>]/i.test(cappedPage.text), 'SHOWCASE the guest page ends with the alpha call to action and shows no cut entry and no form');
+
+  // 3b. Central release list: SL only; lists what the group knows; one save changes only listed entries.
+  for (const [who, expected] of [[undefined, 401], ['a', 403]]) check((await raw('/api/cms/public-world/release', who, 'POST', { places: [], people: [], chronicle: [] })).s === expected, 'SHOWCASE ' + (who ?? 'guests') + ' cannot use the central release list (' + expected + ')');
+  const listPerson = await npc('Liste Ohne Haken ' + tag, { show_on_website: false, field_visibility: { name: 'player_visible' } });
+  const listEntry = await req('/api/records', 'gm', 'POST', { kind: 'chronik', title: 'Aus der Liste ' + tag, visibility: 'group', body: { type: 'ereignis', date: '2026-12-31', text: 'Über die Liste freigegeben.' } });
+  check(listPerson.s === 200 && listEntry.s === 200, 'SHOWCASE unmarked, group-visible entries exist for the list');
+  const before3b = (await req('/api/cms/public-world', 'gm')).d.candidates;
+  const listed = (kind, id) => before3b[kind].find(item => item.id === id);
+  check(listed('places', placeU.id)?.marked === false && listed('places', placeR.id)?.marked === true && !listed('places', placeK.id), 'SHOWCASE the list shows group-known places with their mark and leaves unknown places out');
+  check(listed('people', listPerson.d.id)?.marked === false && listed('chronicle', listEntry.d.id)?.marked === false, 'SHOWCASE the list offers unmarked people and chronicle entries');
+  const wanted = kind => before3b[kind].filter(item => item.marked).map(item => item.id);
+  check((await req('/api/cms/public-world/release', 'gm', 'POST', { places: [...wanted('places'), placeK.id], people: wanted('people'), chronicle: wanted('chronicle') })).s === 400, 'SHOWCASE a place the group does not know cannot be released from the list');
+  const released3b = await req('/api/cms/public-world/release', 'gm', 'POST', { places: [...wanted('places'), placeU.id], people: [...wanted('people'), listPerson.d.id], chronicle: [...wanted('chronicle'), listEntry.d.id] });
+  check(released3b.s === 200 && released3b.d.changed === 3, 'SHOWCASE one save releases a place, a person and a chronicle entry (' + released3b.s + ', ' + released3b.d?.changed + ')');
+  const after3b = (await req('/api/cms/public-world', 'gm')).d;
+  check(after3b.candidates.places.find(item => item.id === placeU.id)?.marked && after3b.candidates.people.find(item => item.id === listPerson.d.id)?.marked && after3b.candidates.chronicle.find(item => item.id === listEntry.d.id)?.marked, 'SHOWCASE the list shows the new marks');
+  check((await node(placeK.id))?.showOnWebsite === true, 'SHOWCASE a marked place the group does not know keeps its mark (not in the list, untouched)');
+  check((await world()).d.chronicle[0]?.id === listEntry.d.id, 'SHOWCASE the entry released from the list is on the website');
+  const unreleased3b = await req('/api/cms/public-world/release', 'gm', 'POST', { places: wanted('places'), people: wanted('people'), chronicle: wanted('chronicle') });
+  check(unreleased3b.s === 200 && unreleased3b.d.changed === 3 && !(await world()).d.chronicle.some(item => item.id === listEntry.d.id), 'SHOWCASE removing the checkmarks takes the entries off the website again');
+  await req('/api/records', 'gm', 'DELETE', { id: listEntry.d.id, version: (await req('/api/records?kind=chronik&view=sl', 'gm')).d.records.find(item => item.id === listEntry.d.id).version });
 
   // 4. Archiving removes a showcase place and its image.
   const archiveTarget = await node(placeM.id);

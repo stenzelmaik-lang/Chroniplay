@@ -53,14 +53,14 @@ function PlaceShowcase({ place }: { place: PublicPlace }) {
 }
 
 function PersonPortrait({ person }: { person: PublicPerson }) {
-  const teaser = publicTeaser(person.summary, 220) || publicTeaser(person.description, 220);
+  const teaser = publicTeaser(person.summary, 320) || publicTeaser(person.description, 320);
   const byline = [person.epithet, person.alias && "„" + person.alias + "“"].filter(Boolean).join(" · ");
   const chips = [person.clan, person.role].filter(Boolean);
   const more = Boolean(person.description || person.knownFor.length || person.affiliation.length) || publicTeaser(person.summary, 100000) !== teaser;
   return <article className={styles.figure} id={"person-" + encodeURIComponent(person.id)} aria-labelledby={"person-name-" + encodeURIComponent(person.id)}>
     <div className={styles.figureMedia} data-empty={!person.image || undefined}>
       {person.image
-        ? <img src={person.image} alt={"Porträt von " + person.name} loading="lazy" decoding="async" style={{ objectPosition: `center ${person.imageFocus}%` }} />
+        ? <img src={person.image} alt={"Bild von " + person.name} loading="lazy" decoding="async" />
         : <span aria-hidden="true">{initials(person.name)}</span>}
     </div>
     <div className={styles.figureText}>
@@ -128,7 +128,7 @@ export default async function WeltPage() {
       {world.people.length > 0 && <section id="persoenlichkeiten" className={styles.section} aria-labelledby="personen-title">
         <p className={styles.kicker}>Begegnungen</p>
         <h2 id="personen-title">Persönlichkeiten</h2>
-        <div className={styles.figureGrid}>{world.people.map(person => <PersonPortrait key={person.id} person={person} />)}</div>
+        <div className={styles.figureList}>{world.people.map(person => <PersonPortrait key={person.id} person={person} />)}</div>
       </section>}
       {world.chronicle.length > 0 && <section id="chronik" className={styles.section} aria-labelledby="chronik-title">
         <p className={styles.kicker}>Aus der Chronik</p>
