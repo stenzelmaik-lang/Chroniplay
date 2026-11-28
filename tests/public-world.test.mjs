@@ -2,8 +2,9 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import {
-  isMarkedForWebsite, publicChronicleEntry, publicImagePath, publicImageSource, publicPerson, publicPlace, publicRichText,
-  publicStaticImage, publicTeaser, sortPublicChronicle, uploadRef, websiteFlagKeys,
+  isMarkedForWebsite, parsePublicWorldIntro, publicChronicleEntry, publicImagePath, publicImageSource, publicPerson, publicPlace,
+  publicRichText, publicStaticImage, publicTeaser, publicWorldIntroKey, publicWorldLimits, publicWorldOrderHints,
+  sortPublicChronicle, uploadRef, websiteFlagKeys,
 } from "../domain/public-world.ts";
 import { encodeRichText, readRichText } from "../domain/location-rich-text.ts";
 import { npcProfileSchema, npcFieldNames } from "../domain/npc-profile.ts";
@@ -87,6 +88,22 @@ test("the public image path carries only kind and entry ID", () => {
   assert.deepEqual(publicImageSource("place", "p", [undefined, ""]), { image: "", upload: null });
 });
 
+test("the curated glimpse has fixed caps and says how the order is decided", () => {
+  assert.deepEqual({ ...publicWorldLimits }, { places: 4, people: 7, chronicle: 3 });
+  assert.match(publicWorldOrderHints.places, /4 Orte/);
+  assert.match(publicWorldOrderHints.people, /7 Persönlichkeiten/);
+  assert.match(publicWorldOrderHints.chronicle, /3 Einträge/);
+});
+
+test("the website intro document is read defensively and scoped per campaign", () => {
+  assert.equal(publicWorldIntroKey("kampagne-a"), "public-world:intro:kampagne-a");
+  assert.notEqual(publicWorldIntroKey("kampagne-a"), publicWorldIntroKey("kampagne-b"));
+  assert.deepEqual(parsePublicWorldIntro(null), { text: "", version: 0, updatedAt: "" });
+  assert.deepEqual(parsePublicWorldIntro("kaputt"), { text: "", version: 0, updatedAt: "" });
+  assert.deepEqual(parsePublicWorldIntro(JSON.stringify({ text: "Hallo", version: 3, updatedAt: "2026-11-28", updatedBy: "sl" })), { text: "Hallo", version: 3, updatedAt: "2026-11-28" });
+  assert.deepEqual(parsePublicWorldIntro(JSON.stringify({ text: 5, version: -1 })), { text: "", version: 0, updatedAt: "" });
+});
+
 test("teasers are plain and bounded", () => {
   const value = rich([{ type: "paragraph", children: [{ text: "Eins zwei drei vier fünf sechs" }] }]);
   assert.equal(publicTeaser(value, 100), "Eins zwei drei vier fünf sechs");
@@ -153,7 +170,7 @@ test("the public route has no write method and the page has no client code", () 
   assert.match(route, /export async function GET/);
   assert.doesNotMatch(route, /export async function (POST|PUT|PATCH|DELETE)/);
   assert.doesNotMatch(route, /actor\(/, "the public read never requires or uses a login");
-  for (const file of ["../app/kampagne/welt/page.tsx", "../app/kampagne/welt/public-rich-text.tsx"]) {
+  for (const file of ["../app/kampagne/welt/page.tsx", "../app/kampagne/welt/public-rich-text.tsx", "../app/kampagne/welt/content.ts"]) {
     const source = readFileSync(new URL(file, import.meta.url), "utf8");
     assert.doesNotMatch(source, /^\s*["']use client["']/m, file);
     assert.doesNotMatch(source, /<form|onClick|fetch\(/, file);
@@ -166,5 +183,5 @@ test("the public route has no write method and the page has no client code", () 
   assert.match(image, /max-age=300/);
   const server = readFileSync(new URL("../server/public-world.ts", import.meta.url), "utf8");
   assert.match(server, /audience='group'/, "only group knowledge is used");
-  assert.match(server, /visibility='group'/, "only group chronicle entries qualify");
+  assert.match(server, /row\.visibility === "group"/, "only group chronicle entries qualify");
 });

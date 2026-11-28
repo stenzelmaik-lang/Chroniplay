@@ -6,6 +6,7 @@ import {api} from "./api-client";
 import {RichTextEditor,RichTextView} from "./rich-text";
 import styles from "./recap-desk.module.css";
 import {WebsiteSwitch} from "./website-release";
+import {PublicWorldDesk} from "./public-world-desk";
 
 /** Two kinds of Chronik entries: a Rückblick (also on the Zuflucht and under Rückblicke) and a plain Chronik entry. */
 export const isRecap=(e:Entry)=>e.body?.type==="rueckblick";
@@ -17,9 +18,11 @@ const kindLabel:Record<Kind,string>={rueckblick:"Rückblick",chronik:"Chronik-Ei
 
 /** Kommandozentrale · Rückblicke & Chronik: one desk, two kinds; the overview comes first. */
 export function RecapDesk(){
-  const [entries,setEntries]=useState<Entry[]|null>(null),[sessions,setSessions]=useState<Entry[]>([]),[draft,setDraft]=useState<Draft|null>(null),[filter,setFilter]=useState<Kind|"alle">("alle");
+  const [entries,setEntries]=useState<Entry[]|null>(null),[sessions,setSessions]=useState<Entry[]>([]),[draft,setDraft]=useState<Draft|null>(null),[filter,setFilter]=useState<Kind|"alle"|"website">("alle");
   const [editorKey,setEditorKey]=useState(0),[busy,setBusy]=useState(false),[status,setStatus]=useState(""),[error,setError]=useState(""),[reload,setReload]=useState(0),[now,setNow]=useState(0);
   useEffect(()=>{let live=true;Promise.all([api<{records:Entry[]}>("/api/records?kind=chronik&view=sl"),api<{records:Entry[]}>("/api/records?kind=sitzungen&view=sl")]).then(([c,s])=>{if(!live)return;setNow(Date.now());setEntries(c.records.sort((x,y)=>(when(y)||0)-(when(x)||0)));setSessions(s.records);}).catch(e=>{if(live)setError((e as Error).message);});return()=>{live=false;};},[reload]);
+  // "?bereich=rueckblick&ansicht=website" opens the website overview directly (linked from the website switches).
+  useEffect(()=>{Promise.resolve().then(()=>{if(new URLSearchParams(window.location.search).get("ansicht")==="website")setFilter("website");});},[]);
   const past=sessions.filter(s=>Number.isFinite(when(s))&&when(s)<=now).sort((x,y)=>when(y)-when(x));
   function open(next:Draft){setStatus("");setEditorKey(k=>k+1);setDraft(next);}
   function edit(e:Entry){open({id:e.id,version:e.version,kind:isRecap(e)?"rueckblick":"chronik",title:e.title,sessionId:String(e.body.sessionId||""),date:String(e.body.date||"").slice(0,10),text:String(e.body.text||""),released:e.visibility==="group",website:e.body?.showOnWebsite===true,base:e.body as Record<string,unknown>});}
@@ -55,8 +58,9 @@ export function RecapDesk(){
         <WebsiteSwitch anchor="chronik" checked={draft.website} disabled={busy} onChange={website=>setDraft({...draft,website})} hint="Gäste sehen Titel, Datum und Text, ohne eingebettete Bilder. Wirksam beim Speichern." note={draft.website&&!draft.released?"Erscheint erst, wenn der Eintrag für die Runde freigegeben ist.":undefined}/>
         <footer className={styles.actions}><button type="button" className="button" disabled={busy} onClick={()=>void save(false)}>{draft.released?<EyeOff size={16}/>:<Save size={16}/>}{draft.released?"Zurück auf Entwurf":"Als Entwurf speichern"}</button><button type="button" className="button primary" disabled={busy} onClick={()=>void save(true)}><Eye size={16}/>{draft.released?"Änderungen freigeben":"Für die Runde freigeben"}</button><span role="status">{status}</span></footer>
       </section>:<>
-      <div className={styles.kindSwitch} role="tablist" aria-label="Filter">{(["alle","rueckblick","chronik"] as const).map(k=><button key={k} type="button" role="tab" aria-selected={filter===k} onClick={()=>setFilter(k)}>{k==="alle"?"Alle":k==="rueckblick"?"Rückblicke":"Chronik-Einträge"}</button>)}</div>
-      <ul className={styles.overview} aria-label="Rückblicke und Chronik">{shown.length?shown.map(r=><li key={r.id}><button type="button" onClick={()=>edit(r)}><span className={styles.tags}><span className={styles.badge} data-kind={isRecap(r)?"rueckblick":"chronik"}>{isRecap(r)?"Rückblick":"Chronik"}</span><span className={styles.badge} data-released={r.visibility==="group"||undefined}>{r.visibility==="group"?"freigegeben":"Entwurf"}</span>{r.body?.showOnWebsite===true&&<span className={styles.badge} data-website="true">Website</span>}</span><strong>{r.title}</strong><small>{Number.isFinite(when(r))?new Date(when(r)).toLocaleDateString("de-DE",{dateStyle:"long"}):"Ohne Datum"}</small></button></li>):<li className={styles.empty}>Noch nichts geschrieben. Leg oben rechts den ersten Eintrag an.</li>}</ul>
+      <div className={styles.kindSwitch} role="tablist" aria-label="Filter">{(["alle","rueckblick","chronik","website"] as const).map(k=><button key={k} type="button" role="tab" aria-selected={filter===k} onClick={()=>setFilter(k)}>{k==="alle"?"Alle":k==="rueckblick"?"Rückblicke":k==="chronik"?"Chronik-Einträge":"Website"}</button>)}</div>
+      {filter==="website"?<PublicWorldDesk/>:
+      <ul className={styles.overview} aria-label="Rückblicke und Chronik">{shown.length?shown.map(r=><li key={r.id}><button type="button" onClick={()=>edit(r)}><span className={styles.tags}><span className={styles.badge} data-kind={isRecap(r)?"rueckblick":"chronik"}>{isRecap(r)?"Rückblick":"Chronik"}</span><span className={styles.badge} data-released={r.visibility==="group"||undefined}>{r.visibility==="group"?"freigegeben":"Entwurf"}</span>{r.body?.showOnWebsite===true&&<span className={styles.badge} data-website="true">Website</span>}</span><strong>{r.title}</strong><small>{Number.isFinite(when(r))?new Date(when(r)).toLocaleDateString("de-DE",{dateStyle:"long"}):"Ohne Datum"}</small></button></li>):<li className={styles.empty}>Noch nichts geschrieben. Leg oben rechts den ersten Eintrag an.</li>}</ul>}
       </>}
   </div>;
 }

@@ -18,7 +18,7 @@ const preparationTools = [
   { name: 'NPCs', description: 'Nichtspielercharaktere anlegen, bearbeiten und freigeben', explain: 'Die Figuren deiner Welt: Akten anlegen, Bilder und Wissen pflegen, für Spieler freigeben.', section: 'nscs', icon: UserRoundPlus },
   { name: 'Gefallen & Schulden', description: 'Verpflichtungen prüfen und Krisen bearbeiten', explain: 'Wer wem was schuldet: Verpflichtungen prüfen, eintragen und Krisen klären.', section: 'gefallen', icon: HeartHandshake },
   { name: 'Orte', description: 'Schauplätze, Bereiche und Räume verwalten', explain: 'Orte, Bereiche und Räume der Welt pflegen – mit Karte und Freigaben für die Spieler.', section: 'ortscms', icon: MapPin },
-  { name: 'Rückblicke & Chronik', description: 'Spielabende zusammenfassen, Ereignisse der Domäne festhalten', explain: 'Nach dem Abend: Zusammenfassungen schreiben und Ereignisse der Domäne festhalten.', section: 'rueckblick', icon: BookOpen },
+  { name: 'Rückblicke & Chronik', description: 'Spielabende zusammenfassen, Chronik und Website pflegen', explain: 'Nach dem Abend: Zusammenfassungen schreiben, Ereignisse der Domäne festhalten und die Einleitung der öffentlichen Website pflegen.', section: 'rueckblick', icon: BookOpen },
 ];
 
 type Resume = { book?: string; evening?: string; scene?: string; title?: string };

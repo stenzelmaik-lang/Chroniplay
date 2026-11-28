@@ -1,20 +1,24 @@
 // Öffentliche Welt: the only server path from campaign data to anonymous website visitors.
 // Rule: an entry appears on the website only when (1) the SL set its explicit website flag, read from the raw stored
 // JSON, and (2) the existing *group* projection already shows it. Content always comes from that projection and is
-// then reduced to an allowlist (domain/public-world.ts). Nothing here writes, except the SL-only place flag setter.
+// then reduced to an allowlist (domain/public-world.ts). The only writers here are SL-only: place flag and intro.
 import type { Actor } from "@/domain/types";
 import type { Entity } from "@/domain/types";
 import type { PlaceProjection } from "@/domain/location-types";
 import { LOCATION_MEDIA_KIND, parseLocationItemContent } from "@/domain/location-library";
 import { hasNPCFieldVisibility, npcFieldVisibility } from "@/domain/npc-profile";
 import {
-  isMarkedForWebsite, publicChronicleEntry, publicImageSource, publicPerson, publicPlace, sortPublicChronicle, websiteFlagKeys,
-  type PublicChronicleEntry, type PublicImageKind, type PublicPerson, type PublicPlace, type PublicWorld, type UploadRef,
+  isMarkedForWebsite, parsePublicWorldIntro, publicChronicleEntry, publicImageSource, publicPerson, publicPlace, publicRichText,
+  publicWorldIntroKey, publicWorldIntroMaxPlain, publicWorldIntroMaxSource, publicWorldLimits, publicWorldOrderHints,
+  sortPublicChronicle, websiteFlagKeys,
+  type PublicChronicleEntry, type PublicImageKind, type PublicPerson, type PublicPlace, type PublicWorld, type PublicWorldIntro,
+  type UploadRef,
 } from "@/domain/public-world";
+import { richTextToPlainText } from "@/domain/location-rich-text";
 import { HttpError } from "@/server/database";
 import { loadEntitiesForIds, projectEntity, type GrantRow } from "@/server/entities";
 import { getLocationNode, requireCmsPublisher } from "@/server/location-cms-service";
-import { loadLocationHub, loadPersistedLocation } from "@/server/location-repository";
+import { loadLocationHub } from "@/server/location-repository";
 
 /** Read-only stand-in for "the whole group, nobody in particular". The id can never match a member id, so owner rules
  * (records, entities) never apply; gm is false and only group grants are loaded. Never pass it to a writer. */
@@ -39,34 +43,29 @@ async function groupGrants(db: D1Database, campaignId: string, ids: string[]): P
   return grants;
 }
 
-/** One public entry plus the server-only reference to its uploaded image. The list and the image route both use these,
- * so the image route can never serve an image of an entry the list would not show. */
+/** One public entry plus the server-only reference to its uploaded image. The list, the image route and the SL overview
+ * all use these ordered entries, so the image route can never serve an image the public page would not show. */
 type PublicEntry<T> = { item: T; upload: UploadRef | null };
+type Ranked<T> = { marked: number; entries: PublicEntry<T>[] };
 
 const rootSql = "SELECT entity_id,attributes FROM location_nodes WHERE campaign_id=? AND level='location' AND parent_id IS NULL AND location_id=entity_id";
-function placeEntry(projection: PlaceProjection | null | undefined): PublicEntry<PublicPlace> | null {
-  if (!projection || projection.view !== "player") return null;
+function placeEntry(projection: PlaceProjection): PublicEntry<PublicPlace> | null {
+  if (projection.view !== "player") return null;
   const item = publicPlace(projection.location);
   return item ? { item, upload: publicImageSource("place", item.id, [projection.location.image]).upload } : null;
 }
 
-export async function loadPublicPlaces(db: D1Database, campaignId: string): Promise<PublicPlace[]> {
+/** All marked main places the group knows, in the order of the Orte-Werkstatt (position, then ID). Not capped. */
+async function rankPublicPlaces(db: D1Database, campaignId: string): Promise<Ranked<PublicPlace>> {
   const roots = await db.prepare(rootSql).bind(campaignId).all<{ entity_id: string; attributes: string }>();
   // The flag is read from the stored attributes: a released place's projection uses its release payload instead.
   const marked = new Set(roots.results.filter(row => isMarkedForWebsite(parse(row.attributes), websiteFlagKeys.place)).map(row => row.entity_id));
-  if (!marked.size) return [];
+  if (!marked.size) return { marked: 0, entries: [] };
   const projections = await loadLocationHub(db, publicViewer(campaignId), "player", "group");
-  return projections.flatMap(projection => {
+  return { marked: marked.size, entries: projections.flatMap(projection => {
     const entry = marked.has(projection.location.id) ? placeEntry(projection) : null;
-    return entry ? [entry.item] : [];
-  });
-}
-
-/** Same rule as the list, for a single main place: marked root, group projection, public allowlist. */
-async function loadPublicPlaceEntry(db: D1Database, campaignId: string, placeId: string) {
-  const root = await db.prepare(rootSql + " AND entity_id=?").bind(campaignId, placeId).first<{ entity_id: string; attributes: string }>();
-  if (!root || !isMarkedForWebsite(parse(root.attributes), websiteFlagKeys.place)) return null;
-  return placeEntry(await loadPersistedLocation(db, publicViewer(campaignId), placeId, "player", "group"));
+    return entry ? [entry] : [];
+  }) };
 }
 
 function personEntry(viewer: Actor, entity: Entity, grants: GrantRow[]): PublicEntry<PublicPerson> | null {
@@ -80,31 +79,76 @@ function personEntry(viewer: Actor, entity: Entity, grants: GrantRow[]): PublicE
   return item ? { item, upload: publicImageSource("person", item.id, [safe.content.image_primary, safe.content.image]).upload } : null;
 }
 
-async function loadPublicPersonEntries(db: D1Database, campaignId: string, onlyId?: string) {
-  const rows = await db.prepare(`SELECT id FROM entities WHERE campaign_id=? AND type='NPC'${onlyId ? " AND id=?" : ""}
-    AND json_extract(CASE WHEN json_valid(content) THEN content ELSE '{}' END,'$.${websiteFlagKeys.person}')=1 ORDER BY title,id`)
-    .bind(...(onlyId ? [campaignId, onlyId] : [campaignId])).all<{ id: string }>();
+/** All marked NPCs the group may see under their name, alphabetical by name. Not capped. */
+async function rankPublicPeople(db: D1Database, campaignId: string): Promise<Ranked<PublicPerson>> {
+  const rows = await db.prepare(`SELECT id FROM entities WHERE campaign_id=? AND type='NPC'
+    AND json_extract(CASE WHEN json_valid(content) THEN content ELSE '{}' END,'$.${websiteFlagKeys.person}')=1`)
+    .bind(campaignId).all<{ id: string }>();
   const ids = rows.results.map(row => row.id);
-  if (!ids.length) return [];
+  if (!ids.length) return { marked: 0, entries: [] };
   const [entities, grants] = await Promise.all([loadEntitiesForIds(db, campaignId, ids), groupGrants(db, campaignId, ids)]);
   const viewer = publicViewer(campaignId);
-  return entities.flatMap(entity => {
+  const entries = entities.flatMap(entity => {
     const entry = personEntry(viewer, entity, grants);
     return entry ? [entry] : [];
   });
+  entries.sort((a, b) => a.item.name.localeCompare(b.item.name, "de-DE") || a.item.id.localeCompare(b.item.id));
+  return { marked: ids.length, entries };
 }
 
-export async function loadPublicPeople(db: D1Database, campaignId: string): Promise<PublicPerson[]> {
-  return (await loadPublicPersonEntries(db, campaignId)).map(entry => entry.item).sort((a, b) => a.name.localeCompare(b.name, "de-DE"));
+const privateContexts = ["table-material", "sl-message", "appointment-vote", "live-table", "live-table-signal", "live-table-event"];
+/** All marked chronicle entries released to the group, newest first. Drafts never qualify. Not capped. */
+async function rankPublicChronicle(db: D1Database, campaignId: string): Promise<Ranked<PublicChronicleEntry>> {
+  const rows = await db.prepare("SELECT id,title,body,visibility FROM records WHERE campaign_id=? AND kind='chronik'")
+    .bind(campaignId).all<{ id: string; title: string; body: string; visibility: string }>();
+  const flagged = rows.results.filter(row => {
+    const body = parse(row.body);
+    return isMarkedForWebsite(body, websiteFlagKeys.chronicle) && !privateContexts.includes(String(body.context));
+  });
+  const released = flagged.filter(row => row.visibility === "group");
+  if (!released.length) return { marked: flagged.length, entries: [] };
+  const ids = released.map(row => row.id);
+  const [entities, grants] = await Promise.all([loadEntitiesForIds(db, campaignId, ids), groupGrants(db, campaignId, ids)]);
+  const index = new Map(entities.map(entity => [entity.id, entity]));
+  const viewer = publicViewer(campaignId);
+  const items = sortPublicChronicle(released.flatMap(row => {
+    const entity = index.get(row.id);
+    const safe = entity ? projectEntity(viewer, entity, grants) : null;
+    const entry = safe ? publicChronicleEntry({ id: row.id, title: safe.title }, safe.content) : null;
+    return entry ? [entry] : [];
+  }));
+  return { marked: flagged.length, entries: items.map(item => ({ item, upload: null })) };
+}
+
+async function readIntro(db: D1Database, campaignId: string): Promise<PublicWorldIntro> {
+  const row = await db.prepare("SELECT value FROM settings WHERE key=?").bind(publicWorldIntroKey(campaignId)).first<{ value: string }>();
+  return parsePublicWorldIntro(row?.value);
+}
+
+const capped = <T,>(ranked: Ranked<T>, limit: number) => ranked.entries.slice(0, limit);
+
+export async function loadPublicWorld(db: D1Database, campaignId: string): Promise<PublicWorld> {
+  const [intro, places, people, chronicle] = await Promise.all([
+    readIntro(db, campaignId), rankPublicPlaces(db, campaignId), rankPublicPeople(db, campaignId), rankPublicChronicle(db, campaignId),
+  ]);
+  return {
+    // Sanitized on the way out, whatever was stored: no images, no internal links, no protected addresses.
+    intro: publicRichText(intro.text),
+    places: capped(places, publicWorldLimits.places).map(entry => entry.item),
+    people: capped(people, publicWorldLimits.people).map(entry => entry.item),
+    chronicle: capped(chronicle, publicWorldLimits.chronicle).map(entry => entry.item),
+  };
 }
 
 export const publicImageTypes = ["image/jpeg", "image/png", "image/webp"];
 
-/** Image route: the file behind a public entry's image, or null (the route answers 404). Resolved only through the same
- * entries as the list; a released hero medium of a place is followed to its file here, on the server. */
+/** Image route: the file behind the image of an entry that is on the public page right now (marked, known to the group,
+ * within the cap), or null (the route answers 404). A released hero medium of a place is followed to its file here. */
 export async function loadPublicImageFile(db: D1Database, campaignId: string, kind: PublicImageKind, id: string) {
-  const entry = kind === "place" ? await loadPublicPlaceEntry(db, campaignId, id) : (await loadPublicPersonEntries(db, campaignId, id))[0] ?? null;
-  const upload = entry && entry.item.id === id ? entry.upload : null;
+  const entries: PublicEntry<PublicPlace | PublicPerson>[] = kind === "place"
+    ? capped(await rankPublicPlaces(db, campaignId), publicWorldLimits.places)
+    : capped(await rankPublicPeople(db, campaignId), publicWorldLimits.people);
+  const upload = entries.find(entry => entry.item.id === id)?.upload;
   if (!upload) return null;
   let fileId: string;
   if ("fileId" in upload) fileId = upload.fileId;
@@ -121,34 +165,42 @@ export async function loadPublicImageFile(db: D1Database, campaignId: string, ki
   return file && publicImageTypes.includes(file.mime) ? file : null;
 }
 
-const privateContexts = ["table-material", "sl-message", "appointment-vote", "live-table", "live-table-signal", "live-table-event"];
-export async function loadPublicChronicle(db: D1Database, campaignId: string): Promise<PublicChronicleEntry[]> {
-  // Only entries the group can read; draft (sl) and private entries never qualify, whatever their flag says.
-  const rows = await db.prepare("SELECT id,title,body FROM records WHERE campaign_id=? AND kind='chronik' AND visibility='group'")
-    .bind(campaignId).all<{ id: string; title: string; body: string }>();
-  const marked = rows.results.filter(row => {
-    const body = parse(row.body);
-    return isMarkedForWebsite(body, websiteFlagKeys.chronicle) && !privateContexts.includes(String(body.context));
-  });
-  if (!marked.length) return [];
-  const ids = marked.map(row => row.id);
-  const [entities, grants] = await Promise.all([loadEntitiesForIds(db, campaignId, ids), groupGrants(db, campaignId, ids)]);
-  const index = new Map(entities.map(entity => [entity.id, entity]));
-  const viewer = publicViewer(campaignId);
-  return sortPublicChronicle(marked.flatMap(row => {
-    const entity = index.get(row.id);
-    const safe = entity ? projectEntity(viewer, entity, grants) : null;
-    if (!safe) return [];
-    const entry = publicChronicleEntry({ id: row.id, title: safe.title }, safe.content);
-    return entry ? [entry] : [];
-  }));
+type OverviewSection = { marked: number; limit: number; hint: string; items: { id: string; title: string; shown: boolean }[] };
+function overviewSection<T extends { id: string }>(ranked: Ranked<T>, limit: number, hint: string, title: (item: T) => string): OverviewSection {
+  return { marked: ranked.marked, limit, hint, items: ranked.entries.map((entry, index) => ({ id: entry.item.id, title: title(entry.item), shown: index < limit })) };
 }
 
-export async function loadPublicWorld(db: D1Database, campaignId: string): Promise<PublicWorld> {
-  const [places, people, chronicle] = await Promise.all([
-    loadPublicPlaces(db, campaignId), loadPublicPeople(db, campaignId), loadPublicChronicle(db, campaignId),
+/** SL only: what the website shows, what the cap cuts, and how many marked entries the group does not know yet. Built
+ * from the same ranked entries as the public page. */
+export async function loadPublicWorldOverview(db: D1Database, a: Actor) {
+  requireCmsPublisher(a);
+  const [intro, places, people, chronicle] = await Promise.all([
+    readIntro(db, a.campaignId), rankPublicPlaces(db, a.campaignId), rankPublicPeople(db, a.campaignId), rankPublicChronicle(db, a.campaignId),
   ]);
-  return { places, people, chronicle };
+  return {
+    intro: { text: intro.text, version: intro.version, publicText: publicRichText(intro.text) },
+    places: overviewSection(places, publicWorldLimits.places, publicWorldOrderHints.places, item => item.title),
+    people: overviewSection(people, publicWorldLimits.people, publicWorldOrderHints.people, item => item.name),
+    chronicle: overviewSection(chronicle, publicWorldLimits.chronicle, publicWorldOrderHints.chronicle, item => item.title),
+  };
+}
+
+/** SL only: save the website introduction. Version protected; a stale editor gets a conflict instead of an overwrite. */
+export async function savePublicWorldIntro(db: D1Database, a: Actor, input: { text: string; expectedVersion: number }) {
+  requireCmsPublisher(a);
+  if (input.text.length > publicWorldIntroMaxSource) throw new HttpError(413, "Die Einleitung ist zu lang.");
+  if (richTextToPlainText(input.text).length > publicWorldIntroMaxPlain) throw new HttpError(413, `Die Einleitung darf höchstens ${publicWorldIntroMaxPlain} Zeichen lang sein.`);
+  const key = publicWorldIntroKey(a.campaignId);
+  const current = await db.prepare("SELECT value FROM settings WHERE key=?").bind(key).first<{ value: string }>();
+  const parsed = parsePublicWorldIntro(current?.value);
+  if (parsed.version !== input.expectedVersion) throw new HttpError(409, "Die Einleitung wurde inzwischen geändert. Bitte lade neu.");
+  const next: PublicWorldIntro = { text: input.text, version: parsed.version + 1, updatedAt: new Date().toISOString() };
+  const value = JSON.stringify({ ...next, updatedBy: a.id });
+  const result = current
+    ? await db.prepare("UPDATE settings SET value=? WHERE key=? AND value=?").bind(value, key, current.value).run()
+    : await db.prepare("INSERT INTO settings(key,value) VALUES(?,?) ON CONFLICT(key) DO NOTHING").bind(key, value).run();
+  if (result.meta.changes !== 1) throw new HttpError(409, "Die Einleitung wurde inzwischen geändert. Bitte lade neu.");
+  return { ok: true, version: next.version, publicText: publicRichText(next.text) };
 }
 
 /** SL only: show or hide a main place on the website. Version protected by the node revision, like other node settings. */

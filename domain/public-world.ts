@@ -53,7 +53,42 @@ export type PublicChronicleEntry = {
   kind: "rueckblick" | "ereignis";
   text: string;
 };
-export type PublicWorld = { places: PublicPlace[]; people: PublicPerson[]; chronicle: PublicChronicleEntry[] };
+export type PublicWorld = {
+  /** SL-maintained introduction (public rich text) or "" for the page's default sentence. */
+  intro: string;
+  places: PublicPlace[];
+  people: PublicPerson[];
+  chronicle: PublicChronicleEntry[];
+};
+
+/** A curated glimpse, not the whole world: fixed caps. The SL chooses by marking; beyond a cap the order decides. */
+export const publicWorldLimits = { places: 4, people: 7, chronicle: 3 } as const;
+/** How the order is decided, said in the SL switches and the overview (one source for the wording). */
+export const publicWorldOrderHints = {
+  places: `Höchstens ${publicWorldLimits.places} Orte erscheinen, in der Reihenfolge der Orte-Werkstatt.`,
+  people: `Höchstens ${publicWorldLimits.people} Persönlichkeiten erscheinen, alphabetisch nach Name.`,
+  chronicle: `Höchstens ${publicWorldLimits.chronicle} Einträge erscheinen, die neuesten zuerst.`,
+} as const;
+
+/** The intro lives in the existing settings table (no migration), one document per campaign. */
+export const publicWorldIntroKey = (campaignId: string) => `public-world:intro:${campaignId}`;
+export const publicWorldIntroMaxSource = 20000;
+export const publicWorldIntroMaxPlain = 2000;
+export type PublicWorldIntro = { text: string; version: number; updatedAt: string };
+export function parsePublicWorldIntro(raw: string | null | undefined): PublicWorldIntro {
+  try {
+    const value: unknown = JSON.parse(raw || "null");
+    if (value && typeof value === "object" && !Array.isArray(value)) {
+      const data = value as Record<string, unknown>;
+      return {
+        text: typeof data.text === "string" ? data.text.slice(0, publicWorldIntroMaxSource) : "",
+        version: Number.isInteger(data.version) && (data.version as number) > 0 ? data.version as number : 0,
+        updatedAt: typeof data.updatedAt === "string" ? data.updatedAt : "",
+      };
+    }
+  } catch { /* An unreadable document counts as no intro. */ }
+  return { text: "", version: 0, updatedAt: "" };
+}
 
 const knownDiscovery = ["known", "visited", "investigated"];
 

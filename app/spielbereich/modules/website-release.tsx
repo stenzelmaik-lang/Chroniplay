@@ -3,6 +3,7 @@
 // released to the group; the hint says so before the SL wonders why a marked entry does not appear.
 import { useState } from "react";
 import { toast } from "sonner";
+import { publicWorldOrderHints } from "@/domain/public-world";
 import { api } from "./api-client";
 import styles from "./website-release.module.css";
 
@@ -17,8 +18,9 @@ export function WebsiteSwitch({ checked, disabled = false, onChange, hint, note,
   return <section className={styles.release} aria-label="Website">
     <label className={styles.switch}><input type="checkbox" checked={checked} disabled={disabled} onChange={event => onChange(event.target.checked)} /><span>Auf der Website zeigen</span></label>
     <p>{hint}</p>
+    <p>{publicWorldOrderHints[anchor === "orte" ? "places" : anchor === "persoenlichkeiten" ? "people" : "chronicle"]}</p>
     {note && <p className={styles.note} role="status">{note}</p>}
-    <a className={styles.link} href={"/kampagne/welt#" + anchor} target="_blank" rel="noopener">Öffentliche Seite ansehen</a>
+    <span className={styles.links}><a className={styles.link} href={"/kampagne/welt#" + anchor} target="_blank" rel="noopener">Öffentliche Seite ansehen</a><a className={styles.link} href="/sl/command-center?bereich=rueckblick&ansicht=website">Übersicht</a></span>
   </section>;
 }
 
