@@ -34,6 +34,7 @@ import {locationReleaseOverviewIntegration} from './location-release-overview-in
 import {regieLocationIntegration} from './regie-location-integration.mjs';
 import {milestoneIntegration} from './milestone-integration.mjs';
 import {publicWorldIntegration} from './public-world-integration.mjs';
+import {publicWorldShowcaseIntegration} from './public-world-showcase-integration.mjs';
 import {locationLibraryIntegration} from './location-library-integration.mjs';
 import {locationDossierIntegration} from './location-dossier-integration.mjs';
 import {engineFixture} from "./fixtures/engine-character.mjs";
@@ -1087,6 +1088,7 @@ await locationReleaseOverviewIntegration({req,check,base,ids});
 await regieLocationIntegration({req,check,base});
 await milestoneIntegration({req,check,base});
 await publicWorldIntegration({req,check,base,ids});
+await publicWorldShowcaseIntegration({req,check,base,ids});
 await accountAccessIntegration({req,check,localSql,sqlQuote,base,testPassword,testPasswordHash});
 await liveLateMembersIntegration({req,check,base,testPassword,localSql});
 await liveFiguresIntegration({req,check,base,testPassword,localSql});

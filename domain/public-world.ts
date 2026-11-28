@@ -192,6 +192,19 @@ export function publicRichText(value: unknown): string {
   return encodeRichText({ version: 1, blocks });
 }
 
+/** Several texts as one public document, in the given order; empty parts are skipped. */
+export function joinPublicRichText(values: unknown[]): string {
+  const blocks = values.flatMap(value => typeof value === "string" && value.trim() ? publicBlocks(readPublicDocument(value).blocks) : []);
+  return documentText(blocks).trim() ? encodeRichText({ version: 1, blocks }) : "";
+}
+
+/** Narrative NPC block kinds that the group reads in the dossier once released (never the SL kinds). */
+export const publicPersonBlockKinds = {
+  short: ["short_profile", "profile"],
+  biography: ["biography", "bio", "history", "description", "text", "personality"],
+} as const;
+export type PublicPersonBlock = { kind: string; content: string };
+
 /** Plain teaser of a (public) rich text value. */
 export function publicTeaser(value: unknown, max = 220): string {
   if (typeof value !== "string" || !value.trim()) return "";
@@ -220,11 +233,14 @@ export function publicPlace(location: {
   };
 }
 
-/** Input: an NPC already projected for the group (field releases applied, secret keys stripped). */
-export function publicPerson(entity: { id: string; title: string; content: Record<string, unknown> }): PublicPerson | null {
+/** Input: an NPC already projected for the group (field releases applied, secret keys stripped) and its released,
+ * player-visible narrative blocks in dossier order. */
+export function publicPerson(entity: { id: string; title: string; content: Record<string, unknown> }, blocks: PublicPersonBlock[] = []): PublicPerson | null {
   const name = cleanLine(entity.title);
   if (!name) return null;
   const c = entity.content;
+  const ofKinds = (kinds: readonly string[]) => blocks.filter(block => kinds.includes(block.kind)).map(block => block.content);
+  const summarySource = typeof c.summary === "string" && c.summary.trim() ? c.summary : typeof c.concept === "string" && c.concept.trim() ? c.concept : ofKinds(publicPersonBlockKinds.short)[0];
   return {
     id: entity.id,
     name,
@@ -232,8 +248,9 @@ export function publicPerson(entity: { id: string; title: string; content: Recor
     epithet: cleanLine(c.title),
     role: cleanLine(c.role),
     clan: cleanLine(c.clan),
-    summary: publicRichText(typeof c.summary === "string" && c.summary.trim() ? c.summary : c.concept),
-    description: publicRichText(c.text),
+    summary: publicRichText(summarySource),
+    // "Biografie": the legacy text plus the released biography and personality blocks.
+    description: joinPublicRichText([c.text, ...ofKinds(publicPersonBlockKinds.biography)]),
     knownFor: cleanList(c.known_for),
     affiliation: cleanList(c.affiliation),
     image: publicImageSource("person", entity.id, [c.image_primary, c.image]).image,

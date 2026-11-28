@@ -147,6 +147,21 @@ test("a person shows only allowlisted, already released fields", () => {
   assert.equal(publicPerson({ id: "npc-2", title: "  ", content: {} }), null);
 });
 
+test("released narrative blocks form the biography; SL kinds never do", () => {
+  const blocks = [
+    { kind: "short_profile", content: "Kurz und knapp." },
+    { kind: "biography", content: "Geboren im Nebel." },
+    { kind: "sl_secrets", content: "SECRET_SL_BLOCK" },
+    { kind: "personality", content: "Ruhig und wachsam." },
+    { kind: "motivation", content: "SECRET_OTHER_KIND" },
+  ];
+  const person = publicPerson({ id: "npc-5", title: "Mit Akte", content: {} }, blocks);
+  assert.equal(publicTeaser(person.summary), "Kurz und knapp.", "the short profile block is the teaser when no summary exists");
+  assert.equal(publicTeaser(person.description), "Geboren im Nebel. Ruhig und wachsam.");
+  assert.ok(!JSON.stringify(person).includes("SECRET"));
+  assert.equal(publicTeaser(publicPerson({ id: "npc-6", title: "Mit Kurzprofil", content: { summary: "Eigenes Kurzprofil." } }, blocks).summary), "Eigenes Kurzprofil.");
+});
+
 test("a chronicle entry keeps title, date, kind and text, never the session link", () => {
   const entry = publicChronicleEntry({ id: "c1", title: "Die Versammlung" }, { type: "rueckblick", date: "2026-03-12T20:00:00Z", text: "Es geschah.", sessionId: "SECRET_SESSION", showOnWebsite: true, source: "SECRET_SOURCE" });
   assert.deepEqual(entry && Object.keys(entry).sort(), ["date", "id", "kind", "text", "title"]);

@@ -10,8 +10,8 @@ import { hasNPCFieldVisibility, npcFieldVisibility } from "@/domain/npc-profile"
 import {
   isMarkedForWebsite, parsePublicWorldIntro, publicChronicleEntry, publicImageSource, publicPerson, publicPlace, publicRichText,
   publicWorldIntroKey, publicWorldIntroMaxPlain, publicWorldIntroMaxSource, publicWorldLimits, publicWorldOrderHints,
-  sortPublicChronicle, websiteFlagKeys,
-  type PublicChronicleEntry, type PublicImageKind, type PublicPerson, type PublicPlace, type PublicWorld, type PublicWorldIntro,
+  publicPersonBlockKinds, sortPublicChronicle, websiteFlagKeys,
+  type PublicChronicleEntry, type PublicPersonBlock, type PublicImageKind, type PublicPerson, type PublicPlace, type PublicWorld, type PublicWorldIntro,
   type UploadRef,
 } from "@/domain/public-world";
 import { richTextToPlainText } from "@/domain/location-rich-text";
@@ -68,15 +68,28 @@ async function rankPublicPlaces(db: D1Database, campaignId: string): Promise<Ran
   }) };
 }
 
-function personEntry(viewer: Actor, entity: Entity, grants: GrantRow[]): PublicEntry<PublicPerson> | null {
+function personEntry(viewer: Actor, entity: Entity, grants: GrantRow[], blocks: PublicPersonBlock[]): PublicEntry<PublicPerson> | null {
   if (entity.type !== "NPC" || !isMarkedForWebsite(entity.content, websiteFlagKeys.person)) return null;
   // A person whose name is not released stays anonymous for the group; the website never shows anonymous figures.
   if (hasNPCFieldVisibility(entity.content) && npcFieldVisibility(entity.content, "name") !== "player_visible") return null;
   const safe = projectEntity(viewer, entity, grants);
   if (!safe) return null;
-  const item = publicPerson({ id: safe.id, title: safe.title, content: safe.content });
+  const item = publicPerson({ id: safe.id, title: safe.title, content: safe.content }, blocks);
   // Field releases are already applied: an unreleased portrait is not in safe.content and yields no upload.
   return item ? { item, upload: publicImageSource("person", item.id, [safe.content.image_primary, safe.content.image]).upload } : null;
+}
+
+/** Released narrative blocks (what players read in the dossier), never SL kinds; filtered in SQL. */
+async function releasedPersonBlocks(db: D1Database, campaignId: string, ids: string[]) {
+  const kinds = [...publicPersonBlockKinds.short, ...publicPersonBlockKinds.biography];
+  const map = new Map<string, PublicPersonBlock[]>();
+  for (const batch of chunks(ids, 60)) {
+    const rows = await db.prepare(`SELECT entity_id,kind,content FROM entity_content_blocks WHERE campaign_id=? AND visibility='player_visible'
+      AND kind IN (${kinds.map(() => "?").join(",")}) AND entity_id IN (${batch.map(() => "?").join(",")}) ORDER BY position,id`)
+      .bind(campaignId, ...kinds, ...batch).all<{ entity_id: string; kind: string; content: string }>();
+    for (const row of rows.results) map.set(row.entity_id, [...(map.get(row.entity_id) ?? []), { kind: row.kind, content: row.content }]);
+  }
+  return map;
 }
 
 /** All marked NPCs the group may see under their name, alphabetical by name. Not capped. */
@@ -86,10 +99,10 @@ async function rankPublicPeople(db: D1Database, campaignId: string): Promise<Ran
     .bind(campaignId).all<{ id: string }>();
   const ids = rows.results.map(row => row.id);
   if (!ids.length) return { marked: 0, entries: [] };
-  const [entities, grants] = await Promise.all([loadEntitiesForIds(db, campaignId, ids), groupGrants(db, campaignId, ids)]);
+  const [entities, grants, blocks] = await Promise.all([loadEntitiesForIds(db, campaignId, ids), groupGrants(db, campaignId, ids), releasedPersonBlocks(db, campaignId, ids)]);
   const viewer = publicViewer(campaignId);
   const entries = entities.flatMap(entity => {
-    const entry = personEntry(viewer, entity, grants);
+    const entry = personEntry(viewer, entity, grants, blocks.get(entity.id) ?? []);
     return entry ? [entry] : [];
   });
   entries.sort((a, b) => a.item.name.localeCompare(b.item.name, "de-DE") || a.item.id.localeCompare(b.item.id));
