@@ -93,7 +93,7 @@ export async function publicWorldIntegration({ req, check, base, ids }) {
   const visiblePerson = npc('Öffentliche Persönlichkeit ' + tag, {
     profile: { alias: 'Die Füchsin', role: 'Informantin', clan: secret + '_CLAN', summary: 'Kennt die Gassen.', location_note: secret + '_WHEREABOUTS', show_on_website: true,
       field_visibility: { name: 'player_visible', alias: 'player_visible', role: 'player_visible', summary: 'player_visible' } },
-    blocks: [{ kind: 'sl_secrets', content: secret + '_SL_BLOCK', visibility: 'sl_secret', position: 0 }, { kind: 'bio', content: secret + '_PLAYER_BLOCK', visibility: 'player_visible', position: 1 }],
+    blocks: [{ kind: 'sl_secrets', content: secret + '_SL_BLOCK', visibility: 'sl_secret', position: 0 }, { kind: 'bio', content: 'Freigegebene Biografie ' + tag, visibility: 'player_visible', position: 1 }, { kind: 'motivation', content: secret + '_UNLISTED_KIND', visibility: 'player_visible', position: 2 }],
   });
   check([401, 403].includes((await req('/api/entities/npc', 'a', 'POST', visiblePerson)).s), 'PUBLIC-WORLD players cannot author a marked NPC');
   const person = await req('/api/entities/npc', 'gm', 'POST', visiblePerson);
@@ -130,6 +130,7 @@ export async function publicWorldIntegration({ req, check, base, ids }) {
   const fox = people.find(item => item.id === person.d.id);
   check(people.length === 1 && !!fox, 'PUBLIC-WORLD only the released, named and marked NPC is public');
   check(fox.name === visiblePerson.title && fox.alias === 'Die Füchsin' && fox.role === 'Informantin' && fox.clan === '' && fox.summary.includes('Kennt die Gassen.'), 'PUBLIC-WORLD the NPC shows only released fields (unreleased clan stays empty)');
+  check(fox.description.includes('Freigegebene Biografie ' + tag), 'PUBLIC-WORLD a released biography block becomes the public biography (SL blocks and other kinds stay out)');
   const entries = pub.d.chronicle;
   const assembly = entries.find(item => item.id === shownEntry.d.id);
   const legacy = entries.find(item => item.id === legacyEntry.d.id);

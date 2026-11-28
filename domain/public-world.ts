@@ -24,7 +24,7 @@ export type PublicPlace = {
   summary: string;
   atmosphere: string;
   worldState: string;
-  /** Only bundled static images (/images/…); uploads need a login and are never emitted. */
+  /** A bundled static image (/images/…), the entry-addressed public image route for an upload, or "". */
   image: string;
 };
 export type PublicPerson = {
@@ -38,6 +38,7 @@ export type PublicPerson = {
   description: string;
   knownFor: string[];
   affiliation: string[];
+  /** A bundled static image (/images/…), the entry-addressed public image route for an upload, or "". */
   image: string;
 };
 export type PublicChronicleEntry = {
@@ -48,7 +49,42 @@ export type PublicChronicleEntry = {
   kind: "rueckblick" | "ereignis";
   text: string;
 };
-export type PublicWorld = { places: PublicPlace[]; people: PublicPerson[]; chronicle: PublicChronicleEntry[] };
+export type PublicWorld = {
+  /** SL-maintained introduction (public rich text) or "" for the page's default sentence. */
+  intro: string;
+  places: PublicPlace[];
+  people: PublicPerson[];
+  chronicle: PublicChronicleEntry[];
+};
+
+/** A curated glimpse, not the whole world: fixed caps. The SL chooses by marking; beyond a cap the order decides. */
+export const publicWorldLimits = { places: 4, people: 7, chronicle: 3 } as const;
+/** How the order is decided, said in the SL switches and the overview (one source for the wording). */
+export const publicWorldOrderHints = {
+  places: `Höchstens ${publicWorldLimits.places} Orte erscheinen, in der Reihenfolge der Orte-Werkstatt.`,
+  people: `Höchstens ${publicWorldLimits.people} Persönlichkeiten erscheinen, alphabetisch nach Name.`,
+  chronicle: `Höchstens ${publicWorldLimits.chronicle} Einträge erscheinen, die neuesten zuerst.`,
+} as const;
+
+/** The intro lives in the existing settings table (no migration), one document per campaign. */
+export const publicWorldIntroKey = (campaignId: string) => `public-world:intro:${campaignId}`;
+export const publicWorldIntroMaxSource = 20000;
+export const publicWorldIntroMaxPlain = 2000;
+export type PublicWorldIntro = { text: string; version: number; updatedAt: string };
+export function parsePublicWorldIntro(raw: string | null | undefined): PublicWorldIntro {
+  try {
+    const value: unknown = JSON.parse(raw || "null");
+    if (value && typeof value === "object" && !Array.isArray(value)) {
+      const data = value as Record<string, unknown>;
+      return {
+        text: typeof data.text === "string" ? data.text.slice(0, publicWorldIntroMaxSource) : "",
+        version: Number.isInteger(data.version) && (data.version as number) > 0 ? data.version as number : 0,
+        updatedAt: typeof data.updatedAt === "string" ? data.updatedAt : "",
+      };
+    }
+  } catch { /* An unreadable document counts as no intro. */ }
+  return { text: "", version: 0, updatedAt: "" };
+}
 
 const knownDiscovery = ["known", "visited", "investigated"];
 
@@ -59,6 +95,38 @@ export function isMarkedForWebsite(data: unknown, key: string): boolean {
 
 export function publicStaticImage(value: unknown): string {
   return typeof value === "string" && /^\/images\/[a-zA-Z0-9._-]+$/.test(value) ? value : "";
+}
+
+export type PublicImageKind = "place" | "person";
+/** Images are addressed by their entry, never by file: the route resolves the upload on the server, so no file ID
+ * reaches a guest and a withdrawn entry takes its image with it. */
+export function publicImagePath(kind: PublicImageKind, id: string) {
+  return `/api/public-world/image?kind=${kind}&id=${encodeURIComponent(id)}`;
+}
+
+/** An upload as the group projection references it. Read only by the public image route, never sent to guests. */
+export type UploadRef = { fileId: string } | { mediaBlockId: string };
+export function uploadRef(value: unknown): UploadRef | null {
+  if (typeof value !== "string" || value.length > 600) return null;
+  let url: URL;
+  try { url = new URL(value, "https://chroniplay.invalid"); } catch { return null; }
+  if (url.origin !== "https://chroniplay.invalid" || url.searchParams.has("preview") || url.searchParams.has("viewerId")) return null;
+  const id = url.searchParams.get("id") ?? "";
+  if (!/^[a-zA-Z0-9_-]{1,200}$/.test(id)) return null;
+  if (url.pathname === "/api/files" || url.pathname === "/api/cms/media") return { fileId: id };
+  if (url.pathname === "/api/locations/media") return { mediaBlockId: id };
+  return null;
+}
+
+/** The first usable image among the candidates: a static image stays as it is, an upload gets the entry path. */
+export function publicImageSource(kind: PublicImageKind, id: string, candidates: unknown[]): { image: string; upload: UploadRef | null } {
+  for (const candidate of candidates) {
+    const image = publicStaticImage(candidate);
+    if (image) return { image, upload: null };
+    const upload = uploadRef(candidate);
+    if (upload) return { image: publicImagePath(kind, id), upload };
+  }
+  return { image: "", upload: null };
 }
 
 const cleanLine = (value: unknown, max = 200) => typeof value === "string" ? value.replace(/\s+/g, " ").trim().slice(0, max) : "";
@@ -120,6 +188,22 @@ export function publicRichText(value: unknown): string {
   return encodeRichText({ version: 1, blocks });
 }
 
+/** Several texts as one public document, in the given order; empty parts are skipped. */
+export function joinPublicRichText(values: unknown[]): string {
+  const blocks = values.flatMap(value => typeof value === "string" && value.trim() ? publicBlocks(readPublicDocument(value).blocks) : []);
+  return documentText(blocks).trim() ? encodeRichText({ version: 1, blocks }) : "";
+}
+
+/** Narrative NPC block kinds that the group reads in the dossier once released (never the SL kinds). */
+export const publicPersonBlockKinds = {
+  short: ["short_profile", "profile"],
+  biography: ["biography", "bio", "history", "description", "text", "personality"],
+} as const;
+export type PublicPersonBlock = { kind: string; content: string };
+/** Image order for a person: the full-body character (secondary image) first, then the portrait. Only released
+ * fields reach here, so an unreleased full-body image falls back to the released portrait. */
+export const publicPersonImageFields = ["image_secondary", "image_primary", "image"] as const;
+
 /** Plain teaser of a (public) rich text value. */
 export function publicTeaser(value: unknown, max = 220): string {
   if (typeof value !== "string" || !value.trim()) return "";
@@ -144,15 +228,18 @@ export function publicPlace(location: {
     summary: publicRichText(location.summary),
     atmosphere: publicRichText(location.atmosphere),
     worldState: cleanLine(location.worldState, 40) || "active",
-    image: publicStaticImage(location.image),
+    image: publicImageSource("place", location.id, [location.image]).image,
   };
 }
 
-/** Input: an NPC already projected for the group (field releases applied, secret keys stripped). */
-export function publicPerson(entity: { id: string; title: string; content: Record<string, unknown> }): PublicPerson | null {
+/** Input: an NPC already projected for the group (field releases applied, secret keys stripped) and its released,
+ * player-visible narrative blocks in dossier order. */
+export function publicPerson(entity: { id: string; title: string; content: Record<string, unknown> }, blocks: PublicPersonBlock[] = []): PublicPerson | null {
   const name = cleanLine(entity.title);
   if (!name) return null;
   const c = entity.content;
+  const ofKinds = (kinds: readonly string[]) => blocks.filter(block => kinds.includes(block.kind)).map(block => block.content);
+  const summarySource = typeof c.summary === "string" && c.summary.trim() ? c.summary : typeof c.concept === "string" && c.concept.trim() ? c.concept : ofKinds(publicPersonBlockKinds.short)[0];
   return {
     id: entity.id,
     name,
@@ -160,11 +247,12 @@ export function publicPerson(entity: { id: string; title: string; content: Recor
     epithet: cleanLine(c.title),
     role: cleanLine(c.role),
     clan: cleanLine(c.clan),
-    summary: publicRichText(typeof c.summary === "string" && c.summary.trim() ? c.summary : c.concept),
-    description: publicRichText(c.text),
+    summary: publicRichText(summarySource),
+    // "Biografie": the legacy text plus the released biography and personality blocks.
+    description: joinPublicRichText([c.text, ...ofKinds(publicPersonBlockKinds.biography)]),
     knownFor: cleanList(c.known_for),
     affiliation: cleanList(c.affiliation),
-    image: publicStaticImage(c.image_primary) || publicStaticImage(c.image),
+    image: publicImageSource("person", entity.id, publicPersonImageFields.map(key => c[key])).image,
   };
 }
 

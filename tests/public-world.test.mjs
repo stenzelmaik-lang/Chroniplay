@@ -2,8 +2,9 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import {
-  isMarkedForWebsite, publicChronicleEntry, publicPerson, publicPlace, publicRichText, publicStaticImage, publicTeaser,
-  sortPublicChronicle, websiteFlagKeys,
+  isMarkedForWebsite, parsePublicWorldIntro, publicChronicleEntry, publicImagePath, publicImageSource, publicPerson, publicPlace,
+  publicRichText, publicStaticImage, publicTeaser, publicWorldIntroKey, publicWorldLimits, publicWorldOrderHints,
+  sortPublicChronicle, uploadRef, websiteFlagKeys,
 } from "../domain/public-world.ts";
 import { encodeRichText, readRichText } from "../domain/location-rich-text.ts";
 import { npcProfileSchema, npcFieldNames } from "../domain/npc-profile.ts";
@@ -66,6 +67,43 @@ test("old entries (HTML, plain text, Markdown) lose protected file addresses and
   assert.equal(publicRichText('<img src="/api/files?id=FILE_H">'), "", "an old image-only text is empty");
 });
 
+test("uploads are recognised only in the projection's own forms; previews, viewer links and foreign URLs are not", () => {
+  assert.deepEqual(uploadRef("/api/files?id=abc-1"), { fileId: "abc-1" });
+  assert.deepEqual(uploadRef("/api/files?id=abc-1&size=thumb"), { fileId: "abc-1" });
+  assert.deepEqual(uploadRef("/api/cms/media?id=f-2&entityId=place.x&revisionId=r-1"), { fileId: "f-2" });
+  assert.deepEqual(uploadRef("/api/locations/media?id=block-3"), { mediaBlockId: "block-3" });
+  for (const value of [
+    "/api/cms/media?id=f-2&entityId=place.x&revisionId=r-1&preview=1", "/api/locations/media?id=block-3&preview=1",
+    "/api/cms/media?id=f-2&entityId=e&revisionId=r&viewerId=p1", "https://example.invalid/api/files?id=x", "//example.invalid/api/files?id=x",
+    "/api/files?id=../x", "/api/files", "/api/other?id=x", "/images/kleve.png", "", null, 7,
+  ]) assert.equal(uploadRef(value), null, String(value));
+});
+
+test("the public image path carries only kind and entry ID", () => {
+  assert.equal(publicImagePath("person", "a b&c"), "/api/public-world/image?kind=person&id=a%20b%26c");
+  const source = publicImageSource("place", "place.x", ["https://example.invalid/x.png", "/api/cms/media?id=FILE_SECRET&entityId=place.x&revisionId=r"]);
+  assert.deepEqual(source, { image: "/api/public-world/image?kind=place&id=place.x", upload: { fileId: "FILE_SECRET" } });
+  assert.ok(!source.image.includes("FILE_SECRET"));
+  assert.deepEqual(publicImageSource("place", "p", ["/images/kleve.png", "/api/files?id=x"]), { image: "/images/kleve.png", upload: null });
+  assert.deepEqual(publicImageSource("place", "p", [undefined, ""]), { image: "", upload: null });
+});
+
+test("the curated glimpse has fixed caps and says how the order is decided", () => {
+  assert.deepEqual({ ...publicWorldLimits }, { places: 4, people: 7, chronicle: 3 });
+  assert.match(publicWorldOrderHints.places, /4 Orte/);
+  assert.match(publicWorldOrderHints.people, /7 Persönlichkeiten/);
+  assert.match(publicWorldOrderHints.chronicle, /3 Einträge/);
+});
+
+test("the website intro document is read defensively and scoped per campaign", () => {
+  assert.equal(publicWorldIntroKey("kampagne-a"), "public-world:intro:kampagne-a");
+  assert.notEqual(publicWorldIntroKey("kampagne-a"), publicWorldIntroKey("kampagne-b"));
+  assert.deepEqual(parsePublicWorldIntro(null), { text: "", version: 0, updatedAt: "" });
+  assert.deepEqual(parsePublicWorldIntro("kaputt"), { text: "", version: 0, updatedAt: "" });
+  assert.deepEqual(parsePublicWorldIntro(JSON.stringify({ text: "Hallo", version: 3, updatedAt: "2026-11-28", updatedBy: "sl" })), { text: "Hallo", version: 3, updatedAt: "2026-11-28" });
+  assert.deepEqual(parsePublicWorldIntro(JSON.stringify({ text: 5, version: -1 })), { text: "", version: 0, updatedAt: "" });
+});
+
 test("teasers are plain and bounded", () => {
   const value = rich([{ type: "paragraph", children: [{ text: "Eins zwei drei vier fünf sechs" }] }]);
   assert.equal(publicTeaser(value, 100), "Eins zwei drei vier fünf sechs");
@@ -84,7 +122,7 @@ test("a place shows only allowlisted root fields of a group-known place", () => 
   };
   const place = publicPlace(projected);
   assert.deepEqual(Object.keys(place).sort(), ["atmosphere", "district", "id", "image", "subtitle", "summary", "title", "worldState"]);
-  assert.equal(place.image, "");
+  assert.equal(place.image, "/api/public-world/image?kind=place&id=place.x", "an upload is addressed by the entry, not by the file");
   assert.equal(place.worldState, "destroyed");
   assert.ok(!JSON.stringify(place).includes("SECRET"));
   for (const discovery of ["hidden", "rumored", undefined]) assert.equal(publicPlace({ ...projected, discovery }), null, String(discovery));
@@ -99,10 +137,31 @@ test("a person shows only allowlisted, already released fields", () => {
     image_primary: "/api/files?id=SECRET_FILE", image: "/images/kleve.png", show_on_website: true, field_visibility: { name: "player_visible" },
   } });
   assert.deepEqual(Object.keys(person).sort(), ["affiliation", "alias", "clan", "description", "epithet", "id", "image", "knownFor", "name", "role", "summary"]);
-  assert.equal(person.image, "/images/kleve.png");
+  assert.equal(person.image, "/api/public-world/image?kind=person&id=npc-1", "the released primary portrait wins and is addressed by the entry");
+  assert.equal(publicPerson({ id: "npc-3", title: "Ohne Upload", content: { image: "/images/kleve.png", hero_position: 40 } }).image, "/images/kleve.png");
+  const full = publicImageSource("person", "npc-7", ["/api/files?id=FULL_BODY", "/api/files?id=PORTRAIT"]);
+  assert.deepEqual(full.upload, { fileId: "FULL_BODY" }, "the full-body (secondary) image comes first");
+  assert.equal(publicPerson({ id: "npc-7", title: "Ganzkörper", content: { image_secondary: "/images/kleve.png", image_primary: "/api/files?id=PORTRAIT" } }).image, "/images/kleve.png");
+  assert.equal(publicPerson({ id: "npc-8", title: "Nur Porträt", content: { image_primary: "/api/files?id=PORTRAIT" } }).image, "/api/public-world/image?kind=person&id=npc-8", "without a released full-body image the portrait is used");
+  assert.equal(publicPerson({ id: "npc-4", title: "Ohne Bild", content: {} }).image, "");
   assert.deepEqual(person.knownFor, ["Feste"]);
   assert.ok(!JSON.stringify(person).includes("SECRET"));
   assert.equal(publicPerson({ id: "npc-2", title: "  ", content: {} }), null);
+});
+
+test("released narrative blocks form the biography; SL kinds never do", () => {
+  const blocks = [
+    { kind: "short_profile", content: "Kurz und knapp." },
+    { kind: "biography", content: "Geboren im Nebel." },
+    { kind: "sl_secrets", content: "SECRET_SL_BLOCK" },
+    { kind: "personality", content: "Ruhig und wachsam." },
+    { kind: "motivation", content: "SECRET_OTHER_KIND" },
+  ];
+  const person = publicPerson({ id: "npc-5", title: "Mit Akte", content: {} }, blocks);
+  assert.equal(publicTeaser(person.summary), "Kurz und knapp.", "the short profile block is the teaser when no summary exists");
+  assert.equal(publicTeaser(person.description), "Geboren im Nebel. Ruhig und wachsam.");
+  assert.ok(!JSON.stringify(person).includes("SECRET"));
+  assert.equal(publicTeaser(publicPerson({ id: "npc-6", title: "Mit Kurzprofil", content: { summary: "Eigenes Kurzprofil." } }, blocks).summary), "Eigenes Kurzprofil.");
 });
 
 test("a chronicle entry keeps title, date, kind and text, never the session link", () => {
@@ -128,12 +187,18 @@ test("the public route has no write method and the page has no client code", () 
   assert.match(route, /export async function GET/);
   assert.doesNotMatch(route, /export async function (POST|PUT|PATCH|DELETE)/);
   assert.doesNotMatch(route, /actor\(/, "the public read never requires or uses a login");
-  for (const file of ["../app/kampagne/welt/page.tsx", "../app/kampagne/welt/public-rich-text.tsx"]) {
+  for (const file of ["../app/kampagne/welt/page.tsx", "../app/kampagne/welt/public-rich-text.tsx", "../app/kampagne/welt/content.ts"]) {
     const source = readFileSync(new URL(file, import.meta.url), "utf8");
     assert.doesNotMatch(source, /^\s*["']use client["']/m, file);
     assert.doesNotMatch(source, /<form|onClick|fetch\(/, file);
   }
+  const image = readFileSync(new URL("../app/api/public-world/image/route.ts", import.meta.url), "utf8");
+  assert.match(image, /export async function GET/);
+  assert.doesNotMatch(image, /export async function (POST|PUT|PATCH|DELETE)/);
+  assert.doesNotMatch(image, /actor\(/, "the public image never requires or uses a login");
+  assert.match(image, /X-Content-Type-Options/);
+  assert.match(image, /max-age=300/);
   const server = readFileSync(new URL("../server/public-world.ts", import.meta.url), "utf8");
   assert.match(server, /audience='group'/, "only group knowledge is used");
-  assert.match(server, /visibility='group'/, "only group chronicle entries qualify");
+  assert.match(server, /row\.visibility === "group"/, "only group chronicle entries qualify");
 });
