@@ -56,8 +56,9 @@ function PersonPortrait({ person }: { person: PublicPerson }) {
   const teaser = publicTeaser(person.summary, 320) || publicTeaser(person.description, 320);
   const byline = [person.epithet, person.alias && "„" + person.alias + "“"].filter(Boolean).join(" · ");
   const chips = [person.clan, person.role].filter(Boolean);
-  const more = Boolean(person.description || person.knownFor.length || person.affiliation.length) || publicTeaser(person.summary, 100000) !== teaser;
-  return <article className={styles.figure} id={"person-" + encodeURIComponent(person.id)} aria-labelledby={"person-name-" + encodeURIComponent(person.id)}>
+  const summaryCut = publicTeaser(person.summary, 100000) !== teaser;
+  const more = Boolean(person.description || person.knownFor.length || person.affiliation.length) || summaryCut;
+  return <article className={styles.figure} data-summary-cut={summaryCut || undefined} id={"person-" + encodeURIComponent(person.id)} aria-labelledby={"person-name-" + encodeURIComponent(person.id)}>
     <div className={styles.figureMedia} data-empty={!person.image || undefined}>
       {person.image
         ? <img src={person.image} alt={"Bild von " + person.name} loading="lazy" decoding="async" />
@@ -70,7 +71,7 @@ function PersonPortrait({ person }: { person: PublicPerson }) {
       {teaser && <p className={styles.teaser}>{teaser}</p>}
       {more && <details className={styles.more}><Toggle open="Biografie" close="Weniger anzeigen" />
         <div className={styles.moreBody}>
-          <PublicRichText value={person.summary} />
+          {summaryCut && <PublicRichText value={person.summary} />}
           <PublicRichText value={person.description} />
           {person.knownFor.length > 0 && <><h4 className={styles.moreHeading}>Bekannt für</h4><ul className={styles.plainList}>{person.knownFor.map(item => <li key={item}>{item}</li>)}</ul></>}
           {person.affiliation.length > 0 && <><h4 className={styles.moreHeading}>Zugehörigkeiten</h4><ul className={styles.plainList}>{person.affiliation.map(item => <li key={item}>{item}</li>)}</ul></>}

@@ -45,8 +45,9 @@
 .figureList{display:grid;gap:clamp(36px,6vw,80px)}
 .figure{display:grid;grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr);gap:clamp(20px,4vw,56px);align-items:center;min-width:0}
 .figure:nth-child(even) .figureMedia{order:2}
-.figureMedia{justify-self:center;width:min(100%,440px);aspect-ratio:3/4;border-radius:12px;background:radial-gradient(ellipse at 50% 85%,#e9b96e2e,transparent 60%),radial-gradient(circle at 30% 15%,#14303d,#081720 70%)}
-.figureMedia img{object-fit:contain;object-position:center bottom;filter:drop-shadow(0 18px 30px #000a)}
+.figureMedia{justify-self:center;width:min(100%,440px);border-radius:12px;background:radial-gradient(ellipse at 50% 85%,#e9b96e2e,transparent 60%),radial-gradient(circle at 30% 15%,#14303d,#081720 70%)}
+.figureMedia img{display:block;height:auto;max-height:640px;object-fit:contain}
+.figureMedia[data-empty]{aspect-ratio:3/4}
 .figureMedia span{display:grid;place-items:center;width:96px;height:96px;border:1px solid var(--gold);border-radius:50%;font:34px Georgia,serif;letter-spacing:2px;opacity:.8}
 .figureText{align-content:center}
 .figureText h3{font-size:clamp(30px,3.2vw,44px)}
@@ -61,7 +62,7 @@
 .more summary:hover{color:var(--gold)}
 .whenOpen{display:none}.more[open] .whenOpen{display:inline}.more[open] .whenClosed{display:none}
 .moreBody{margin-top:16px;padding-top:16px;border-top:1px solid var(--line)}
-.showcase:has(.more[open]) .teaser{display:none}
+.showcase:has(.more[open]) .teaser,.figure[data-summary-cut]:has(.more[open]) .teaser{display:none}
 @media (prefers-reduced-motion:no-preference){
   .more[open] .moreBody{animation:reveal .22s ease-out}
   .more summary::after{transition:transform .15s}
