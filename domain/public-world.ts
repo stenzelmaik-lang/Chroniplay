@@ -4,6 +4,8 @@
 // Note: "public" in the location model means "generally known inside the game", not "shown on the website".
 // The website release therefore uses its own flag keys below.
 import { encodeRichText, htmlToRichText, readRichText, richTextPrefix, type RichTextBlock, type RichTextDocument, type RichTextInline } from "./location-rich-text.ts";
+import { npcPortraitSettings } from "./npc-presentation.ts";
+import type { JsonObject } from "./types.ts";
 
 /** Stored flag keys, one per source. Each lives in an existing JSON field, so no migration is needed. */
 export const websiteFlagKeys = {
@@ -24,7 +26,7 @@ export type PublicPlace = {
   summary: string;
   atmosphere: string;
   worldState: string;
-  /** Only bundled static images (/images/…); uploads need a login and are never emitted. */
+  /** A bundled static image (/images/…), the entry-addressed public image route for an upload, or "". */
   image: string;
 };
 export type PublicPerson = {
@@ -38,7 +40,10 @@ export type PublicPerson = {
   description: string;
   knownFor: string[];
   affiliation: string[];
+  /** A bundled static image (/images/…), the entry-addressed public image route for an upload, or "". */
   image: string;
+  /** Vertical focus of the portrait in percent (the SL's released crop setting). */
+  imageFocus: number;
 };
 export type PublicChronicleEntry = {
   id: string;
@@ -59,6 +64,38 @@ export function isMarkedForWebsite(data: unknown, key: string): boolean {
 
 export function publicStaticImage(value: unknown): string {
   return typeof value === "string" && /^\/images\/[a-zA-Z0-9._-]+$/.test(value) ? value : "";
+}
+
+export type PublicImageKind = "place" | "person";
+/** Images are addressed by their entry, never by file: the route resolves the upload on the server, so no file ID
+ * reaches a guest and a withdrawn entry takes its image with it. */
+export function publicImagePath(kind: PublicImageKind, id: string) {
+  return `/api/public-world/image?kind=${kind}&id=${encodeURIComponent(id)}`;
+}
+
+/** An upload as the group projection references it. Read only by the public image route, never sent to guests. */
+export type UploadRef = { fileId: string } | { mediaBlockId: string };
+export function uploadRef(value: unknown): UploadRef | null {
+  if (typeof value !== "string" || value.length > 600) return null;
+  let url: URL;
+  try { url = new URL(value, "https://chroniplay.invalid"); } catch { return null; }
+  if (url.origin !== "https://chroniplay.invalid" || url.searchParams.has("preview") || url.searchParams.has("viewerId")) return null;
+  const id = url.searchParams.get("id") ?? "";
+  if (!/^[a-zA-Z0-9_-]{1,200}$/.test(id)) return null;
+  if (url.pathname === "/api/files" || url.pathname === "/api/cms/media") return { fileId: id };
+  if (url.pathname === "/api/locations/media") return { mediaBlockId: id };
+  return null;
+}
+
+/** The first usable image among the candidates: a static image stays as it is, an upload gets the entry path. */
+export function publicImageSource(kind: PublicImageKind, id: string, candidates: unknown[]): { image: string; upload: UploadRef | null } {
+  for (const candidate of candidates) {
+    const image = publicStaticImage(candidate);
+    if (image) return { image, upload: null };
+    const upload = uploadRef(candidate);
+    if (upload) return { image: publicImagePath(kind, id), upload };
+  }
+  return { image: "", upload: null };
 }
 
 const cleanLine = (value: unknown, max = 200) => typeof value === "string" ? value.replace(/\s+/g, " ").trim().slice(0, max) : "";
@@ -144,7 +181,7 @@ export function publicPlace(location: {
     summary: publicRichText(location.summary),
     atmosphere: publicRichText(location.atmosphere),
     worldState: cleanLine(location.worldState, 40) || "active",
-    image: publicStaticImage(location.image),
+    image: publicImageSource("place", location.id, [location.image]).image,
   };
 }
 
@@ -164,7 +201,8 @@ export function publicPerson(entity: { id: string; title: string; content: Recor
     description: publicRichText(c.text),
     knownFor: cleanList(c.known_for),
     affiliation: cleanList(c.affiliation),
-    image: publicStaticImage(c.image_primary) || publicStaticImage(c.image),
+    image: publicImageSource("person", entity.id, [c.image_primary, c.image]).image,
+    imageFocus: npcPortraitSettings(c as JsonObject).position,
   };
 }
 

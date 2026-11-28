@@ -3,15 +3,18 @@
 // JSON, and (2) the existing *group* projection already shows it. Content always comes from that projection and is
 // then reduced to an allowlist (domain/public-world.ts). Nothing here writes, except the SL-only place flag setter.
 import type { Actor } from "@/domain/types";
+import type { Entity } from "@/domain/types";
+import type { PlaceProjection } from "@/domain/location-types";
+import { LOCATION_MEDIA_KIND, parseLocationItemContent } from "@/domain/location-library";
 import { hasNPCFieldVisibility, npcFieldVisibility } from "@/domain/npc-profile";
 import {
-  isMarkedForWebsite, publicChronicleEntry, publicPerson, publicPlace, sortPublicChronicle, websiteFlagKeys,
-  type PublicChronicleEntry, type PublicPerson, type PublicPlace, type PublicWorld,
+  isMarkedForWebsite, publicChronicleEntry, publicImageSource, publicPerson, publicPlace, sortPublicChronicle, websiteFlagKeys,
+  type PublicChronicleEntry, type PublicImageKind, type PublicPerson, type PublicPlace, type PublicWorld, type UploadRef,
 } from "@/domain/public-world";
 import { HttpError } from "@/server/database";
 import { loadEntitiesForIds, projectEntity, type GrantRow } from "@/server/entities";
 import { getLocationNode, requireCmsPublisher } from "@/server/location-cms-service";
-import { loadLocationHub } from "@/server/location-repository";
+import { loadLocationHub, loadPersistedLocation } from "@/server/location-repository";
 
 /** Read-only stand-in for "the whole group, nobody in particular". The id can never match a member id, so owner rules
  * (records, entities) never apply; gm is false and only group grants are loaded. Never pass it to a writer. */
@@ -36,38 +39,86 @@ async function groupGrants(db: D1Database, campaignId: string, ids: string[]): P
   return grants;
 }
 
+/** One public entry plus the server-only reference to its uploaded image. The list and the image route both use these,
+ * so the image route can never serve an image of an entry the list would not show. */
+type PublicEntry<T> = { item: T; upload: UploadRef | null };
+
+const rootSql = "SELECT entity_id,attributes FROM location_nodes WHERE campaign_id=? AND level='location' AND parent_id IS NULL AND location_id=entity_id";
+function placeEntry(projection: PlaceProjection | null | undefined): PublicEntry<PublicPlace> | null {
+  if (!projection || projection.view !== "player") return null;
+  const item = publicPlace(projection.location);
+  return item ? { item, upload: publicImageSource("place", item.id, [projection.location.image]).upload } : null;
+}
+
 export async function loadPublicPlaces(db: D1Database, campaignId: string): Promise<PublicPlace[]> {
-  const roots = await db.prepare("SELECT entity_id,attributes FROM location_nodes WHERE campaign_id=? AND level='location' AND parent_id IS NULL AND location_id=entity_id")
-    .bind(campaignId).all<{ entity_id: string; attributes: string }>();
+  const roots = await db.prepare(rootSql).bind(campaignId).all<{ entity_id: string; attributes: string }>();
   // The flag is read from the stored attributes: a released place's projection uses its release payload instead.
   const marked = new Set(roots.results.filter(row => isMarkedForWebsite(parse(row.attributes), websiteFlagKeys.place)).map(row => row.entity_id));
   if (!marked.size) return [];
   const projections = await loadLocationHub(db, publicViewer(campaignId), "player", "group");
   return projections.flatMap(projection => {
-    if (projection.view !== "player" || !marked.has(projection.location.id)) return [];
-    const place = publicPlace(projection.location);
-    return place ? [place] : [];
+    const entry = marked.has(projection.location.id) ? placeEntry(projection) : null;
+    return entry ? [entry.item] : [];
   });
 }
 
-export async function loadPublicPeople(db: D1Database, campaignId: string): Promise<PublicPerson[]> {
-  const rows = await db.prepare(`SELECT id FROM entities WHERE campaign_id=? AND type='NPC'
+/** Same rule as the list, for a single main place: marked root, group projection, public allowlist. */
+async function loadPublicPlaceEntry(db: D1Database, campaignId: string, placeId: string) {
+  const root = await db.prepare(rootSql + " AND entity_id=?").bind(campaignId, placeId).first<{ entity_id: string; attributes: string }>();
+  if (!root || !isMarkedForWebsite(parse(root.attributes), websiteFlagKeys.place)) return null;
+  return placeEntry(await loadPersistedLocation(db, publicViewer(campaignId), placeId, "player", "group"));
+}
+
+function personEntry(viewer: Actor, entity: Entity, grants: GrantRow[]): PublicEntry<PublicPerson> | null {
+  if (entity.type !== "NPC" || !isMarkedForWebsite(entity.content, websiteFlagKeys.person)) return null;
+  // A person whose name is not released stays anonymous for the group; the website never shows anonymous figures.
+  if (hasNPCFieldVisibility(entity.content) && npcFieldVisibility(entity.content, "name") !== "player_visible") return null;
+  const safe = projectEntity(viewer, entity, grants);
+  if (!safe) return null;
+  const item = publicPerson({ id: safe.id, title: safe.title, content: safe.content });
+  // Field releases are already applied: an unreleased portrait is not in safe.content and yields no upload.
+  return item ? { item, upload: publicImageSource("person", item.id, [safe.content.image_primary, safe.content.image]).upload } : null;
+}
+
+async function loadPublicPersonEntries(db: D1Database, campaignId: string, onlyId?: string) {
+  const rows = await db.prepare(`SELECT id FROM entities WHERE campaign_id=? AND type='NPC'${onlyId ? " AND id=?" : ""}
     AND json_extract(CASE WHEN json_valid(content) THEN content ELSE '{}' END,'$.${websiteFlagKeys.person}')=1 ORDER BY title,id`)
-    .bind(campaignId).all<{ id: string }>();
+    .bind(...(onlyId ? [campaignId, onlyId] : [campaignId])).all<{ id: string }>();
   const ids = rows.results.map(row => row.id);
   if (!ids.length) return [];
   const [entities, grants] = await Promise.all([loadEntitiesForIds(db, campaignId, ids), groupGrants(db, campaignId, ids)]);
   const viewer = publicViewer(campaignId);
-  const people = entities.flatMap(entity => {
-    if (entity.type !== "NPC" || !isMarkedForWebsite(entity.content, websiteFlagKeys.person)) return [];
-    // A person whose name is not released stays anonymous for the group; the website never shows anonymous figures.
-    if (hasNPCFieldVisibility(entity.content) && npcFieldVisibility(entity.content, "name") !== "player_visible") return [];
-    const safe = projectEntity(viewer, entity, grants);
-    if (!safe) return [];
-    const person = publicPerson({ id: safe.id, title: safe.title, content: safe.content });
-    return person ? [person] : [];
+  return entities.flatMap(entity => {
+    const entry = personEntry(viewer, entity, grants);
+    return entry ? [entry] : [];
   });
-  return people.sort((a, b) => a.name.localeCompare(b.name, "de-DE"));
+}
+
+export async function loadPublicPeople(db: D1Database, campaignId: string): Promise<PublicPerson[]> {
+  return (await loadPublicPersonEntries(db, campaignId)).map(entry => entry.item).sort((a, b) => a.name.localeCompare(b.name, "de-DE"));
+}
+
+export const publicImageTypes = ["image/jpeg", "image/png", "image/webp"];
+
+/** Image route: the file behind a public entry's image, or null (the route answers 404). Resolved only through the same
+ * entries as the list; a released hero medium of a place is followed to its file here, on the server. */
+export async function loadPublicImageFile(db: D1Database, campaignId: string, kind: PublicImageKind, id: string) {
+  const entry = kind === "place" ? await loadPublicPlaceEntry(db, campaignId, id) : (await loadPublicPersonEntries(db, campaignId, id))[0] ?? null;
+  const upload = entry && entry.item.id === id ? entry.upload : null;
+  if (!upload) return null;
+  let fileId: string;
+  if ("fileId" in upload) fileId = upload.fileId;
+  else {
+    const block = await db.prepare("SELECT kind,content FROM entity_content_blocks WHERE campaign_id=? AND id=? AND kind=? AND visibility='sl_secret'")
+      .bind(campaignId, upload.mediaBlockId, LOCATION_MEDIA_KIND).first<{ kind: string; content: string }>();
+    const data = block ? parseLocationItemContent(block.content, block.kind)?.data : null;
+    if (!data || !("fileId" in data) || data.state !== "active" || !data.playerReleased || data.mediaType === "sl_plan") return null;
+    fileId = data.fileId;
+  }
+  // Only campaign images that are not a member's private file; SVG and every non-image type are never served.
+  const file = await db.prepare("SELECT key,mime,size FROM files WHERE campaign_id=? AND id=? AND visibility IN ('sl','group')")
+    .bind(campaignId, fileId).first<{ key: string; mime: string; size: number }>();
+  return file && publicImageTypes.includes(file.mime) ? file : null;
 }
 
 const privateContexts = ["table-material", "sl-message", "appointment-vote", "live-table", "live-table-signal", "live-table-event"];

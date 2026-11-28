@@ -26,7 +26,7 @@
 .cardMedia,.portrait{position:relative;display:grid;place-items:center;aspect-ratio:16/9;overflow:hidden;background:radial-gradient(circle at 30% 20%,#14303d,#081720 70%);color:var(--gold)}
 .portrait{aspect-ratio:16/10}
 .cardMedia img,.portrait img{width:100%;height:100%;object-fit:cover}
-.portrait img{object-position:center 25%}
+.portrait img{object-position:center top}
 .portrait span{display:grid;place-items:center;width:88px;height:88px;border:1px solid var(--gold);border-radius:50%;font:32px Georgia,serif;letter-spacing:2px}
 .stateBadge{position:absolute;top:10px;left:10px;padding:4px 10px;border:1px solid var(--gold);border-radius:999px;background:#061018d9;color:var(--gold);font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase}
 .cardBody{display:grid;align-content:start;gap:8px;min-width:0;padding:18px}

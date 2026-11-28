@@ -33,7 +33,7 @@ function PlaceCard({ place }: { place: PublicPlace }) {
   const more = Boolean(place.atmosphere) || publicTeaser(place.summary, 100000) !== teaser;
   return <article className={styles.card} id={"ort-" + encodeURIComponent(place.id)}>
     <div className={styles.cardMedia} data-empty={!place.image || undefined}>
-      {place.image ? <img src={place.image} alt="" loading="lazy" /> : <MapPin aria-hidden="true" size={30} />}
+      {place.image ? <img src={place.image} alt={"Bild von " + place.title} loading="lazy" decoding="async" /> : <MapPin aria-hidden="true" size={30} />}
       {state && <span className={styles.stateBadge}>{state}</span>}
     </div>
     <div className={styles.cardBody}>
@@ -55,7 +55,7 @@ function PersonCard({ person }: { person: PublicPerson }) {
   const more = Boolean(person.description || person.knownFor.length || person.affiliation.length) || publicTeaser(person.summary, 100000) !== teaser;
   return <article className={styles.card} id={"person-" + encodeURIComponent(person.id)}>
     <div className={styles.portrait} data-empty={!person.image || undefined}>
-      {person.image ? <img src={person.image} alt="" loading="lazy" /> : <span aria-hidden="true">{initials(person.name)}</span>}
+      {person.image ? <img src={person.image} alt={"Porträt von " + person.name} loading="lazy" decoding="async" style={{ objectPosition: `center ${person.imageFocus}%` }} /> : <span aria-hidden="true">{initials(person.name)}</span>}
     </div>
     <div className={styles.cardBody}>
       <h3>{person.name}</h3>
